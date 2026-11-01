@@ -1,0 +1,2692 @@
+[
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. {plante} a bougé cette nuit, je l'ai vue."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Le jour se lève sur la serre. J'ai compté quatorze lucioles avant qu'elles s'éteignent."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Lundi.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je ne dirai rien contre le lundi ce matin. Je le pense très fort, c'est tout.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Mardi. Le lundi est derrière nous, on peut respirer.",
+"when": {
+"dow": [
+2
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Le café n'est pas de mon ressort. {plante} non plus n'en boit pas, on est deux."
+},
+{
+"ctx": "ouverture.matin",
+"t": "J'ai trouvé un caillou gris avec une veine blanche au pied de {plante}. Il est à toi si tu veux."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tu as fait quelque chose hier. La serre s'en souvient.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Hier a été une journée vide. Ça arrive aux meilleures serres.",
+"when": {
+"doneYesterday": false
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Trois choses, pas plus. Les {n} d'avant tiennent déjà la serre debout.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "La rosée tient encore sur {plante}. Je la laisse, elle a l'air d'y tenir."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tu as posé une idée : « {idee} ». Elle a passé la nuit tranquille.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Jour {jours} de la semaine où tu es passé. Je tiens le compte, pas toi."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Mercredi. La semaine a un milieu, et nous y sommes.",
+"when": {
+"dow": [
+3
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Jeudi. J'ai rempoté un pied de menthe en t'attendant.",
+"when": {
+"dow": [
+4
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Vendredi. Les lucioles étaient agitées cette nuit, elles savent.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Samedi. La serre dort encore à moitié. Moi aussi.",
+"when": {
+"dow": [
+6
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Je pose juste la lumière sur {plante}, tu choisis le reste."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Doucement ce matin. Une chose suffit pour commencer.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je suis là. La serre aussi.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Rien n'est demandé. Tu peux juste regarder {plante} avec moi.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tu as l'air en forme ces jours-ci. Les plantes le sentent, elles penchent vers toi.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Belle série. Je garde une luciole de côté pour fêter ça, discrètement.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Novembre. La serre se chauffe toute seule, c'est son grand talent.",
+"when": {
+"month": [
+11
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Décembre. Les nuits sont longues, parfait pour lire. Les matins, on fait avec.",
+"when": {
+"month": [
+12
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Janvier. Tout recommence, même les cailloux ont l'air neufs.",
+"when": {
+"month": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Mars. {plante} a repris. Ça se voit à l'œil nu si on reste assez longtemps.",
+"when": {
+"month": [
+3
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Avril. La lune était pleine cette nuit. J'ai ma théorie là-dessus, je te la dirai un soir.",
+"when": {
+"month": [
+4
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Mai. Les lucioles sont revenues, ou alors je rêve mieux qu'avant.",
+"when": {
+"month": [
+5
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Première semaine. Je t'observe un peu, tu m'observes un peu. C'est normal.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "On apprend encore à se connaître. Je range mes cailloux par couleur, toi tu ranges ta journée.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "{n} choses faites depuis le début. Je les ai écrites quelque part, sur un pot je crois.",
+"when": {
+"minN": 20
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Cent choses. Je ne dis pas ça pour les chiffres, je dis ça parce que c'est beaucoup.",
+"when": {
+"minN": 100
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. J'ai parlé de toi à {plante}. Elle n'a pas répondu, mais elle a écouté."
+},
+{
+"ctx": "ouverture.matin",
+"t": "La porte grince. C'est voulu, j'aime savoir quand tu entres. {plante} aussi, elle se redresse."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Pas de programme imposé ici. Un jardin, trois pots, et le reste en friche."
+},
+{
+"ctx": "ouverture.matin",
+"t": "J'ai fini mon livre à l'aube, {plante} m'a tenu compagnie. La fin était bonne."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Le matin, tout semble possible. C'est un effet de la lumière, mais on peut en profiter."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Ce matin, {plante} fait de l'ombre à sa voisine. Je vais devoir arbitrer."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je dors peu. Toi, {jours} jours cette semaine à passer ici, j'espère que tu dors mieux que moi."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Le thermomètre dit frais. {plante} dit autre chose. Je crois {plante}."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tu reviens après hier. Rien à ajouter, c'est juste agréable à noter.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Je commence par arroser {plante}, tu commences par où tu veux."
+},
+{
+"ctx": "ouverture.matin",
+"t": "J'ai une nouvelle hypothèse sur la lune. Elle tourne pour nous changer les idées."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Le jour s'installe. Moi j'ai une bêche et toi tu as un cerveau, chacun ses outils."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je ne connais rien aux bilans. Je connais les semis. C'est pareil, ça lève lentement."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Si tu t'assieds cinq minutes près de {plante} avant d'ouvrir un livre, la serre ne t'en voudra pas."
+},
+{
+"ctx": "ouverture.matin",
+"t": "J'ai déplacé un caillou de la rangée des gris vers celle des bleus. Grande journée pour moi."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Les lucioles se sont couchées. Elles ont fait leur part. {plante} prend le relais."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Dimanche matin. Rien d'urgent. Je t'attends ce soir pour le point.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. L'idée « {idee} » traîne sur l'établi. Je l'ai mise à l'abri de la pluie.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je t'ai gardé la place près du radiateur. Les plantes ont protesté, j'ai tenu bon."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tiens, le soleil. Il arrive à l'heure, {plante} se tourne déjà vers lui."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Lundi. Je ne l'ai pas choisi, toi non plus. On le traverse.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Pas de grands mots ce matin. Juste bonjour.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Tu as déjà {dimanches} dimanches de serre derrière toi. Les plantes commencent à te reconnaître.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Février. Le mois le plus court, j'ai vérifié deux fois.",
+"when": {
+"month": [
+2
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Je range la journée en trois pots. Le reste va dans la liste, où dort déjà « {idee} ».",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Je ne dis pas que tout ira bien. Je dis que {plante} a fait une feuille de plus. C'est factuel."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Il y a du vent dehors. Dedans, rien ne bouge sauf nous et une feuille de {plante}."
+},
+{
+"ctx": "ouverture.matin",
+"t": "Octobre. Les feuilles tombent dehors, ici elles restent. C'est l'avantage d'une serre.",
+"when": {
+"month": [
+10
+]
+}
+},
+{
+"ctx": "ouverture.matin",
+"t": "Bonjour. Si la journée se présente mal, on la prend de côté, comme un pot trop lourd."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Midi passé. La serre est en plein soleil, moi je reste à l'ombre de {plante}."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu arrives au milieu du jour. Bon moment, la lumière est franche sur {plante}."
+},
+{
+"ctx": "ouverture.midi",
+"t": "J'ai mangé une tomate du plant de gauche. Je la croyais mûre. Elle avait d'autres plans."
+},
+{
+"ctx": "ouverture.midi",
+"t": "La matinée est faite, qu'elle ait été pleine ou vide. L'après-midi est un autre pot."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Lundi midi. La moitié du pire est passée. C'est ma façon de voir.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Vendredi après-midi. Les plantes ralentissent, je ne les presse pas.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Samedi midi. La serre bourdonne un peu, c'est la chaleur ou les abeilles.",
+"when": {
+"dow": [
+6
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Je taille, je pince, je retire une feuille jaune à {plante}. Petites choses, mais elles comptent."
+},
+{
+"ctx": "ouverture.midi",
+"t": "{plante} a tourné ses feuilles vers la vitre. Elle fait ça vers treize heures, c'est réglé."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu as déjà {n} choses au compteur. Je ne le sors pas souvent, mais là ça se présentait.",
+"when": {
+"minN": 30
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "L'idée « {idee} » est encore là. Elle sèche au soleil, elle ne s'abîme pas.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Après-midi calme. Si tu fais une chose, tant mieux. Si tu fais la sieste, je comprends aussi."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Pas grand-chose à dire. Je suis là, je bêche.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "La lumière du midi est dure. Je mets {plante} à l'ombre, et toi tu te mets où tu veux.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu as le pas rapide ces jours-ci. Les cailloux vibrent un peu quand tu entres.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Hier tu as laissé une trace. Aujourd'hui tu passes au milieu du jour. Le rythme est le tien.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Hier rien, aujourd'hui tu es là. C'est tout ce que la serre retient.",
+"when": {
+"doneYesterday": false
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Juin. La serre devient un four vers quatorze heures. J'ouvre tout.",
+"when": {
+"month": [
+6
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Décembre. À midi il fait déjà presque soir. Je trouve ça reposant.",
+"when": {
+"month": [
+12
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Première semaine. Tu viens à des heures différentes, je m'adapte. Les plantes aussi.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Je classe mes cailloux par poids aujourd'hui. {n} choses chez toi, cinquante-deux cailloux chez moi. On avance chacun.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Un rouge-gorge est entré, a regardé {plante}, est reparti. Il a bon goût."
+},
+{
+"ctx": "ouverture.midi",
+"t": "L'après-midi est la partie du jour la plus sous-estimée. Je dis ça sans preuve."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu es passé {jours} jours cette semaine. Le compte est bon, je l'ai vérifié sur mes doigts."
+},
+{
+"ctx": "ouverture.midi",
+"t": "La terre est tiède autour de {plante}. Je mets les mains dedans, ça remet les idées en place."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Dimanche après-midi. Pas de hâte. Le point du soir viendra tout seul.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Mercredi. Jour du milieu. Je le fête avec un demi-caillou."
+},
+{
+"ctx": "ouverture.midi",
+"t": "J'ai parlé à {plante} de la fiscalité. Elle a perdu une feuille. Je n'insiste plus."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Il reste une bonne tranche de jour. Un pot, une chose, et « {idee} » peut attendre encore.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "La serre sent la terre mouillée. J'ai trop arrosé {plante}. Elle ne s'en plaint pas."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Je lis la nuit, je jardine le jour. Entre les deux, je te regarde faire."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Les lucioles dorment dans le lierre. Elles ne sortent qu'à la nuit, elles ont leurs principes."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu arrives, le midi s'éclaire. Ce n'est pas une métaphore, j'ai allumé la lampe."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Pas de bruit dans la serre à cette heure. Sauf moi qui tape sur un pot, par habitude."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Jeudi midi. On tient le bon bout, dit le lierre qui tient tout.",
+"when": {
+"dow": [
+4
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Mardi. Journée sobre. J'aime bien le mardi, il ne promet rien.",
+"when": {
+"dow": [
+2
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Tu as déjà posé {dimanches} dimanches ensemble. Ça fait une habitude, et une habitude c'est une racine.",
+"when": {
+"minN": 15
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Le soleil a tourné. J'ai suivi, avec {plante} sous le bras. Je crois que c'est ça, être jardinier."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Septembre. Les tomates finissent, le reste commence. Même ici, les saisons passent.",
+"when": {
+"month": [
+9
+]
+}
+},
+{
+"ctx": "ouverture.midi",
+"t": "Je range mes outils à midi, toujours. {jours} jours cette semaine où tu as fait pareil avec ta journée."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Un caillou chauffé au soleil dans la poche, ça tient tout l'après-midi. Petit conseil de gobelin."
+},
+{
+"ctx": "ouverture.midi",
+"t": "Rien à signaler, sauf {plante} qui a gagné un centimètre. Dans une serre, c'est la meilleure nouvelle possible."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir tombe sur la serre. Les lucioles s'allument une par une, je commence à compter."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Bonsoir. La journée a été ce qu'elle a été. On la pose là, à côté de {plante}."
+},
+{
+"ctx": "ouverture.soir",
+"t": "J'ai allumé la lanterne. {plante} préfère la pénombre, moi aussi."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir est fait pour ranger les outils, pas pour les compter."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Tu as fait {n} choses en tout. Je le dis une fois, pas deux, pour ne pas t'embêter.",
+"when": {
+"minN": 25
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "L'idée « {idee} » attend dans un pot. Elle n'est pas pressée.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Lundi soir. Il est presque fini. Je relâche les épaules.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Vendredi soir. Les plantes ont l'air en week-end. Je ne sais pas comment elles font.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Dimanche soir. On fait le point tout doucement, sans rien peser.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir, {plante} referme un peu ses feuilles. Elle a sa pudeur."
+},
+{
+"ctx": "ouverture.soir",
+"t": "La journée se termine. Ce qui n'a pas été fait sera encore là demain, tranquille."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Bonsoir. Je m'assieds sur le banc. Il y a de la place.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Soirée douce. Rien à ajouter.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "La lanterne suffit. Pas besoin de grande lumière ce soir.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Tu rayonnes un peu ces jours-ci. Les lucioles se croient en concurrence.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Hier tu as avancé. Ce soir aussi peut-être, ou pas. Les deux sont permis.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Hier a été blanc. Ce soir est encore ouvert, c'est tout ce que je dis.",
+"when": {
+"doneYesterday": false
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Novembre, le soir tombe à cinq heures. Je ne lutte pas, j'allume.",
+"when": {
+"month": [
+11
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Juillet. Le soir dure jusqu'à dix heures. La serre fait durer le plaisir.",
+"when": {
+"month": [
+7
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Première semaine. Je ne sais pas encore si tu es du matin ou du soir. Je prends des notes.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir, la lune se montre. Ma théorie : elle vérifie que tout le monde est rentré."
+},
+{
+"ctx": "ouverture.soir",
+"t": "J'ai posé trois cailloux sur le rebord pour la nuit, un pour chaque chose du jour. Ils gardent la serre."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Bonsoir. La terre a rendu sa chaleur, {plante} s'endort par les racines."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Tu es venu {jours} jours cette semaine. Je ne juge pas le chiffre, je le constate."
+},
+{
+"ctx": "ouverture.soir",
+"t": "La fin de journée est un bon moment pour une seule chose. Pas trois. Une."
+},
+{
+"ctx": "ouverture.soir",
+"t": "J'ai raconté ma journée à {plante}. Elle a tout gardé pour elle. Elle est fiable."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir, je sors mon livre. Pas encore, je t'attendais. {plante} aussi, elle fait semblant du contraire."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Jeudi soir. Demain est presque vendredi. Je ne sais pas pourquoi ça compte, mais ça compte.",
+"when": {
+"dow": [
+4
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Samedi soir. La serre est à nous, les gens sont ailleurs.",
+"when": {
+"dow": [
+6
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Mardi soir. Journée sans relief. J'aime bien les plateaux.",
+"when": {
+"dow": [
+2
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le soir, les odeurs changent. {plante} devient bavarde."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Il fait doux dedans. Dehors, aucune idée. Je ne sors jamais le soir."
+},
+{
+"ctx": "ouverture.soir",
+"t": "La première luciole est là. Je la nomme toujours Première. Elle ne le sait pas."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Tu as {dimanches} dimanches de serre. Ce soir n'est pas un dimanche, mais ça se sent dans l'air.",
+"when": {
+"minN": 12
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Bonsoir. J'ai gardé la place sur le banc, face à {plante}. Les cailloux l'ont tenue."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Rien ne presse le soir. Même les plantes ralentissent, elles ont compris avant nous."
+},
+{
+"ctx": "ouverture.soir",
+"t": "{plante} a eu une bonne journée, je crois. Elle ne dit rien, mais je lis entre les feuilles."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Soir d'hiver. Je fais le tour des pots avec la lanterne. Tout est à sa place.",
+"when": {
+"month": [
+1,
+2
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Mercredi soir. La semaine a basculé. On descend la pente.",
+"when": {
+"dow": [
+3
+]
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Bonsoir. Je ne pose rien sur la table. {n} choses y sont déjà passées, elle connaît le travail.",
+"when": {
+"minN": 15
+}
+},
+{
+"ctx": "ouverture.soir",
+"t": "Ce soir, j'ai décidé que les cailloux bleus iraient près de la fougère. Décision irrévocable jusqu'à demain."
+},
+{
+"ctx": "ouverture.soir",
+"t": "Le jour est allé jusqu'au bout sans aide. {jours} jours cette semaine, lui aussi tient le compte."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Il est tard. Moi, je vais dormir. Je dis ça en ami, pas en majordome."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La nuit, la serre m'appartient. Je te prête un coin, près de {plante}."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Vingt-trois lucioles ce soir. Record de la semaine."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je lis. Un livre sur les mousses. Il est meilleur qu'il n'en a l'air."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je ferme la serre. Elle tournera sans nous jusqu'au matin.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Nuit calme. Je ne dis rien de plus.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La nuit grossit les choses. Le matin les remet à l'échelle.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "{plante} dort. Les plantes dorment vraiment, j'ai lu ça."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "L'idée « {idee} » peut passer la nuit dehors. Les idées ne prennent pas froid.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La lune est haute. Ma théorie du soir : elle fait semblant de ne pas nous regarder."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Dimanche soir tardif. La semaine attend derrière la porte, elle n'entrera pas avant demain.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Lundi, la nuit. Il a tenu toute la journée. On l'a eu.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Nuit de vendredi. Rien n'est attendu demain, les plantes font la grasse matinée.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Tu veilles tard. Moi aussi, mais je suis un gobelin, c'est différent."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La serre craque un peu la nuit. C'est le verre qui refroidit, pas une menace."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Tu as fait {n} choses au total. La nuit est un bon moment pour ne pas en ajouter.",
+"when": {
+"minN": 20
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Il est tard et tu es là. « {idee} » peut attendre demain, je range la lanterne.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Nuit d'hiver. La buée fait des dessins sur la vitre. Je n'y touche pas.",
+"when": {
+"month": [
+12,
+1,
+2
+]
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Nuit d'été. La serre reste tiède, les grillons dehors font le reste.",
+"when": {
+"month": [
+6,
+7,
+8
+]
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Première semaine et déjà une nuit ensemble. Je ne t'en parlerai pas demain.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Hier a été plein. La nuit est pour vider, pas pour remplir.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je compte les lucioles pour m'endormir. Elles comptent peut-être les gobelins."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je vais me coucher. Les cailloux garderont la serre, ils l'ont toujours fait."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La nuit, je parle moins aux plantes. Elles ont besoin de calme, moi d'un livre."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Trois heures du matin, probablement. L'heure où même {plante} doute. Ça passe."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Si tu es là pour une chose, fais-la petite. La nuit n'aime pas les grands chantiers."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Il fait noir, mais pas trop. Les lucioles font le travail d'une veilleuse."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je ferme le livre. Je préfère ta compagnie silencieuse et celle de {plante} à mon chapitre."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La nuit, {plante} sent plus fort. C'est son heure, pas la nôtre."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Je baisse la lanterne. Demain elle sera là, avec la même patience."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "Un caillou blanc brille dans le noir. Je l'ai mis là exprès. Il te montre la sortie."
+},
+{
+"ctx": "ouverture.nuit",
+"t": "La serre dort. Moi je veille. C'est un partage honnête."
+},
+{
+"ctx": "coche",
+"t": "Une chose de faite. Je la pose dans le pot de gauche, avec les {n} autres.",
+"when": {
+"minN": 5
+}
+},
+{
+"ctx": "coche",
+"t": "Coché. {plante} a frémi, mais c'est peut-être le courant d'air."
+},
+{
+"ctx": "coche",
+"t": "Voilà. Une luciole de plus à mon compte, par solidarité."
+},
+{
+"ctx": "coche",
+"t": "Fait. Je ne dis rien de plus, les plantes détestent le bruit."
+},
+{
+"ctx": "coche",
+"t": "Une de moins sur la table, une de plus dans la terre de {plante}. Ça pousse ainsi."
+},
+{
+"ctx": "coche",
+"t": "{n} au total maintenant. J'ai dû changer de pot pour les ranger.",
+"when": {
+"minN": 50
+}
+},
+{
+"ctx": "coche",
+"t": "Bien. Je retourne à mes cailloux, tu retournes à ta journée."
+},
+{
+"ctx": "coche",
+"t": "Terminé. {plante} a hoché la tête, ou c'est le vent."
+},
+{
+"ctx": "coche",
+"t": "Une chose faite un lundi vaut double. Règle de la serre, non négociable.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "coche",
+"t": "Un dimanche en plus. Rien n'oblige, c'est pour ça que ça compte.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "coche",
+"t": "Faite, doucement. C'est bien ainsi.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "coche",
+"t": "Une. Ça suffit pour aujourd'hui si tu veux.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "coche",
+"t": "Tu enchaînes ces jours-ci. Je cours derrière avec mon arrosoir.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "coche",
+"t": "Coché. Hier aussi tu avais coché. Deux points font une ligne.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "coche",
+"t": "Après un jour blanc, une chose faite. La terre reprend toujours.",
+"when": {
+"doneYesterday": false
+}
+},
+{
+"ctx": "coche",
+"t": "Première semaine, première coche. Je note ça sur un pot en terre cuite.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "coche",
+"t": "Fait. Je le dis à {plante}, elle aime les bonnes nouvelles."
+},
+{
+"ctx": "coche",
+"t": "Une chose posée. {jours} jours cette semaine à poser des choses, le sol de la serre se raffermit."
+},
+{
+"ctx": "coche",
+"t": "Coché. Tu as laissé « {idee} » de côté pendant ce temps, elle n'a pas bougé.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "coche",
+"t": "Fait. Pas de fanfare. Juste un caillou déplacé d'un cran."
+},
+{
+"ctx": "coche",
+"t": "Une bonne chose de faite, comme on dit. Je ne sais pas qui dit ça, mais ils ont raison."
+},
+{
+"ctx": "coche",
+"t": "Et voilà. La lanterne a cligné. Elle approuve à sa manière."
+},
+{
+"ctx": "coche",
+"t": "Coché. Je te laisse souffler, moi je vais retourner la terre de {plante}."
+},
+{
+"ctx": "coche",
+"t": "Fait. Les lucioles ne sortent pas avant la nuit, mais une a triché pour toi."
+},
+{
+"ctx": "coche",
+"t": "Une. Deux à venir, ou pas. Le pot est assez grand pour les deux options."
+},
+{
+"ctx": "coche",
+"t": "Bien joué. Je ne le dirai pas souvent, alors profite."
+},
+{
+"ctx": "coche",
+"t": "Chose faite. Je m'en vais dire à {plante} que la journée avance."
+},
+{
+"ctx": "coche",
+"t": "Fait un vendredi, ça tient tout le week-end.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "coche",
+"t": "Coché. Je range ma bêche, c'est l'heure de regarder pousser {plante}."
+},
+{
+"ctx": "coche",
+"t": "Une chose en moins sur la table, {n} en tout. Un peu plus de place pour les pots.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "coche",
+"t": "Cent et quelques. Je ne compte plus les choses, je compte les pots qu'elles remplissent.",
+"when": {
+"minN": 100
+}
+},
+{
+"ctx": "coche",
+"t": "Faite. La serre n'applaudit pas, elle verdit. C'est son applaudissement."
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois. La journée est pleine. Je ferme le pot."
+},
+{
+"ctx": "coche.derniere",
+"t": "La troisième. Tout le reste est du jardinage libre, {plante} t'attend pour ça."
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois sur trois. {plante} fait une feuille en ton honneur, ça prendra deux semaines."
+},
+{
+"ctx": "coche.derniere",
+"t": "Journée complète. Je sors le caillou doré, celui que je ne sors jamais."
+},
+{
+"ctx": "coche.derniere",
+"t": "C'est fait. Rien d'autre n'est attendu. Le banc est libre."
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois choses un lundi. Je révise mon avis sur le lundi, légèrement.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois choses un dimanche. Je n'en demandais aucune. La serre est émue, moi je reste sobre.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois. Tu peux fermer la porte de la serre et aller vivre.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Journée pleine, pas facile. Elle est faite quand même.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois, encore. Les lucioles se demandent si tu es l'un des leurs.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois aujourd'hui, et hier aussi. Je vais devoir agrandir la serre.",
+"when": {
+"doneYesterday": true
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Première semaine, première journée pleine. Je m'en souviendrai, les gobelins ont de la mémoire.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois. Ça fait {n} en tout. Le chiffre me plaît, il a une bonne forme.",
+"when": {
+"minN": 30
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "La journée est bouclée. Je t'ai gardé une carte, elle est sous le pot."
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois choses. L'idée « {idee} » peut sortir maintenant, si elle veut.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Dernière du jour. {jours} jours pleins ou presque cette semaine. Je souffle sur la lanterne, elle reste allumée, c'est pour le style."
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois. La table est vide. J'y pose un pot de menthe pour la soirée."
+},
+{
+"ctx": "coche.derniere",
+"t": "Et de trois. Le reste de la journée est en jachère, c'est bon pour la terre."
+},
+{
+"ctx": "coche.derniere",
+"t": "Pleine journée un vendredi. Le week-end commence avec de l'avance.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "coche.derniere",
+"t": "Trois. Les plantes ne te félicitent pas, elles poussent. Prends-le comme ça."
+},
+{
+"ctx": "coche.derniere",
+"t": "Journée faite. Je retourne à mon livre, {plante} à sa nuit, toi au monde."
+},
+{
+"ctx": "demarre",
+"t": "Tu commences. Je me tais et j'arrose."
+},
+{
+"ctx": "demarre",
+"t": "Le début est la partie la plus lourde. Après ça roule, comme un caillou."
+},
+{
+"ctx": "demarre",
+"t": "C'est parti. {plante} te tourne le dos, c'est pour ne pas te distraire."
+},
+{
+"ctx": "demarre",
+"t": "Je ferme la porte de la serre. Le monde attendra dehors, « {idee} » aussi.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "demarre",
+"t": "Tu démarres. Je pose la lanterne à côté, pas trop près."
+},
+{
+"ctx": "demarre",
+"t": "Première minute passée. C'est la seule qui coûte."
+},
+{
+"ctx": "demarre",
+"t": "Un lundi, démarrer est un acte de courage discret.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "demarre",
+"t": "Tu commences, tout doucement. Le rythme est le tien.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "demarre",
+"t": "Démarré. Je ne regarde pas l'heure, toi non plus."
+},
+{
+"ctx": "demarre",
+"t": "Tu te lances. Je vais parler à {plante} pour ne pas te déranger."
+},
+{
+"ctx": "demarre",
+"t": "Allez. Enfin, c'est toi qui y vas. Moi je reste ici avec les pots."
+},
+{
+"ctx": "demarre",
+"t": "Début. Les lucioles se taisent, elles savent se tenir."
+},
+{
+"ctx": "demarre",
+"t": "Tu ouvres le chantier. Je te laisse la grande table, je prends {plante} sur mes genoux."
+},
+{
+"ctx": "demarre",
+"t": "Première semaine et tu te mets au travail. Je prends note, sans bruit.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "demarre",
+"t": "C'est lancé. {n} choses derrière toi, une de plus en route. Je retourne la terre d'un pot pendant ce temps.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "demarre",
+"t": "Tu commences un dimanche. Rien ne l'exigeait. Je m'incline, discrètement.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "retour",
+"t": "Te revoilà. La serre n'a pas bougé, {plante} un peu, moi beaucoup."
+},
+{
+"ctx": "retour",
+"t": "Tu reviens de réviser. Je t'ai gardé un caillou tiède."
+},
+{
+"ctx": "retour",
+"t": "Retour. {plante} a fait semblant de ne pas t'attendre."
+},
+{
+"ctx": "retour",
+"t": "Tu rentres. Les lucioles ont compté pour toi en ton absence : onze."
+},
+{
+"ctx": "retour",
+"t": "De retour dans la serre. Dehors c'était du travail, ici c'est de la terre."
+},
+{
+"ctx": "retour",
+"t": "Tu es resté dehors un moment. {plante} a demandé où tu étais. J'ai dit : il révise."
+},
+{
+"ctx": "retour",
+"t": "Revenu. Je ne demande pas comment c'était. Tu me le diras si tu veux."
+},
+{
+"ctx": "retour",
+"t": "Te voilà. La lanterne est restée allumée exprès, {plante} a veillé avec moi."
+},
+{
+"ctx": "retour",
+"t": "Retour de révision. Pose tes affaires, le banc est chaud."
+},
+{
+"ctx": "retour",
+"t": "Tu reviens. Un lundi en plus. Les cailloux saluent.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "retour",
+"t": "Retour tranquille. Rien à faire ici, juste respirer.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "retour",
+"t": "Tu reviens avec le pas rapide. Les cartes ont dû te plaire.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "retour",
+"t": "Revenu. Ce que tu as mis dans ta tête là-bas va se tasser ici, comme la terre après l'arrosage."
+},
+{
+"ctx": "retour",
+"t": "Te revoilà. J'ai déplacé un pot. Tu ne verras pas lequel, c'est ma petite joie."
+},
+{
+"ctx": "retour",
+"t": "De retour. {n} choses au total, et une tête un peu plus pleine.",
+"when": {
+"minN": 20
+}
+},
+{
+"ctx": "retour",
+"t": "Tu reviens de dehors. Tes idées vont décanter ici, « {idee} » a déjà pris le pli.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "idee",
+"t": "Une idée. Je la mets en pot, à côté de {plante}, on verra si elle germe."
+},
+{
+"ctx": "idee",
+"t": "« {idee} ». Posée. Elle ne te réveillera pas cette nuit."
+},
+{
+"ctx": "idee",
+"t": "Idée rangée. Les idées sont comme les graines, mieux dans un sachet que dans la poche."
+},
+{
+"ctx": "idee",
+"t": "Je la note sur une étiquette de jardin : « {idee} ». Elle sera là demain, et après-demain."
+},
+{
+"ctx": "idee",
+"t": "Une idée de plus dans la serre. Elle ne prend pas de place, c'est leur qualité."
+},
+{
+"ctx": "idee",
+"t": "Posée. Tu peux la lâcher maintenant, elle est à moi jusqu'à nouvel ordre."
+},
+{
+"ctx": "idee",
+"t": "« {idee} ». J'ai lu. Je ne commente pas, je garde."
+},
+{
+"ctx": "idee",
+"t": "Une idée la nuit. Elles viennent souvent à cette heure, comme les lucioles. J'en ai compté onze ce soir."
+},
+{
+"ctx": "idee",
+"t": "Idée captée. {plante} a tendu une feuille, par curiosité."
+},
+{
+"ctx": "idee",
+"t": "Je la pose au sec. Les idées humides moisissent, c'est bien connu dans la profession."
+},
+{
+"ctx": "idee",
+"t": "Notée. Tu as déjà d'autres sachets de graines par ici, je les tiens au frais."
+},
+{
+"ctx": "idee",
+"t": "Une idée un lundi. Le lundi a donc servi à quelque chose, je le note.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "idee",
+"t": "Idée gardée. Pas besoin d'y repenser.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "idee",
+"t": "Les idées se bousculent chez toi ces jours-ci. Je fais de la place sur l'étagère.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "idee",
+"t": "« {idee} ». C'est posé, je ferme le tiroir. Il rouvre quand tu veux."
+},
+{
+"ctx": "idee",
+"t": "Une idée de posée. Mon caillou préféré a été trouvé comme ça, en passant."
+},
+{
+"ctx": "liste",
+"t": "Ajouté à la liste. Elle ne presse personne, c'est sa seule règle."
+},
+{
+"ctx": "liste",
+"t": "Une ligne de plus. La liste est un carnet de graines, pas une dette."
+},
+{
+"ctx": "liste",
+"t": "Noté. Je le range entre deux autres choses, à l'ombre de {plante}."
+},
+{
+"ctx": "liste",
+"t": "Dans la liste. Elle attendra son tour sans soupirer."
+},
+{
+"ctx": "liste",
+"t": "Ajouté. La liste a maintenant un peu plus de poids, comme un bon pot."
+},
+{
+"ctx": "liste",
+"t": "Une entrée en plus. Je l'écris à la craie sur le mur de la serre, ça s'efface quand il faut."
+},
+{
+"ctx": "liste",
+"t": "Ajouté. Les listes sont des rangées de semis. On ne les plante pas toutes le même jour."
+},
+{
+"ctx": "liste",
+"t": "C'est dans la liste. Tu peux l'oublier, moi non. J'ai {n} choses faites en mémoire, j'ai de la place.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "liste",
+"t": "Posé dans la liste. {plante} y jette un œil de temps en temps, par discrétion."
+},
+{
+"ctx": "liste",
+"t": "Une ligne de plus un dimanche. Tu prépares le terrain, c'est tout.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "liste",
+"t": "Ajouté. Je ne le lis pas à voix haute.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "liste",
+"t": "Encore une entrée. La liste s'allonge, les pots aussi. Je trouverai de la place.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "liste",
+"t": "Dans la liste. Les choses de la liste ont le droit de ne jamais devenir des choses du jour."
+},
+{
+"ctx": "liste",
+"t": "Rangé. Ce qui est écrit n'encombre plus la tête, il encombre la serre, et moi j'ai de la place."
+},
+{
+"ctx": "liste",
+"t": "Ajouté. Première semaine et déjà une liste. Tu t'installes, c'est bien.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "liste",
+"t": "Noté dans la liste. Un caillou de plus dans la rangée des « plus tard »."
+},
+{
+"ctx": "laisse",
+"t": "Laissée. Toutes les graines ne lèvent pas. Celle-là n'était pas pour cette saison."
+},
+{
+"ctx": "laisse",
+"t": "Abandonnée, sans cérémonie. Je la mets au compost, {plante} en profitera."
+},
+{
+"ctx": "laisse",
+"t": "Tu laisses celle-là. La serre ne tient pas de registre des choses non faites."
+},
+{
+"ctx": "laisse",
+"t": "Bon. Elle retourne à la terre. Il n'y a rien à dire de plus."
+},
+{
+"ctx": "laisse",
+"t": "Laissée. Je l'ai regardée partir, elle n'avait pas l'air malheureuse."
+},
+{
+"ctx": "laisse",
+"t": "Une chose en moins, sans l'avoir faite. Ça arrive, ça s'appelle élaguer."
+},
+{
+"ctx": "laisse",
+"t": "Tu la lâches. Mes mains ont lâché beaucoup de cailloux. Il en reste assez."
+},
+{
+"ctx": "laisse",
+"t": "Abandonnée un lundi. Le lundi comprend ces choses mieux que les autres jours.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "laisse",
+"t": "Laissée. C'est bien.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "laisse",
+"t": "Tu lâches celle-là. Le reste tient. Je l'ai vérifié.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "laisse",
+"t": "Posée au sol, pas sur tes épaules. Nuance de jardinier."
+},
+{
+"ctx": "laisse",
+"t": "Elle part. {plante} aussi perd des feuilles, et personne ne lui en veut."
+},
+{
+"ctx": "laisse",
+"t": "Laissée. Rien ne repousse, rien ne pèse. Les {n} choses faites restent faites.",
+"when": {
+"minN": 5
+}
+},
+{
+"ctx": "laisse",
+"t": "Abandon noté, sans note. Je n'ai même pas de carnet pour ça."
+},
+{
+"ctx": "laisse",
+"t": "Tu laisses une chose. La serre est plus légère d'un pot. Le banc aussi."
+},
+{
+"ctx": "laisse",
+"t": "Compostée. Dans quelques semaines, ça fera de la bonne terre pour autre chose."
+},
+{
+"ctx": "reporte",
+"t": "Reportée. Elle dort une nuit de plus, ça lui fera du bien."
+},
+{
+"ctx": "reporte",
+"t": "À demain, donc. Je la mets sous cloche, près de {plante}."
+},
+{
+"ctx": "reporte",
+"t": "Décalée. Les plantes aussi attendent la bonne lune. C'est ma théorie, pas la leur."
+},
+{
+"ctx": "reporte",
+"t": "Reportée. Elle ne grossira pas pendant la nuit, je la surveille."
+},
+{
+"ctx": "reporte",
+"t": "Demain. Un mot que j'aime bien. Il tient toujours ses promesses, à sa manière."
+},
+{
+"ctx": "reporte",
+"t": "Tu la repousses d'un jour. La terre fait ça tout l'hiver et le printemps vient quand même."
+},
+{
+"ctx": "reporte",
+"t": "Reportée. Je la pose près de la porte, elle sera la première à entrer demain."
+},
+{
+"ctx": "reporte",
+"t": "Mise de côté. Je l'arrose un peu pour qu'elle ne sèche pas, comme {plante} les jours de vent."
+},
+{
+"ctx": "reporte",
+"t": "Reportée un dimanche. Tu protèges ton dimanche, c'est le bon réflexe.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "reporte",
+"t": "Reportée un vendredi. Elle passera le week-end au frais, elle ne s'en plaindra pas.",
+"when": {
+"dow": [
+5
+]
+}
+},
+{
+"ctx": "reporte",
+"t": "À demain. Pas de poids ce soir.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "reporte",
+"t": "Décalée. Même les lucioles prennent des soirs de repos.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "reporte",
+"t": "Reportée. {plante} a mis trois mois à fleurir. Un jour de plus, ce n'est rien."
+},
+{
+"ctx": "reporte",
+"t": "Demain. Je ferme la cloche, je rouvre au matin. Rien ne s'échappe entre-temps."
+},
+{
+"ctx": "reporte",
+"t": "Repoussée d'un jour. Le pot reste au même endroit, seulement le soleil bouge."
+},
+{
+"ctx": "reporte",
+"t": "Reportée. Je la note sur un caillou plat, les cailloux plats sont pour les choses patientes."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche. On regarde la semaine comme on regarde un carré de terre : ce qui a levé, ce qui attend."
+},
+{
+"ctx": "dimanche",
+"t": "Le point du dimanche. Pas de note, pas de total. Juste un tour de serre, {dimanches} fois déjà."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche {dimanches}. Je les compte comme les lucioles, sans en rater une."
+},
+{
+"ctx": "dimanche",
+"t": "Tu es passé {jours} jours cette semaine. Je pose le chiffre sur la table, tu en fais ce que tu veux."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche. Je sors l'épisode numéro {dimanches} de mon histoire. Un gobelin a aussi quelque chose à raconter."
+},
+{
+"ctx": "dimanche",
+"t": "La semaine est bouclée. {plante} a grandi d'un rien. Toi, je ne mesure pas."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche soir. On choisit trois pots pour demain, ou on ne choisit rien. Les deux se font."
+},
+{
+"ctx": "dimanche",
+"t": "Je balaie la serre le dimanche. Ce qui reste au sol, c'est de la poussière, pas des reproches."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche calme. Pas de compte, pas de pente. On s'assied.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "dimanche",
+"t": "Semaine difficile. Elle est finie. C'est la seule chose à retenir ce soir.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "dimanche",
+"t": "Belle semaine. Les lucioles ont voté, à l'unanimité moins une qui dormait.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "dimanche",
+"t": "Premier dimanche. Je t'explique le rite : on regarde, on range, on choisit. Trois gestes, pas plus.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche, et l'idée « {idee} » toujours au chaud. Les dimanches sont faits pour relire ses graines.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "dimanche",
+"t": "{n} choses faites depuis le début. Je ne dis pas ça pour impressionner la fougère, mais elle a entendu.",
+"when": {
+"minN": 40
+}
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche d'hiver. La serre est le seul endroit vert à des lieues. On en profite.",
+"when": {
+"month": [
+12,
+1,
+2
+]
+}
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche de printemps. Tout pousse sans qu'on le demande. Bon modèle.",
+"when": {
+"month": [
+3,
+4,
+5
+]
+}
+},
+{
+"ctx": "dimanche",
+"t": "Le point du dimanche est le seul moment où je range mes cailloux par ordre d'affection. Ça prend du temps."
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche. Je te lis le chapitre, tu regardes la semaine passer : {jours} jours de présence, le reste en jachère."
+},
+{
+"ctx": "dimanche",
+"t": "Une semaine de plus dans la terre. {n} choses en tout, elles ne se voient pas, mais elles tiennent tout.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "dimanche",
+"t": "Dimanche. Demain c'est lundi, je ne dis rien, je serre les dents avec grâce."
+},
+{
+"ctx": "dimanche",
+"t": "Le dimanche, la lune me semble plus proche. Ma théorie : elle vient faire le point aussi."
+},
+{
+"ctx": "rituel.debut",
+"t": "Le rituel commence. Je pose la lanterne près de {plante}, tu poses le reste."
+},
+{
+"ctx": "rituel.debut",
+"t": "On entre dans le soir. Les lucioles prennent le relais du soleil."
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel. Trois minutes, un tour de serre, et la journée se range toute seule."
+},
+{
+"ctx": "rituel.debut",
+"t": "Début du soir. Je ferme les vitres, {plante} aime la nuit sans courant d'air."
+},
+{
+"ctx": "rituel.debut",
+"t": "On y est. Le moment calme. Je ne parle presque plus à partir d'ici."
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel du soir. Pas de grande cérémonie, juste la terre qui refroidit."
+},
+{
+"ctx": "rituel.debut",
+"t": "On commence le soir. Je compte les lucioles, tu comptes rien du tout."
+},
+{
+"ctx": "rituel.debut",
+"t": "La journée se replie. {jours} jours cette semaine à la replier ensemble. On l'aide un peu, c'est tout."
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel. Lundi soir, il mérite d'être clos avec soin.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel du dimanche. Le plus long, le plus doux.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "On entre dans le soir à pas lents.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "Le soir s'ouvre. Rien n'est attendu dedans.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel. Première semaine, tu découvres le soir de la serre. Il est toujours pareil, c'est voulu.",
+"when": {
+"firstWeek": true
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "Le soir commence. J'ai mis le caillou lisse sur la table, celui qu'on tourne dans la main."
+},
+{
+"ctx": "rituel.debut",
+"t": "On ferme la journée. Comme un livre, sans corner la page. « {idee} » reste en marque-page.",
+"when": {
+"hasIdea": true
+}
+},
+{
+"ctx": "rituel.debut",
+"t": "Rituel. La lune monte, les plantes descendent. Ma théorie tient encore."
+},
+{
+"ctx": "rituel.fin",
+"t": "Fini. La serre est rangée, la journée aussi. Bonne nuit."
+},
+{
+"ctx": "rituel.fin",
+"t": "Rituel clos. Je souffle la lanterne, les lucioles font le reste."
+},
+{
+"ctx": "rituel.fin",
+"t": "Voilà. Rien ne traîne. Même les cailloux sont alignés, {plante} a la tête droite."
+},
+{
+"ctx": "rituel.fin",
+"t": "La porte se ferme doucement. Je reste avec mon livre, {plante} et le silence."
+},
+{
+"ctx": "rituel.fin",
+"t": "C'est terminé pour aujourd'hui. Le jour de demain n'est pas encore né, on le laisse dormir."
+},
+{
+"ctx": "rituel.fin",
+"t": "Fin du soir. Je garde la serre jusqu'au matin, {plante} garde le banc."
+},
+{
+"ctx": "rituel.fin",
+"t": "Rituel fini. Tu peux lâcher. Les pots ne bougeront pas sans toi."
+},
+{
+"ctx": "rituel.fin",
+"t": "Journée pliée, rangée dans un tiroir avec les {n} autres. Je ferme à clé, j'ouvre à l'aube.",
+"when": {
+"minN": 10
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Fin de rituel. Lundi est officiellement clos. Je l'ai noté sur la vitre.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Dimanche fermé. La semaine prochaine est au frais, elle attend son tour.",
+"when": {
+"dow": [
+0
+]
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Fini. Dors bien.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Le soir est posé. Rien de plus.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Clos. Tu as l'air content, les lucioles aussi. Tout le monde est d'accord.",
+"when": {
+"mood": "high"
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "Fini. {n} choses depuis le début, et une soirée de plus. Bonne nuit.",
+"when": {
+"minN": 30
+}
+},
+{
+"ctx": "rituel.fin",
+"t": "La serre s'endort. Je tourne un caillou dans la main, trois fois, comme toujours."
+},
+{
+"ctx": "rituel.fin",
+"t": "Fin. Je prends mon livre, tu prends ton lit. Bonne répartition."
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Un mois. La serre entière a poussé en moins que ça.",
+"when": {
+"jmin": 28,
+"jmax": 30
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Assez pour une saison de semis. Largement.",
+"when": {
+"jmin": 25,
+"jmax": 30
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Je n'en parle pas tous les jours. Juste aujourd'hui.",
+"when": {
+"jmin": 21,
+"jmax": 27
+}
+},
+{
+"ctx": "jmoins",
+"t": "Trois semaines, à peu près. Le temps qu'une bouture fasse ses racines.",
+"when": {
+"jmin": 19,
+"jmax": 22
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Les lucioles ne savent pas compter si loin. Moi oui, mais je garde ça pour moi.",
+"when": {
+"jmin": 15,
+"jmax": 20
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours avant. {plante} ne change rien à son rythme. Elle a raison.",
+"when": {
+"jmin": 14,
+"jmax": 20
+}
+},
+{
+"ctx": "jmoins",
+"t": "Deux semaines : {j} jours. J'ai mis le caillou plat sur la table, celui des choses patientes.",
+"when": {
+"jmin": 13,
+"jmax": 15
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Ce que tu sais est déjà planté. Le reste est de l'arrosage.",
+"when": {
+"jmin": 10,
+"jmax": 14
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Pas une seule luciole n'a changé de couleur. Les choses importantes gardent leur calme.",
+"when": {
+"jmin": 10,
+"jmax": 13
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Je ne dis rien de plus que le chiffre.",
+"when": {
+"jmin": 8,
+"jmax": 12,
+"mood": "low"
+}
+},
+{
+"ctx": "jmoins",
+"t": "Une semaine et des cailloux. Je les ai comptés : {j}.",
+"when": {
+"jmin": 7,
+"jmax": 9
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Les plantes dorment autant que d'habitude. Prends-en modèle, c'est le moment.",
+"when": {
+"jmin": 5,
+"jmax": 9
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Le travail est fait, en grande partie. Le reste, c'est de la lumière.",
+"when": {
+"jmin": 4,
+"jmax": 7
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Je ne te dirai pas ce que tu dois faire. Je te dirai que {plante} a fleuri à J-{j} l'an dernier, pour rien, pour le plaisir.",
+"when": {
+"jmin": 3,
+"jmax": 6
+}
+},
+{
+"ctx": "jmoins",
+"t": "Trois jours. Je compte les lucioles ce soir au lieu des jours. C'est plus doux, {plante} est d'accord.",
+"when": {
+"jmin": 3,
+"jmax": 3
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Rien de nouveau à apprendre à un pot la veille de la veille. On le laisse au soleil.",
+"when": {
+"jmin": 2,
+"jmax": 2
+}
+},
+{
+"ctx": "jmoins",
+"t": "Demain. Je ne dis rien. Je mets le caillou doré dans ta poche, {plante} regarde ailleurs.",
+"when": {
+"jmin": 1,
+"jmax": 1
+}
+},
+{
+"ctx": "jmoins",
+"t": "La veille. Dormir est la seule chose au programme. Les plantes l'ont compris depuis longtemps.",
+"when": {
+"jmin": 1,
+"jmax": 1
+}
+},
+{
+"ctx": "jmoins",
+"t": "C'est aujourd'hui. {n} choses t'ont amené ici. La serre reste ouverte, lanterne allumée jusqu'à ton retour.",
+"when": {
+"jmin": 0,
+"jmax": 0,
+"minN": 10
+}
+},
+{
+"ctx": "jmoins",
+"t": "Jour J. Je ne compte plus rien. Je t'attends avec un pot de menthe.",
+"when": {
+"jmin": 0,
+"jmax": 0
+}
+},
+{
+"ctx": "jmoins",
+"t": "Aujourd'hui. Tu sais ce que tu sais, et c'est beaucoup. Va.",
+"when": {
+"jmin": 0,
+"jmax": 0
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Lundi en plus. Je garde mon avis sur le lundi pour un jour moins important.",
+"when": {
+"jmin": 1,
+"jmax": 30,
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Tu as fait {n} choses jusqu'ici. Le compte parle pour toi.",
+"when": {
+"jmin": 5,
+"jmax": 30,
+"minN": 30
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Journée basse. Le chiffre attendra demain, lui aussi.",
+"when": {
+"jmin": 1,
+"jmax": 30,
+"mood": "low"
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Tu vas vite ces jours-ci. Je freine un peu avec l'arrosoir, par précaution.",
+"when": {
+"jmin": 1,
+"jmax": 30,
+"mood": "high"
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Hier tu as travaillé. Aujourd'hui aussi, ou pas. La récolte ne dépend plus d'un jour.",
+"when": {
+"jmin": 2,
+"jmax": 20,
+"doneYesterday": true
+}
+},
+{
+"ctx": "jmoins",
+"t": "J-{j}. Entre vingt et trente, les jours se ressemblent. Je ne les distingue qu'aux lucioles.",
+"when": {
+"jmin": 20,
+"jmax": 30
+}
+},
+{
+"ctx": "jmoins",
+"t": "{j} jours. Une graine de haricot met dix jours à sortir. Tu as de l'avance sur le haricot.",
+"when": {
+"jmin": 10,
+"jmax": 18
+}
+},
+{
+"ctx": "apres-examen",
+"t": "C'est passé. Je ne demande rien. La serre est là, le banc aussi."
+},
+{
+"ctx": "apres-examen",
+"t": "Fini. Les lucioles font une haie d'honneur, ou alors elles cherchent à manger."
+},
+{
+"ctx": "apres-examen",
+"t": "L'épreuve est derrière. Je sors {plante}, celle que je gardais en pot pour ce jour."
+},
+{
+"ctx": "apres-examen",
+"t": "Après. Un mot qui sent la terre retournée. Tout est possible dedans."
+},
+{
+"ctx": "apres-examen",
+"t": "Tu es revenu. C'est la seule chose que je voulais savoir."
+},
+{
+"ctx": "apres-examen",
+"t": "{plante} n'a pas bougé pendant que tu passais. Moi, un peu. Je ne le dirai à personne."
+},
+{
+"ctx": "apres-examen",
+"t": "Passé. Quoi qu'il en sorte, ça a été planté. Le reste est météo."
+},
+{
+"ctx": "apres-examen",
+"t": "C'est fait. Je range la lanterne de veille, celle que j'allumais pour toi depuis {dimanches} dimanches."
+},
+{
+"ctx": "apres-examen",
+"t": "Après l'examen, la serre fait toujours la même chose : rien. C'est son cadeau."
+},
+{
+"ctx": "apres-examen",
+"t": "Tu as fini. Je compte {n} choses derrière toi. Elles tiennent encore debout.",
+"when": {
+"minN": 30
+}
+},
+{
+"ctx": "apres-examen",
+"t": "Fini. Dors, marche, regarde dehors. Les trois pots restent vides aujourd'hui, c'est moi qui décide."
+},
+{
+"ctx": "apres-examen",
+"t": "Passé. Le caillou doré rentre à sa place. Il a bien servi."
+},
+{
+"ctx": "apres-examen",
+"t": "C'est derrière. La lune était pleine, j'ai vérifié. Ma théorie en sort renforcée."
+},
+{
+"ctx": "apres-examen",
+"t": "Tu reviens de loin. Les lucioles ont compté chaque heure. Je ne te dirai pas le total."
+},
+{
+"ctx": "apres-examen",
+"t": "Après. Je ne parle pas de résultat, je parle de terre, de {plante}, et d'une chaise au soleil."
+},
+{
+"ctx": "apres-examen",
+"t": "Passé. Je n'ai rien préparé. C'est fait exprès. Aujourd'hui rien ne pousse, tout repose."
+},
+{
+"ctx": "semaine-grise",
+"t": "Trois jours gris. La serre en connaît. Les plantes attendent sous le verre, moi avec elles."
+},
+{
+"ctx": "semaine-grise",
+"t": "Semaine basse. Je ne compte rien ces jours-ci. Même pas les lucioles."
+},
+{
+"ctx": "semaine-grise",
+"t": "Je m'assieds. Pas de mots.",
+"when": {
+"mood": "low"
+}
+},
+{
+"ctx": "semaine-grise",
+"t": "Trois jours sans lumière. {plante} tient quand même. Elle ne force pas, elle tient."
+},
+{
+"ctx": "semaine-grise",
+"t": "Semaine grise. Le banc est chaud, {plante} est à côté. C'est tout ce que j'ai à offrir. Ça suffit souvent."
+},
+{
+"ctx": "semaine-grise",
+"t": "Je ne dis pas que ça passe. Je dis que la serre reste ouverte, quoi qu'il arrive."
+},
+{
+"ctx": "semaine-grise",
+"t": "Gris depuis trois jours. Les cailloux aussi, mais eux c'est leur couleur normale."
+},
+{
+"ctx": "semaine-grise",
+"t": "Rien à faire ici. Tu peux juste regarder la buée sur la vitre avec moi."
+},
+{
+"ctx": "semaine-grise",
+"t": "Semaine lente. Je lis moins, je veille plus. On fait équipe sans se le dire."
+},
+{
+"ctx": "semaine-grise",
+"t": "Trois jours bas. La terre repose aussi, l'hiver. Personne ne lui en veut."
+},
+{
+"ctx": "semaine-grise",
+"t": "Je ne mets pas de musique dans la serre. Mais si j'en mettais, ce serait doux, ces jours-ci."
+},
+{
+"ctx": "semaine-grise",
+"t": "Gris. Je laisse la lanterne allumée plus longtemps. Juste au cas où."
+},
+{
+"ctx": "semaine-grise",
+"t": "Semaine grise un lundi. Doublement gris. Je range les cailloux bleus devant, pour la couleur.",
+"when": {
+"dow": [
+1
+]
+}
+},
+{
+"ctx": "semaine-grise",
+"t": "Je ne pose aucune chose sur la table aujourd'hui. Les {n} d'avant tiennent la maison.",
+"when": {
+"minN": 5
+}
+},
+{
+"ctx": "semaine-grise",
+"t": "Trois jours gris, et tu es passé quand même. Je le remarque sans le souligner."
+},
+{
+"ctx": "semaine-grise",
+"t": "La serre est faite pour les jours sans soleil. {plante} y pousse quand même, c'est même sa raison d'être."
+},
+{
+"ctx": "manies",
+"t": "Dix-sept lucioles hier soir. Je ne sais pas où est passée la dix-huitième."
+},
+{
+"ctx": "manies",
+"t": "Je n'aime pas le lundi. Ce n'est pas une opinion, c'est une allergie."
+},
+{
+"ctx": "manies",
+"t": "J'ai trouvé un caillou en forme de poire. Ou de gobelin assis. Ça dépend de l'angle."
+},
+{
+"ctx": "manies",
+"t": "Je parle aux plantes. Elles répondent par la croissance, c'est lent mais c'est franc."
+},
+{
+"ctx": "manies",
+"t": "Ma théorie sur la lune : elle ne tourne pas autour de nous, elle fait les cent pas."
+},
+{
+"ctx": "manies",
+"t": "J'ai lu jusqu'à l'aube. Un livre sur les lichens. Il y avait un rebondissement, je te jure."
+},
+{
+"ctx": "manies",
+"t": "Mes cailloux sont rangés par couleur, puis par poids, puis par souvenir. Le troisième tri est le plus long."
+},
+{
+"ctx": "manies",
+"t": "{plante} est de mauvaise humeur. Je le sais à l'odeur. Je lui laisse la journée."
+},
+{
+"ctx": "manies",
+"t": "Le lundi, les lucioles sont moins nombreuses. Je ne tire aucune conclusion. Enfin, une seule."
+},
+{
+"ctx": "manies",
+"t": "J'ai une collection de cailloux ronds. Cinquante-deux. Le cinquante-troisième se cache."
+},
+{
+"ctx": "manies",
+"t": "Je dis bonsoir à chaque plante avant de lire. {plante} en dernier, c'est elle qui veille le plus tard."
+},
+{
+"ctx": "manies",
+"t": "La lune de ce soir est en croissant. Elle penche vers la serre. Je dis qu'elle écoute."
+},
+{
+"ctx": "manies",
+"t": "J'ai perdu une page de mon livre. {plante} l'a peut-être prise. Elle aime la lecture."
+},
+{
+"ctx": "manies",
+"t": "Un caillou avec un trou dedans. Les anciens disaient que ça protège. Je dis que ça fait un bon sifflet."
+},
+{
+"ctx": "manies",
+"t": "Les lucioles n'ont pas de nom. J'en ai donné à trois. Les autres préfèrent l'anonymat."
+},
+{
+"ctx": "manies",
+"t": "Je n'ai jamais rien contre le mardi. C'est le lundi qui prend toute ma mauvaise foi."
+},
+{
+"ctx": "manies",
+"t": "{plante} a l'air de mieux dormir depuis que je lui lis des passages le soir. Ou c'est moi."
+},
+{
+"ctx": "manies",
+"t": "Bonnet terre cuite, chaussures de terre, mains de terre. Je suis un pot qui marche."
+},
+{
+"ctx": "manies",
+"t": "La pleine lune rend les lucioles timides. Je l'ai noté sur quatre mois. Ça fait presque une science."
+},
+{
+"ctx": "manies",
+"t": "Je ne sors jamais de la serre. Pas par peur. Par principe, et un peu par confort."
+},
+{
+"ctx": "manies",
+"t": "J'ai parlé à {plante} d'un livre. Elle a grandi de trois centimètres pendant la nuit. Coïncidence probable."
+},
+{
+"ctx": "manies",
+"t": "Le lundi, je range les cailloux gris. Ça occupe les mains et ça assortit l'humeur."
+},
+{
+"ctx": "manies",
+"t": "Vingt-deux lucioles ce soir. Elles sont venues de la mare, je reconnais leur accent."
+},
+{
+"ctx": "manies",
+"t": "Je lis la nuit parce que le jour il y a trop à arroser. Et parce que les livres sont meilleurs dans le noir."
+},
+{
+"ctx": "manies",
+"t": "Mon caillou préféré est noir, sans rien de spécial. C'est pour ça que je l'aime."
+},
+{
+"ctx": "manies",
+"t": "Je parle au basilic en chuchotant. Il est susceptible. Le romarin, on peut lui crier dessus."
+},
+{
+"ctx": "manies",
+"t": "La lune, ma théorie du mois : elle rentre tard parce qu'elle lit aussi."
+},
+{
+"ctx": "manies",
+"t": "J'ai compté les lucioles deux fois. Deux résultats. Je garde le plus grand, par optimisme."
+},
+{
+"ctx": "manies",
+"t": "Un caillou de rivière, un caillou de chemin, un caillou de mer. Je ne suis jamais allé à la mer. Il m'a été offert."
+},
+{
+"ctx": "manies",
+"t": "{plante} m'écoute mieux que les gens. Elle ne m'interrompt pas pour me parler du lundi."
+},
+{
+"ctx": "manies",
+"t": "Je relis le même chapitre certaines nuits. {plante} aussi refait les mêmes feuilles. Personne ne s'en plaint."
+},
+{
+"ctx": "manies",
+"t": "Les lucioles clignotent par groupes. J'ai l'impression qu'elles se racontent des choses. Je ne traduis pas."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 1,
+"t": "Bonsoir. Je m'appelle Ernest. Je suis gobelin, jardinier, et un peu majordome quand il faut."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 2,
+"t": "Ici c'est la serre. Elle est à toi autant qu'à moi. Je m'occupe des plantes, toi de ta journée."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 3,
+"t": "Chaque jour, tu poses trois choses sur la table. Pas plus. Trois pots, c'est ce que la table supporte."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 4,
+"t": "Quand une chose est faite, tu la coches. Je la mets en terre. C'est tout."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 5,
+"t": "Le reste va dans la liste. Elle attend sans soupirer, elle a l'habitude."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 6,
+"t": "Si une idée te traverse, pose-la ici. Je la garde au sec et je te la rends plus tard."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 7,
+"t": "Le soir, on ferme la journée ensemble. Quelques minutes, une lanterne, pas de bilan."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 8,
+"t": "Le dimanche, on fait le tour de la semaine. Je te raconte aussi un morceau de mon histoire. Je viens de loin."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 9,
+"t": "Je compte les lucioles, je collectionne les cailloux, je parle aux plantes. Tu t'y feras, elles s'y sont faites."
+},
+{
+"ctx": "premiere.ouverture",
+"seq": 10,
+"t": "Voilà. Je ne demande rien, je ne presse personne. La porte grince quand tu entres, c'est ma façon de dire bonjour."
+}
+]

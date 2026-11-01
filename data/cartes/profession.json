@@ -1,0 +1,322 @@
+[
+  {
+    "id": "pro-001",
+    "titre": "Venise, 20 novembre 1494",
+    "texte": "Ce jour-là sort des presses de Paganino Paganini, à Venise, un gros volume de mathématiques : la Summa de arithmetica, geometria, proportioni et proportionalita de Luca Pacioli, frère franciscain. Au milieu des fractions et de la géométrie, un traité d'une trentaine de pages, le Particularis de computis et scripturis, décrit la tenue des livres « à la vénitienne » : inventaire, brouillard, journal, grand livre, et la règle qui t'occupe encore aujourd'hui, tout débit a son crédit. Pacioli n'a rien inventé. Les marchands de Venise et de Florence pratiquaient cela depuis un siècle. Il a fait mieux : il l'a imprimé, en langue vulgaire, pour que n'importe quel négociant puisse l'apprendre. C'est la première exposition imprimée de la partie double. Un manuel de six siècles qui tient encore debout.",
+    "source": "Luca Pacioli, Summa de arithmetica, geometria, proportioni et proportionalita, Venise, Paganino Paganini, 1494, section Particularis de computis et scripturis ; National Library of Scotland, fonds ICAS, fiche Pacioli, https://www.nls.uk/collections/rare-books/collections/icas/pacioli",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-002",
+    "titre": "Le comptable et le peintre",
+    "texte": "Pacioli n'était pas seulement l'homme des débits et crédits. À Milan, vers 1496, il se lie avec Léonard de Vinci. Les deux hommes partagent un toit chez le duc Ludovic Sforza, et Léonard note dans ses carnets qu'il apprend les mathématiques avec « maestro Luca ». Quand Pacioli publie en 1509 son De divina proportione, un traité sur la proportion dorée, les gravures des polyèdres sont tirées des dessins de Léonard. Un portrait de Pacioli, peint vers 1495 et conservé à Naples, le montre en robe de franciscain, une main sur un livre ouvert, l'autre traçant une figure sur une ardoise, un polyèdre de verre suspendu à côté de lui. Le père de la comptabilité moderne a posé en géomètre, pas en teneur de livres. Il savait ce qui ferait rêver.",
+    "source": "Luca Pacioli, De divina proportione, Venise, Paganino Paganini, 1509 (planches d'après Léonard de Vinci) ; Jacopo de' Barbari (attribué), Portrait de Luca Pacioli, vers 1495, Museo e Real Bosco di Capodimonte, Naples",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-003",
+    "titre": "Salon-de-Provence, 1299",
+    "texte": "Le plus ancien grand livre en partie double connu n'est pas vénitien. Il vient d'une succursale provençale d'une maison florentine, celle de Giovanni Farolfi, et il a été tenu en 1299 et 1300 par un comptable nommé Amatino Manucci. Les comptes y sont déjà ouverts en deux colonnes, chaque opération renvoie à sa contrepartie, et le livre se boucle. L'historien Geoffrey Lee a publié son analyse en 1977 et conclu que la technique était déjà mûre à cette date, donc née encore avant. Deux siècles avant Pacioli, dans une boutique de Provence, un homme dont on ne sait presque rien faisait déjà ton métier.",
+    "source": "Geoffrey A. Lee, « The Coming of Age of Double Entry: The Giovanni Farolfi Ledger of 1299-1300 », The Accounting Historians Journal, vol. 4, n° 2, 1977, https://egrove.olemiss.edu/aah_journal/vol4/iss2/6",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-004",
+    "titre": "Les massari de Gênes, 1340",
+    "texte": "En 1340, la commune de Gênes tient ses comptes publics dans un registre, le cartulaire des massari, les trésoriers de la ville. Chaque opération y figure deux fois, en débit et en crédit, dans un système complet et cohérent. Longtemps, les historiens ont présenté ce registre comme la plus ancienne comptabilité en partie double entièrement conservée. Il a été réétudié à nouveau en 2025. Détail qui compte : ce n'est pas un marchand mais une administration publique qui l'a tenu. La partie double a servi très tôt à rendre compte de l'argent des autres, pas seulement à compter le sien. L'idée de reddition de comptes est au cœur du registre avant d'être au cœur de ta profession.",
+    "source": "Mikhail Kuter, Marina Gurskaya, Dmitriy Gurskii, « Genoa 1340, Double Entry, and 'Gold Coasting' », De Computis, Revista Española de Historia de la Contabilidad, 2025, https://www.upo.es/revistas/index.php/decomputis/article/view/11927",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-005",
+    "titre": "Un bilan daté du 31 janvier 1399",
+    "texte": "Francesco di Marco Datini, marchand de Prato, a laissé des dizaines de milliers de lettres et de registres. Parmi eux, les comptes de sa compagnie de Barcelone. L'historien Raymond de Roover a publié deux documents de cette succursale : un compte de pertes et profits couvrant juillet 1397 à janvier 1399, et un bilan arrêté au 31 janvier 1399. Les intitulés de comptes ressemblent déjà beaucoup aux nôtres. Dans le compte de résultat, une petite dépréciation sur le mobilier de bureau est passée en charge. Un amortissement, en somme, à la fin du XIVe siècle. Les outils que tu manies en clôture ont six cents ans, et un marchand toscan en Catalogne les utilisait déjà sans leur donner de nom.",
+    "source": "Raymond de Roover, « Financial Statements - 1399 », The Woman C.P.A., 1969 ; Raymond de Roover, « The Development of Accounting prior to Luca Pacioli », in Studies in the History of Accounting, 1956 ; Archivio di Stato di Prato, fonds Datini",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-006",
+    "titre": "Cotrugli avant Pacioli, 1458",
+    "texte": "Benedetto Cotrugli, marchand de Raguse, l'actuelle Dubrovnik, achève en 1458 un manuscrit intitulé Libro de l'arte de la mercatura. Il y consacre un chapitre à la tenue des livres et décrit la partie double, trente-six ans avant Pacioli. Mais le texte reste manuscrit et circule peu. Il n'est imprimé qu'en 1573, à Venise. Pacioli, lui, a été imprimé tout de suite, et c'est lui que l'histoire a retenu. Leçon pour ton mémoire : avoir raison le premier ne suffit pas, il faut que le texte sorte. La notice avant le 5 décembre, c'est ta mise sous presse.",
+    "source": "Benedetto Cotrugli, Libro de l'arte de la mercatura, manuscrit de 1458, imprimé à Venise en 1573 sous le titre Della mercatura et del mercante perfetto ; édition critique : Benedetto Cotrugli, The Book of the Art of Trade, dir. Carlo Carraro et Giovanni Favero, Palgrave Macmillan, 2017",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-007",
+    "titre": "Le mot « audit » vient d'une oreille",
+    "texte": "Audit vient du latin audire, écouter. Au Moyen Âge, la plupart des seigneurs et des rois ne lisaient pas les comptes : on les leur lisait à haute voix, et celui qui écoutait pour vérifier était l'auditor. À l'Échiquier d'Angleterre, vers 1180, le trésorier Richard FitzNeal décrit la scène dans son Dialogus de Scaccario : les shérifs viennent rendre compte, les sommes sont posées avec des jetons sur une grande table couverte d'un drap à carreaux, d'où le nom Exchequer, l'échiquier, et les officiers vérifient à l'oreille et à l'œil. Un audit, à l'origine, c'est une audience. Quand tu « écoutes » un client te raconter son année avant d'ouvrir le grand livre, tu fais exactement ce que le mot dit.",
+    "source": "Richard FitzNeal, Dialogus de Scaccario (vers 1179), éd. et trad. Charles Johnson, Oxford Medieval Texts, 1983 ; Oxford English Dictionary, entrée « audit, n. » (du latin auditus, audition)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-008",
+    "titre": "Colbert, Savary et l'obligation de tenir des livres",
+    "texte": "En mars 1673, l'ordonnance du commerce de Louis XIV, préparée sous Colbert, impose à tous les négociants et marchands de tenir un livre contenant tout leur négoce, leurs lettres de change, leurs dettes actives et passives, et de conserver leur correspondance. Le texte est si marqué par un négociant parisien appelé à la commission, Jacques Savary, qu'on l'appelle le Code Savary. Deux ans plus tard, Savary publie Le Parfait Négociant, qui explique au marchand comment s'y conformer et devient le manuel de référence de l'Europe marchande. C'est la première fois qu'en France la loi fait de la comptabilité un devoir, pas seulement une habileté. Ton métier existe parce que l'État a voulu lire dans les livres des marchands.",
+    "source": "Ordonnance du commerce de mars 1673, titre III « Des livres et registres des négociants, marchands et banquiers » ; Jacques Savary, Le Parfait Négociant, Paris, Louis Billaine, 1675 (consultable sur Gallica, BnF)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-009",
+    "titre": "Le Code de commerce de 1807",
+    "texte": "Le Code de commerce napoléonien, promulgué en septembre 1807, reprend l'héritage de 1673 dans ses articles 8 à 11 : tout commerçant tient un livre-journal qui présente jour par jour ses opérations, fait chaque année un inventaire de ses effets mobiliers et immobiliers, de ses dettes actives et passives, et le copie sur un registre spécial. Les livres doivent être cotés, paraphés et visés par un juge du tribunal de commerce ou le maire, tenus par ordre de dates, sans blancs, lacunes ni transports en marge. Pas d'expert-comptable à l'horizon, pas de plan comptable, mais déjà l'idée que le livre tenu régulièrement fait foi en justice, et que celui qui ne le tient pas s'expose, en cas de faillite, à la banqueroute. L'inventaire annuel, c'est ta clôture.",
+    "source": "Code de commerce de 1807, livre I, titre II « Des livres de commerce », articles 8 à 11 (édition originale, Imprimerie impériale, 1807 ; reproduite sur Gallica, BnF)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-010",
+    "titre": "1867 : des commissaires sans métier",
+    "texte": "La loi du 24 juillet 1867 libère la société anonyme : plus besoin d'autorisation gouvernementale pour la créer. En contrepartie, elle impose à chaque société anonyme un ou plusieurs commissaires, désignés par l'assemblée, chargés de faire un rapport sur les comptes présentés par le conseil. C'est l'acte de naissance du commissariat aux comptes français. Mais la loi ne demande aucune compétence, aucun diplôme, aucune indépendance. N'importe quel actionnaire complaisant peut être commissaire, et le poste est souvent tenu par un ami du conseil. Pendant près de soixante-dix ans, la fonction existera sur le papier sans vraiment protéger personne. Il faudra un scandale pour la rendre sérieuse.",
+    "source": "Loi du 24 juillet 1867 sur les sociétés, titre II, articles 32 et suivants (Bulletin des lois, 1867) ; sur l'institution des commissaires, voir le traité Les sociétés commerciales, tome 2, Lextenso-LGDJ, « Notions générales sur l'institution des commissaires aux comptes »",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-011",
+    "titre": "Stavisky, Bayonne, et la naissance du commissaire sérieux",
+    "texte": "Décembre 1933. Les bons émis par le Crédit municipal de Bayonne, fondé par le financier Alexandre Stavisky, se révèlent sans valeur : plusieurs centaines de millions de francs de faux bons de caisse. Stavisky est retrouvé mort en janvier 1934 à Chamonix. L'affaire fait tomber le gouvernement, provoque les émeutes du 6 février 1934, et pose une question simple : où étaient les contrôleurs ? Le législateur répond par le décret-loi du 8 août 1935 qui remanie la loi de 1867. Désormais, dans les sociétés qui font appel à l'épargne publique, les commissaires doivent être agréés par la cour d'appel ; des incompatibilités protègent leur indépendance ; ils disposent d'un droit de contrôle permanent. Le commissaire aux comptes devient un professionnel, et il le devient à cause d'un escroc.",
+    "source": "Décret-loi du 8 août 1935 modifiant la loi du 24 juillet 1867 sur les sociétés (Journal officiel, août 1935) ; Les sociétés commerciales, tome 2, Lextenso-LGDJ, « Notions générales sur l'institution des commissaires aux comptes », https://www.labase-lextenso.fr/ouvrages/t2-les-societes-commerciales-9782275159348 ; Encyclopaedia Britannica, « Stavisky Affair », https://www.britannica.com/event/Stavisky-Affair",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-012",
+    "titre": "1881, 1912, 1927 : la profession se cherche",
+    "texte": "Avant l'Ordre, il y a des sociétés. En 1881 naît la Société académique de comptabilité, qui organise des cours et délivre ses propres titres de comptable. En 1912 se forme la Compagnie des experts-comptables de Paris, qui veut réserver le titre à ceux qui l'ont mérité. Enfin, le décret du 22 mai 1927 crée un brevet d'expert-comptable reconnu par l'État, le premier titre officiel. Il exige du candidat une expérience professionnelle justifiée, et beaucoup des six cents premiers brevetés l'obtiennent sur dossier, leur pratique jugée équivalente à l'examen par une commission de pairs. Quarante-six ans de tâtonnements entre la première société et le premier brevet. Ta profession n'est pas née d'un décret, elle s'est construite par en bas.",
+    "source": "Claude Bocqueraz, « The development of professional associations: the experience of French accountants from the 1880s to the 1940s », Accounting, Business & Financial History, vol. 11, n° 1, 2001 ; Jean-Guy Degos, « Les diplômes d'expert-comptable français (1927-2010) », Comptabilités, revue d'histoire des comptabilités, n° 5, 2013 ; décret du 22 mai 1927 instituant le brevet d'expert-comptable",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-013",
+    "titre": "Avril 1942 : l'Ordre naît sous Vichy",
+    "texte": "L'Ordre des experts-comptables est souvent présenté comme fondé en 1945. C'est inexact. Il est créé par les lois n° 467 et n° 468 du 3 avril 1942, publiées au Journal officiel du 18 avril 1942, sous le régime de Vichy, dans la logique corporatiste qui crée alors des ordres pour les professions libérales. En avril 1942, le ministre des Finances de Pétain, Yves Bouthillier, assiste à la première réunion du Conseil supérieur. Le texte de 1942 instaure un monopole, un diplôme et deux catégories de membres, experts-comptables et comptables agréés. L'historien Jean-Guy Degos parle des « années sombres » de l'Ordre et note qu'il est encore difficile d'en écrire sereinement l'histoire. La profession a su le dire elle-même : l'Ordre a été « reconstitué » en 1945, non fondé.",
+    "source": "Jean-Guy Degos, « Les années sombres de l'Ordre national des experts-comptables : quelques textes oubliés », Journées d'histoire de la comptabilité, Bordeaux, 2005, https://ideas.repec.org/p/wpa/wuwpeh/0503009.html ; entretien avec Édouard Salustro, Comptabilités, revue d'histoire des comptabilités, n° 5, 2013",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-014",
+    "titre": "19 septembre 1945 : la refondation",
+    "texte": "À la Libération, les comités d'organisation économiques de Vichy sont dissous. Les ordres professionnels, eux, survivent. L'ordonnance n° 45-2138 du 19 septembre 1945 portant institution de l'Ordre des experts-comptables et réglementant le titre et la profession reprend l'essentiel de l'architecture de 1942, la purge de ses attaches et la place sous la République. Elle définit l'expert-comptable à l'article 2, fixe le serment à l'article 3, le secret professionnel à l'article 21, les incompatibilités à l'article 22. Elle conserve aussi la « blessure originelle » dont parle l'historienne Béatrice Touchelay : la coexistence des experts-comptables et des comptables agréés, qui ne sera résorbée que par la loi du 31 octobre 1968. Quatre-vingts ans plus tard, c'est toujours ce texte, maintes fois modifié, qui fonde ton titre.",
+    "source": "Ordonnance n° 45-2138 du 19 septembre 1945 portant institution de l'Ordre des experts-comptables et réglementant le titre et la profession d'expert-comptable, Légifrance, https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000699117 ; Béatrice Touchelay, « La profession d'expert-comptable, une construction », Comptabilités, n° 5, 2013",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-015",
+    "titre": "Le premier Plan comptable général, 1947",
+    "texte": "Après la guerre, la France veut diriger son économie, et pour diriger il faut mesurer. Une Commission de normalisation des comptabilités est installée en 1946. Elle dépose en juillet 1947 un plan comptable et un bilan type, approuvés par l'arrêté du ministre de l'Économie nationale du 18 septembre 1947. Ce premier PCG est facultatif. Un arrêté du 30 décembre 1947 le rend obligatoire pour les entreprises privées bénéficiant d'une garantie de l'État supérieure à dix millions de francs ; un décret du 22 octobre 1947 l'applique aux établissements publics industriels et commerciaux. Il sera révisé en 1957, en 1982, en 1999, et le règlement ANC 2014-03 en est l'héritier direct. Un projet d'occupation en 1942 l'avait précédé ; il n'a pas survécu, mais l'idée, elle, a fait l'unanimité.",
+    "source": "Service des archives économiques et financières (ministère de l'Économie), « Le Plan comptable jusqu'en 1982 », https://www.economie.gouv.fr/saef/plan-comptable-jusquen-1982 ; arrêté du 18 septembre 1947 approuvant le Plan comptable général ; décret n° 47-2051 du 22 octobre 1947",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-016",
+    "titre": "1966 : le commissaire aux comptes devient une profession",
+    "texte": "La loi n° 66-537 du 24 juillet 1966 sur les sociétés commerciales refond tout le droit des sociétés et, avec lui, le commissariat aux comptes. Le commissaire devient obligatoire dans toutes les sociétés anonymes, sa mission est définie, certifier la régularité et la sincérité des comptes, ses incompatibilités précisées, sa responsabilité civile et pénale fixée. Le décret n° 69-810 du 12 août 1969 organise la profession : inscription sur une liste tenue par une commission régionale, discipline, et création de la Compagnie nationale des commissaires aux comptes, placée auprès du garde des Sceaux. Trente ans après Stavisky, le commissaire a enfin un statut complet. Il a fallu une loi de cinq cents articles pour y arriver.",
+    "source": "Loi n° 66-537 du 24 juillet 1966 sur les sociétés commerciales, Légifrance, https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000692245 ; décret n° 69-810 du 12 août 1969 relatif à l'organisation de la profession et au statut professionnel des commissaires aux comptes de sociétés, Légifrance (JORF du 29 août 1969)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-017",
+    "titre": "1984 : le droit d'alerte",
+    "texte": "Au début des années 1980, les faillites se multiplient et l'on reproche aux commissaires aux comptes de certifier des comptes exacts d'entreprises qui meurent six mois plus tard. La loi n° 84-148 du 1er mars 1984 relative à la prévention et au règlement amiable des difficultés des entreprises change la donne. Elle crée la procédure d'alerte : lorsque le commissaire relève des faits de nature à compromettre la continuité de l'exploitation, il doit en informer les dirigeants, puis, faute de réponse satisfaisante, le conseil, l'assemblée, et enfin le président du tribunal de commerce. Le commissaire n'est plus seulement le juge du passé, il devient le veilleur de l'avenir. C'est de cette loi que vient aussi l'obligation de comptes prévisionnels pour les grandes entreprises. La continuité d'exploitation, ce mot que tu écris dans chaque rapport, a une date de naissance.",
+    "source": "Loi n° 84-148 du 1er mars 1984 relative à la prévention et au règlement amiable des difficultés des entreprises, Légifrance (JORF du 2 mars 1984)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-018",
+    "titre": "Enron, Andersen et les broyeuses",
+    "texte": "Le 2 décembre 2001, Enron, septième entreprise américaine, dépose son bilan. Ses profits reposaient sur des entités hors bilan, et son auditeur, Arthur Andersen, l'un des Big Five, avait tout certifié. Pire : quand la SEC ouvre son enquête à l'automne 2001, des employés d'Andersen à Houston détruisent des tonnes de documents de travail. Le cabinet est condamné pour obstruction en juin 2002 et perd, en quelques semaines, le droit d'auditer des sociétés cotées. Quatre-vingt-neuf ans d'histoire, vingt-huit mille salariés aux États-Unis : disparus. Le Congrès vote la loi Sarbanes-Oxley le 30 juillet 2002 : création du PCAOB pour superviser les auditeurs, interdiction de la plupart des missions de conseil chez les clients audités, rotation des associés, certification des comptes par le PDG et le directeur financier. La profession a appris, ce jour-là, qu'un cabinet peut mourir d'une seule mission.",
+    "source": "Sarbanes-Oxley Act of 2002, Public Law 107-204, 30 juillet 2002, https://www.govinfo.gov/content/pkg/PLAW-107publ204/pdf/PLAW-107publ204.pdf ; Arthur Andersen LLP v. United States, 544 U.S. 696 (2005), Cour suprême des États-Unis, https://supreme.justia.com/cases/federal/us/544/696/",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-019",
+    "titre": "La loi de sécurité financière et le H3C, 2003",
+    "texte": "La France répond à Enron un an après les Américains. La loi n° 2003-706 du 1er août 2003 de sécurité financière crée le Haut Conseil du commissariat aux comptes, le H3C, autorité placée auprès du garde des Sceaux et chargée de surveiller la profession, de veiller à la déontologie et à l'indépendance, et de contrôler les cabinets. Jusque-là, les commissaires se surveillaient eux-mêmes au sein de la CNCC. Désormais un tiers, composé en majorité de non-professionnels, regarde par-dessus leur épaule. La loi sépare aussi strictement audit et conseil chez un même client, impose le rapport sur le contrôle interne dans les sociétés cotées et renforce la rotation des signataires. C'est le moment où la profession française accepte d'être contrôlée pour rester crédible.",
+    "source": "Loi n° 2003-706 du 1er août 2003 de sécurité financière, Légifrance, https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000428977 ; H2A, « Rapport annuel H3C 2023 », https://h2a-france.org/wp-content/uploads/2024/05/Rapport-annuel-H3C-2023.pdf",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-020",
+    "titre": "2014 : l'Europe réforme l'audit",
+    "texte": "Après la crise de 2008, Bruxelles se demande pourquoi les banques effondrées avaient toutes des rapports d'audit sans réserve. Le résultat tient en deux textes du 16 avril 2014 : la directive 2014/56/UE, qui modifie la directive audit de 2006, et le règlement (UE) n° 537/2014 sur les entités d'intérêt public. Pour ces entités, banques, assurances, sociétés cotées, le règlement impose la rotation obligatoire du cabinet, en principe au bout de dix ans, plafonne les honoraires des services autres que l'audit à 70 % des honoraires d'audit, dresse une liste noire de services interdits et impose un rapport complémentaire au comité d'audit. La France transpose par l'ordonnance n° 2016-315 du 17 mars 2016 et renforce le H3C au passage. L'indépendance n'est plus seulement un serment, c'est une mécanique.",
+    "source": "Directive 2014/56/UE du Parlement européen et du Conseil du 16 avril 2014 ; règlement (UE) n° 537/2014 du 16 avril 2014 relatif aux exigences spécifiques applicables au contrôle légal des comptes des entités d'intérêt public, EUR-Lex, https://eur-lex.europa.eu/eli/reg/2014/537/oj ; ordonnance n° 2016-315 du 17 mars 2016 relative au commissariat aux comptes, Légifrance",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-021",
+    "titre": "De la H3C à la H2A : l'audit de la durabilité",
+    "texte": "La directive (UE) 2022/2464 du 14 décembre 2022, dite CSRD, impose aux grandes entreprises européennes un rapport de durabilité, environnement, social, gouvernance, et exige qu'il soit certifié par un tiers indépendant, comme les comptes. La France transpose par l'ordonnance n° 2023-1142 du 6 décembre 2023. Le 1er janvier 2024, le Haut Conseil du commissariat aux comptes devient la Haute autorité de l'audit, la H2A, autorité publique indépendante dotée de la personnalité morale. Elle reprend les missions du H3C et y ajoute la régulation des auditeurs de durabilité, commissaires aux comptes ou organismes tiers indépendants. Pour la première fois depuis 1867, le périmètre de la certification déborde les chiffres. Ton métier a changé de nom d'autorité ; il est en train de changer d'objet.",
+    "source": "Ordonnance n° 2023-1142 du 6 décembre 2023 relative à la publication et à la certification d'informations en matière de durabilité, Légifrance (JORF du 7 décembre 2023) ; Directive (UE) 2022/2464 du 14 décembre 2022 (CSRD), EUR-Lex ; H2A, Rapport annuel 2024, https://h2a-france.org/publications/rapport-annuel-2024/rapport-annuel-h2a-2024",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-022",
+    "titre": "Quatre diplômes en un siècle",
+    "texte": "L'historien Jean-Guy Degos compte quatre régimes successifs du diplôme d'expert-comptable français. Le brevet de 1927, délivré largement sur dossier. Le diplôme de 1942, repris en 1945 avec l'Ordre refondé. La réforme de 1963 : le décret n° 63-999 crée un diplôme d'études comptables supérieures, et le décret n° 63-1000 le diplôme d'expertise comptable qui le couronne. Puis le régime de 1981, décret n° 81-536, qui installe l'examen final dans sa forme encore reconnaissable, avec une épreuve de « rédaction et soutenance d'un mémoire ». Le régime de 1963 a survécu jusqu'en 1993, chevauchant celui de 1981 pendant onze ans. Aujourd'hui, le DEC relève du décret n° 2012-432 du 30 mars 2012. Ton épreuve 3 a quarante-cinq ans. Elle n'a pas pris une ride dans sa capacité à faire peur.",
+    "source": "Jean-Guy Degos, « Les diplômes d'expert-comptable français (1927-2010) », Comptabilités, revue d'histoire des comptabilités, n° 5, 2013 ; décrets n° 63-999 et n° 63-1000 de 1963, décret n° 81-536 ; décret n° 2012-432 du 30 mars 2012 relatif à l'exercice de l'activité d'expertise comptable, Légifrance, https://www.legifrance.gouv.fr (JORF du 31 mars 2012)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-023",
+    "titre": "Ce que disent les rapports du jury",
+    "texte": "Les rapports du jury du DEC, publiés par le SIEC, sont une lecture apaisante pour qui prépare le mémoire. Session de mai 2017 : 597 soutenances. Session de mai 2023 : 736. Session de novembre 2023 : 76,9 % des candidats obtiennent au moins 10 sur 20 à l'épreuve 3, avec une moyenne de 11,20, que le jury qualifie lui-même de remarquablement stable. Session de mai 2024 : 78 % de réussite, moyenne 11,24, dans la fourchette haute de l'épreuve. Et le jury de mai 2022 le dit sans détour : les épreuves écrites ont des moyennes historiquement basses, alors que le mémoire est bien réussi et contribue largement aux bons résultats d'ensemble. L'épreuve que tout le monde redoute est celle que les candidats réussissent le mieux. Les deux tiers du chemin, c'est l'agrément et le travail. Le reste, c'est la soutenance, qui dure une heure au plus.",
+    "source": "SIEC, Rapport du jury du DEC, session mai 2024, https://intervenants.siec.education.fr/candidats/docutheque/download/diplome-dexpertise-comptable-dec-rapports-de-jury/DEC%20Rapport%20du%20jury_session%20mai%202024.pdf ; sessions novembre 2023, mai 2023, mai 2022 et mai 2017, même docuthèque SIEC",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-024",
+    "titre": "La Note du jury et l'intelligence artificielle",
+    "texte": "Chaque année, le jury national du DEC publie une Note à l'attention des candidats. La version du 6 juillet 2026 couvre le choix du sujet, le plan, la bibliographie, la demande d'agrément et la soutenance, et comporte une annexe sur l'usage de l'intelligence artificielle. Son principe est simple : le mémoire demeure une recherche personnelle, dont la problématique est en lien direct avec l'expérience professionnelle du candidat. Le texte réglementaire fixe le calendrier : le sujet est proposé à l'agrément du jury six mois au moins avant le début des épreuves de la session de soutenance. La soutenance a un coefficient 4, dure une heure au plus, et une note inférieure à 10 est éliminatoire. Ernest ajoute une chose que la Note ne dit pas : le jury lit des centaines de notices. Celle qui lui parle de ta pratique, pas de tes lectures, sortira du lot.",
+    "source": "SIEC, DEC, Note du jury à l'attention des candidats, version du 6 juillet 2026, https://siec.education.fr/candidats/docutheque/download/diplome-dexpertise-comptable-dec-note-du-jury-aux-candidats/Note%20du%20jury%20a%CC%80%20l%27attention%20des%20candidats%20-%20Version%2006%2007%202026.pdf ; Bulletin officiel de l'enseignement supérieur, 2026, Hebdo 19, ESRS2611472A",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-025",
+    "titre": "Le Code de déontologie de l'expert-comptable",
+    "texte": "Pendant soixante ans, la déontologie des experts-comptables a vécu dans un code des devoirs professionnels adopté par l'Ordre lui-même. Le décret n° 2007-1387 du 27 septembre 2007 en fait un texte réglementaire, le Code de déontologie des professionnels de l'expertise comptable, opposable à tous. Il est ensuite intégré au décret n° 2012-432 du 30 mars 2012, articles 141 à 169. On y trouve les devoirs généraux, compétence, conscience professionnelle, indépendance, probité, respect du secret, le devoir de conseil devenu obligation, la lettre de mission écrite, l'interdiction du démarchage puis son encadrement, les règles sur la publicité et les honoraires. Ton épreuve 1 du 10 novembre, c'est ce texte-là, et sa colonne vertébrale tient en cinq mots : compétence, indépendance, probité, conscience, secret.",
+    "source": "Décret n° 2007-1387 du 27 septembre 2007 portant code de déontologie des professionnels de l'expertise comptable ; décret n° 2012-432 du 30 mars 2012 relatif à l'exercice de l'activité d'expertise comptable, articles 141 à 169, Légifrance, https://www.legifrance.gouv.fr (JORF du 31 mars 2012)",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "pro-026",
+    "titre": "Le serment de l'expert-comptable",
+    "texte": "« Je jure d'exercer ma profession avec conscience et probité, de respecter et faire respecter les lois dans mes travaux. » C'est l'article 3 de l'ordonnance du 19 septembre 1945. Nul ne porte le titre sans avoir prêté ce serment devant son conseil régional. Deux mots, conscience et probité, pour toute une vie.",
+    "source": "Ordonnance n° 45-2138 du 19 septembre 1945, article 3, Légifrance, https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000699117",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-027",
+    "titre": "Le serment du commissaire aux comptes",
+    "texte": "Le commissaire aux comptes jure, devant la cour d'appel dont il relève, « de remplir les devoirs de sa profession avec honneur, probité et indépendance, respecter et faire respecter les lois ». Trois vertus au lieu de deux : l'indépendance s'est ajoutée. C'est l'article L. 821-23 du Code de commerce.",
+    "source": "Code de commerce, article L. 821-23, Légifrance ; Cour d'appel de Dijon, « Prestation de serment des commissaires aux comptes », https://www.cours-appel.justice.fr/dijon/prestation-de-serment-des-commissaires-aux-comptes",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-028",
+    "titre": "Le secret, article 21",
+    "texte": "L'article 21 de l'ordonnance de 1945 soumet les experts-comptables au secret professionnel dans les conditions du Code pénal, aujourd'hui l'article 226-13 : un an d'emprisonnement et 15 000 euros d'amende pour celui qui révèle une information à caractère secret. Le secret n'est pas une politesse envers le client. C'est une loi pénale.",
+    "source": "Ordonnance n° 45-2138 du 19 septembre 1945, article 21 ; Code pénal, article 226-13, Légifrance, https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417945",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-029",
+    "titre": "Les incompatibilités, article 22",
+    "texte": "L'article 22 de l'ordonnance de 1945 dresse la liste de ce qu'un expert-comptable ne peut pas faire : accomplir des actes de commerce ou d'intermédiaire autres que ceux de sa profession, exercer un mandat commercial, agir comme agent d'affaires, occuper un emploi salarié hors de la profession. L'indépendance commence par des interdictions, pas par des intentions.",
+    "source": "Ordonnance n° 45-2138 du 19 septembre 1945, article 22, Légifrance, https://www.legifrance.gouv.fr/loda/id/JORFTEXT000000699117",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-030",
+    "titre": "Le mot « bilan »",
+    "texte": "Bilan vient de l'italien bilancio, lui-même du latin bilanx : la balance à deux plateaux. Un bilan, étymologiquement, c'est une pesée. Deux plateaux, actif et passif, qui doivent s'équilibrer. Le mot entre en français au XVIe siècle, apporté par la pratique marchande italienne.",
+    "source": "Alain Rey (dir.), Dictionnaire historique de la langue française, Le Robert, 1992, entrée « bilan »",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-031",
+    "titre": "Degrange et le journal américain, 1795",
+    "texte": "En 1795, Edmond Degrange publie La Tenue des livres rendue facile. Il y propose de regrouper tous les comptes en cinq comptes généraux et de tenir journal et grand livre sur une seule feuille à colonnes : le « journal-grand livre », qu'on appellera journal américain. Le tableur avant le tableur.",
+    "source": "Edmond Degrange, La Tenue des livres rendue facile, Paris, Hocquart, 1795 (consultable sur Gallica, BnF)",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-032",
+    "titre": "Le comptable des Fugger qui aimait les habits",
+    "texte": "Matthäus Schwarz, chef comptable de la maison Fugger à Augsbourg au XVIe siècle, a fait peindre 137 portraits de lui-même dans ses tenues successives, de 1520 à 1560 : le premier « livre de mode » connu. Il a aussi rédigé un traité de tenue des livres. On peut aimer les colonnes et les manches bouffantes.",
+    "source": "Ulinka Rublack, Maria Hayward (dir.), The First Book of Fashion: The Book of Clothes of Matthäus and Veit Konrad Schwarz of Augsburg, Bloomsbury, 2015",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-033",
+    "titre": "Stevin, 1608 : la partie double pour les princes",
+    "texte": "Le mathématicien flamand Simon Stevin publie en 1608 sa Vorstelicke Bouckhouding, la comptabilité princière. Il explique au prince Maurice de Nassau que la partie double des marchands vaut aussi pour les finances d'un État. Il est l'un des premiers à proposer un arrêté annuel des comptes et un compte de résultat distinct.",
+    "source": "Simon Stevin, Wisconstighe Ghedachtenissen, Leyde, 1608, livre « Vorstelicke Bouckhouding op de Italiaensche wyse » ; O. ten Have, « Simon Stevin of Bruges », in Studies in the History of Accounting, 1956",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-034",
+    "titre": "1973 : les normes internationales",
+    "texte": "L'International Accounting Standards Committee naît à Londres le 29 juin 1973, à l'initiative de neuf pays dont la France. Ses successeurs, l'IASB et les IFRS, deviennent obligatoires pour les comptes consolidés des sociétés cotées européennes par le règlement (CE) n° 1606/2002 du 19 juillet 2002, à compter de 2005. Trente ans pour passer du club au droit.",
+    "source": "Règlement (CE) n° 1606/2002 du Parlement européen et du Conseil du 19 juillet 2002 sur l'application des normes comptables internationales, EUR-Lex, https://eur-lex.europa.eu/eli/reg/2002/1606/oj ; IFRS Foundation, « Who we are », https://www.ifrs.org/about-us/who-we-are/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-035",
+    "titre": "Munich, 1977 : l'IFAC",
+    "texte": "La Fédération internationale des comptables, IFAC, est fondée le 7 octobre 1977 à Munich, lors du 11e Congrès mondial des comptables, par 63 organisations de 51 pays. C'est elle qui porte aujourd'hui les normes ISA d'audit et le Code d'éthique de l'IESBA que tes NEP françaises transposent.",
+    "source": "IFAC, « IFAC History », https://www.ifac.org/who-we-are ; International Federation of Accountants, acte constitutif, Munich, 1977",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-036",
+    "titre": "Loi PACTE : les seuils de 2019",
+    "texte": "La loi n° 2019-486 du 22 mai 2019, dite PACTE, aligne les seuils de nomination obligatoire d'un commissaire aux comptes sur les seuils européens : 4 millions de bilan, 8 millions de chiffre d'affaires, 50 salariés, deux critères sur trois. Des milliers de PME sortent du périmètre de l'audit légal d'un coup. La profession s'en souvient encore.",
+    "source": "Loi n° 2019-486 du 22 mai 2019 relative à la croissance et la transformation des entreprises, article 20 ; décret n° 2019-514 du 24 mai 2019 fixant les seuils, Légifrance, https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000038496102",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-037",
+    "titre": "Le Code de déontologie des commissaires aux comptes",
+    "texte": "Le premier Code de déontologie de la profession de commissaire aux comptes est approuvé par le décret n° 2005-1412 du 16 novembre 2005, dans la foulée de la loi de sécurité financière. Il est entièrement réécrit par le décret n° 2020-292 du 21 mars 2020 pour intégrer la réforme européenne de 2014. Il figure en annexe 8-1 du Code de commerce.",
+    "source": "Décret n° 2005-1412 du 16 novembre 2005 portant approbation du code de déontologie de la profession de commissaire aux comptes ; décret n° 2020-292 du 21 mars 2020, Légifrance ; Code de commerce, annexe 8-1",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-038",
+    "titre": "La Cour des comptes, 1807",
+    "texte": "La loi du 16 septembre 1807 crée la Cour des comptes, héritière des Chambres des comptes de l'Ancien Régime, supprimées en 1791. Le contrôle des comptes publics par des magistrats est plus vieux que la profession libérale qui contrôle les comptes privés.",
+    "source": "Loi du 16 septembre 1807 relative à l'organisation de la Cour des comptes (Bulletin des lois, 1807) ; Cour des comptes, site institutionnel, rubrique « Histoire », https://www.ccomptes.fr",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-039",
+    "titre": "Andersen, acquitté trop tard",
+    "texte": "Le 31 mai 2005, la Cour suprême des États-Unis annule à l'unanimité la condamnation d'Arthur Andersen pour obstruction : les instructions données au jury étaient trop vagues. Juridiquement, le cabinet est blanchi. Pratiquement, il n'existe plus depuis trois ans. La confiance ne se rétablit pas par arrêt.",
+    "source": "Arthur Andersen LLP v. United States, 544 U.S. 696 (2005), Cour suprême des États-Unis, https://supreme.justia.com/cases/federal/us/544/696/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "pro-040",
+    "titre": "1968 : fin des comptables agréés",
+    "texte": "Depuis 1942, l'Ordre avait deux étages : experts-comptables et comptables agréés. La loi n° 68-946 du 31 octobre 1968 ferme l'accès au second titre et organise sa disparition progressive. L'historienne Béatrice Touchelay voit dans cette dualité la « blessure originelle » de l'Ordre. Il a fallu vingt-six ans pour la refermer.",
+    "source": "Loi n° 68-946 du 31 octobre 1968 modifiant le statut de l'Ordre des experts-comptables et des comptables agréés, Légifrance ; Béatrice Touchelay, Comptabilités, revue d'histoire des comptabilités, n° 5, 2013",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  }
+]

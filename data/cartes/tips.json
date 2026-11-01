@@ -1,0 +1,402 @@
+[
+  {
+    "id": "tip-001",
+    "titre": "La liste du soir",
+    "texte": "Avant d'éteindre, prends cinq minutes pour écrire ce qu'il te reste à faire demain. Pas ce que tu as fait : ce qui reste. Plus la liste est précise, mieux ça marche.\nScullin, Krueger, Ballard, Pruett et Bliwise (2018), Journal of Experimental Psychology: General. 57 jeunes adultes en laboratoire de sommeil, mesure par polysomnographie. Ceux qui écrivaient leur liste de choses à faire s'endormaient plus vite (environ neuf minutes de gagnées) que ceux qui décrivaient leur journée passée.\nEffet moyen, une seule étude, petit échantillon. Les auteurs eux-mêmes demandent une réplication. Mais le coût est de cinq minutes.",
+    "source": "Scullin M.K., Krueger M.L., Ballard H.K., Pruett N., Bliwise D.L. (2018). The effects of bedtime writing on difficulty falling asleep: A polysomnographic study comparing to-do lists and completed activity lists. Journal of Experimental Psychology: General, 147(1), 139-146. https://doi.org/10.1037/xge0000374",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-002",
+    "titre": "Si… alors",
+    "texte": "Au lieu de « je réviserai la déontologie », écris « quand j'aurai fini mon café de 8 h, j'ouvre la fiche 3 au bureau ». Un déclencheur, un lieu, une action. La décision est prise à l'avance, le moment venu il n'y a plus qu'à exécuter.\nGollwitzer et Sheeran (2006), Advances in Experimental Social Psychology. Méta-analyse de 94 études sur les « intentions d'implémentation ».\nEffet moyen à grand (d ≈ 0,65) sur l'atteinte des objectifs. C'est l'un des résultats les plus solides de la psychologie de la motivation. Ça marche surtout pour démarrer, moins pour tenir des heures.",
+    "source": "Gollwitzer P.M., Sheeran P. (2006). Implementation intentions and goal achievement: A meta-analysis of effects and processes. Advances in Experimental Social Psychology, 38, 69-119. https://doi.org/10.1016/S0065-2601(06)38002-1",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-003",
+    "titre": "Le principe du progrès",
+    "texte": "Note chaque soir une chose, même minuscule, qui a avancé. Pas pour te féliciter : pour la voir.\nAmabile et Kramer (2011), The Progress Principle (Harvard Business Review Press), et l'article « The Power of Small Wins », Harvard Business Review, mai 2011. Près de 12 000 entrées de journal quotidien recueillies auprès de 238 personnes dans sept entreprises.\nLe facteur le plus lié à une bonne journée intérieure était le sentiment d'avoir progressé dans un travail qui compte, devant la reconnaissance ou les primes. Étude de terrain descriptive : pas de taille d'effet chiffrée à proprement parler, mais un échantillon de journées très large. Les reculs pèsent plus lourd que les progrès ne soulèvent, d'où l'intérêt d'écrire ce qui avance.",
+    "source": "Amabile T.M., Kramer S.J. (2011). The Progress Principle: Using Small Wins to Ignite Joy, Engagement, and Creativity at Work. Harvard Business Review Press. Et : Amabile T.M., Kramer S.J. (2011). The Power of Small Wins. Harvard Business Review, 89(5), 70-80. https://hbr.org/2011/05/the-power-of-small-wins",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-004",
+    "titre": "Soixante-six jours, en gros",
+    "texte": "Une habitude ne se forme pas en 21 jours. Pour la plupart des gens il faut deux mois, et sauter un jour ne casse rien.\nLally, van Jaarsveld, Potts et Wardle (2010), European Journal of Social Psychology. 96 volontaires ont choisi une nouvelle habitude quotidienne (manger un fruit, courir) et noté chaque jour à quel point elle leur semblait automatique.\nMédiane : 66 jours pour atteindre un plateau d'automaticité, avec des écarts énormes (18 à 254 jours). Rater un jour n'avait pas d'effet mesurable sur la courbe. Une seule étude, petit échantillon, habitudes simples : c'est une indication, pas une loi.",
+    "source": "Lally P., van Jaarsveld C.H.M., Potts H.W.W., Wardle J. (2010). How are habits formed: Modelling habit formation in the real world. European Journal of Social Psychology, 40(6), 998-1009. https://doi.org/10.1002/ejsp.674",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-005",
+    "titre": "L'effet nouveau départ",
+    "texte": "Un lundi, un premier du mois, le lendemain d'un anniversaire : ces dates donnent une impulsion réelle. Si tu veux relancer un rythme, cale-le sur l'une d'elles plutôt qu'un jeudi 17.\nDai, Milkman et Riis (2014), Management Science. Recherches Google sur « diet », fréquentation d'une salle de sport universitaire, engagements pris sur un site d'objectifs : tous augmentent nettement en début de semaine, de mois, d'année et après un anniversaire.\nEffet modeste mais retrouvé sur trois jeux de données indépendants. Ça explique l'impulsion ; ça ne dit rien sur la durée, qui dépend de toi.",
+    "source": "Dai H., Milkman K.L., Riis J. (2014). The Fresh Start Effect: Temporal Landmarks Motivate Aspirational Behavior. Management Science, 60(10), 2563-2582. https://doi.org/10.1287/mnsc.2014.1901",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-006",
+    "titre": "Le biais de planification",
+    "texte": "Quand tu estimes le temps d'une tâche, regarde combien a pris la dernière tâche du même genre. Pas combien devrait prendre celle-ci.\nBuehler, Griffin et Ross (1994), Journal of Personality and Social Psychology. Des étudiants en fin de mémoire ont prédit leur date de dépôt : 33,9 jours en moyenne. Réalité : 55,5 jours. Même leur estimation « si tout va mal » était trop optimiste. Moins de 30 % ont tenu leur prédiction.\nEffet grand et très répliqué depuis. Le remède qui marche le mieux dans leurs expériences : se fonder sur ses durées passées plutôt que sur le plan de la tâche à venir.",
+    "source": "Buehler R., Griffin D., Ross M. (1994). Exploring the \"planning fallacy\": Why people underestimate their task completion times. Journal of Personality and Social Psychology, 67(3), 366-381. https://doi.org/10.1037/0022-3514.67.3.366",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-007",
+    "titre": "Se tester plutôt que relire",
+    "texte": "Ferme la fiche et récite. Ou écris de mémoire ce que tu sais d'un article, puis compare. C'est désagréable et c'est précisément ce qui fonctionne.\nRoediger et Karpicke (2006), Psychological Science. Des étudiants lisent un texte puis soit le relisent, soit tentent de le restituer de mémoire. Une semaine plus tard, ceux qui se sont testés retiennent environ 56 % du texte contre 42 % pour les relecteurs, alors qu'à cinq minutes les relecteurs étaient devant.\nEffet grand, répliqué des centaines de fois depuis sous le nom d'effet test. Le piège : la relecture donne une impression de maîtrise que le test fait disparaître. Cette impression est fausse.",
+    "source": "Roediger H.L., Karpicke J.D. (2006). Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention. Psychological Science, 17(3), 249-255. https://doi.org/10.1111/j.1467-9280.2006.01693.x",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-008",
+    "titre": "Espacer, pas entasser",
+    "texte": "Revois une notion le lendemain, puis dans quelques jours, puis dans quelques semaines. Pour un examen dans six mois, un écart de trois à quatre semaines entre deux révisions d'un même point est dans la bonne zone.\nCepeda, Pashler, Vul, Wixted et Rohrer (2006), Psychological Bulletin : méta-analyse de 254 comparaisons. Puis Cepeda et al. (2008), Psychological Science : 1 354 participants testés jusqu'à un an plus tard.\nEffet robuste et grand. L'intervalle optimal entre deux révisions vaut environ 10 à 20 % du délai avant l'examen. Trop court, on ré-apprend ce qu'on sait encore ; trop long, on repart de zéro.",
+    "source": "Cepeda N.J., Pashler H., Vul E., Wixted J.T., Rohrer D. (2006). Distributed practice in verbal recall tasks: A review and quantitative synthesis. Psychological Bulletin, 132(3), 354-380. https://doi.org/10.1037/0033-2909.132.3.354 ; Cepeda N.J., Vul E., Rohrer D., Wixted J.T., Pashler H. (2008). Spacing effects in learning: A temporal ridgeline of optimal retention. Psychological Science, 19(11), 1095-1102. https://doi.org/10.1111/j.1467-9280.2008.02209.x",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-009",
+    "titre": "Ce qui marche et ce qui ne marche pas",
+    "texte": "Surligner, relire, résumer : les méthodes les plus utilisées sont les moins efficaces. Se tester et espacer : les deux seules notées « utilité élevée » par la plus grande revue du domaine.\nDunlosky, Rawson, Marsh, Nathan et Willingham (2013), Psychological Science in the Public Interest. Revue de dix techniques d'étude, évaluées sur la diversité des publics, des matières et des conditions où elles ont fait leurs preuves.\nPratique du test et pratique distribuée : utilité élevée. Interrogation élaborative, auto-explication, pratique entrelacée : utilité modérée. Surlignage, relecture, résumé, mnémotechniques par mots-clés, imagerie : utilité faible. Ce n'est pas que surligner soit nul : c'est que ça ne fait presque rien de plus que lire.",
+    "source": "Dunlosky J., Rawson K.A., Marsh E.J., Nathan M.J., Willingham D.T. (2013). Improving Students' Learning With Effective Learning Techniques: Promising Directions From Cognitive and Educational Psychology. Psychological Science in the Public Interest, 14(1), 4-58. https://doi.org/10.1177/1529100612453266",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-010",
+    "titre": "Le réapprentissage successif",
+    "texte": "Une notion est « acquise » quand tu l'as rappelée correctement trois fois de suite. Puis tu la reprends, à zéro, dans trois séances espacées. Pas avant d'avoir réussi, pas une fois seulement.\nRawson et Dunlosky (2011), Journal of Experimental Psychology: General. Des étudiants apprennent des définitions jusqu'à les rappeler correctement, puis les réapprennent lors de séances séparées. Test de rétention jusqu'à plusieurs mois.\nLe meilleur rapport effort/rétention : trois rappels corrects lors de la première séance, puis trois séances de réapprentissage. Au-delà, le gain devient faible. Effet grand sur la rétention à long terme, dans une étude de laboratoire avec du matériel scolaire réel.",
+    "source": "Rawson K.A., Dunlosky J. (2011). Optimizing schedules of retrieval practice for durable and efficient learning: How much is enough? Journal of Experimental Psychology: General, 140(3), 283-302. https://doi.org/10.1037/a0023956",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-011",
+    "titre": "Mélanger les types d'exercices",
+    "texte": "Si tu fais une série de cas, mélange les thèmes au lieu d'enchaîner dix cas identiques. Tu auras l'impression d'être moins bon pendant la séance. C'est l'inverse qui est vrai à l'examen.\nRohrer et Taylor (2007), Instructional Science. Des étudiants apprennent à calculer le volume de quatre solides, soit par blocs (tous les prismes, puis tous les cônes…), soit entrelacés. Une semaine plus tard : 63 % de réussite pour le groupe entrelacé, 20 % pour le groupe par blocs.\nEffet grand ici, mais sur des problèmes de géométrie. Dunlosky et al. (2013) classent l'entrelacement en « utilité modérée » : il aide surtout quand la difficulté est de choisir la bonne méthode, ce qui ressemble beaucoup à un cas d'examen.",
+    "source": "Rohrer D., Taylor K. (2007). The shuffling of mathematics problems improves learning. Instructional Science, 35(6), 481-498. https://doi.org/10.1007/s11251-007-9015-8",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-012",
+    "titre": "Dormir, c'est réviser",
+    "texte": "Ce que tu as appris dans la journée est rejoué et renforcé pendant le sommeil lent profond, surtout en première moitié de nuit. Une séance de révision suivie d'une vraie nuit vaut plus qu'une séance plus longue suivie d'une nuit tronquée.\nRasch et Born (2013), Physiological Reviews. Revue de référence sur le rôle du sommeil dans la consolidation de la mémoire : réactivation des traces hippocampiques, transfert vers le cortex, rôle des fuseaux et des ondes lentes.\nEffet solidement établi chez l'humain et l'animal, avec des dizaines d'études convergentes. Le détail des mécanismes reste discuté ; le fait que le sommeil consolide ne l'est plus.",
+    "source": "Rasch B., Born J. (2013). About Sleep's Role in Memory. Physiological Reviews, 93(2), 681-766. https://doi.org/10.1152/physrev.00032.2012",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-013",
+    "titre": "La nuit blanche avant l'épreuve",
+    "texte": "Ne la fais pas. Après une nuit sans sommeil, l'hippocampe encode beaucoup moins bien : ce que tu lis à 3 h ne rentre pas, et ce que tu savais sort moins bien.\nYoo, Hu, Gujar, Jolesz et Walker (2007), Nature Neuroscience. Deux groupes de jeunes adultes apprennent une liste d'images, l'un après une nuit normale, l'autre après 35 h d'éveil, sous IRM. Le groupe privé de sommeil retient nettement moins (de l'ordre de 40 % de moins) et montre une activité hippocampique réduite.\nEffet grand, mais une seule étude de 28 personnes. Les travaux ultérieurs vont dans le même sens. Deux nuits courtes d'affilée avant l'examen coûtent déjà.",
+    "source": "Yoo S.S., Hu P.T., Gujar N., Jolesz F.A., Walker M.P. (2007). A deficit in the ability to form new human memories without sleep. Nature Neuroscience, 10(3), 385-392. https://doi.org/10.1038/nn1851",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-014",
+    "titre": "Six heures ne suffisent pas",
+    "texte": "Dormir six heures par nuit pendant deux semaines dégrade l'attention autant qu'une ou deux nuits blanches. Et tu ne le sens pas.\nVan Dongen, Maislin, Mullington et Dinges (2003), Sleep. 48 adultes confinés en laboratoire quatorze jours avec 4, 6 ou 8 h de sommeil autorisées. Tests d'attention plusieurs fois par jour.\nÀ 6 h par nuit, les performances baissent de façon cumulative sans plateau et finissent au niveau d'une privation totale de deux nuits. Les participants, eux, déclaraient ne se sentir qu'un peu plus somnolents. Effet grand, étude contrôlée de référence, mais 48 personnes. Si tu dors six heures, tu ne t'en rends pas compte : c'est le point.",
+    "source": "Van Dongen H.P.A., Maislin G., Mullington J.M., Dinges D.F. (2003). The cumulative cost of additional wakefulness: dose-response effects on neurobehavioral functions and sleep physiology from chronic sleep restriction and total sleep deprivation. Sleep, 26(2), 117-126. https://doi.org/10.1093/sleep/26.2.117",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-015",
+    "titre": "Se lever à la même heure",
+    "texte": "La régularité compte autant que la durée. Lever et coucher à heures à peu près fixes, week-end compris, c'est l'intervention la moins chère qui existe.\nPhillips et al. (2017), Scientific Reports. 61 étudiants suivis 30 jours avec un journal de sommeil ; les auteurs construisent un indice de régularité du sommeil et le comparent aux résultats du semestre.\nCorrélation moyenne (r = 0,37) entre régularité et notes, sans différence de durée totale de sommeil entre réguliers et irréguliers. Les irréguliers sécrétaient leur mélatonine 2,6 h plus tard. Étude observationnelle, petit échantillon : ça ne prouve pas la causalité, mais c'est cohérent avec tout ce qu'on sait du rythme circadien.",
+    "source": "Phillips A.J.K., Clerx W.M., O'Brien C.S., Sano A., Barger L.K., Picard R.W., Lockley S.W., Klerman E.B., Czeisler C.A. (2017). Irregular sleep/wake patterns are associated with poorer academic performance and delayed circadian and sleep/wake timing. Scientific Reports, 7, 3216. https://doi.org/10.1038/s41598-017-03171-4",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-016",
+    "titre": "La sieste qui vaut une nuit",
+    "texte": "Une sieste de 60 à 90 minutes en début d'après-midi, qui passe par du sommeil lent et du sommeil paradoxal, suffit à consolider un apprentissage du matin presque autant qu'une nuit entière.\nMednick, Nakayama et Stickgold (2003), Nature Neuroscience. Des participants apprennent une tâche visuelle le matin ; ceux qui font une sieste de 60–90 min s'améliorent au test du soir autant que ceux retestés après une nuit, et les sans-sieste se dégradent.\nEffet moyen à grand, mais sur une tâche perceptive, pas sur du droit des sociétés. Petit échantillon. Une sieste de 20 minutes aide la vigilance ; pour la mémoire il faut la version longue, et pas après 16 h sous peine de ruiner la nuit.",
+    "source": "Mednick S., Nakayama K., Stickgold R. (2003). Sleep-dependent learning: a nap is as good as a night. Nature Neuroscience, 6(7), 697-698. https://doi.org/10.1038/nn1078",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-017",
+    "titre": "Le café de 16 h",
+    "texte": "Un café six heures avant le coucher enlève encore une heure de sommeil. Et tu ne le remarques pas.\nDrake, Roehrs, Shambroom et Roth (2013), Journal of Clinical Sleep Medicine. 12 bons dormeurs prennent 400 mg de caféine (deux à trois grands cafés) à 0, 3 ou 6 h avant le coucher, ou un placebo, chez eux, avec un moniteur de sommeil.\nÀ 6 h d'écart, le temps de sommeil objectif baisse de plus d'une heure, alors que le journal subjectif ne montre rien. Effet grand mais une seule petite étude ; une revue de 2020 note qu'il a été retrouvé depuis. Dose forte aussi. Pour une sensibilité moyenne : dernier café vers 14 h si tu te couches à 23 h.",
+    "source": "Drake C., Roehrs T., Shambroom J., Roth T. (2013). Caffeine Effects on Sleep Taken 0, 3, or 6 Hours before Going to Bed. Journal of Clinical Sleep Medicine, 9(11), 1195-1200. https://doi.org/10.5664/jcsm.3170",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-018",
+    "titre": "Le café après, pas avant",
+    "texte": "Si tu veux que le café serve ta mémoire, prends-le juste après la séance de révision plutôt qu'avant.\nBorota et al. (2014), Nature Neuroscience. 160 participants qui ne boivent pas de café d'habitude étudient des images, puis reçoivent 200 mg de caféine ou un placebo. Test surprise 24 h plus tard.\nLe groupe caféine distingue mieux les images proches de celles vues la veille : la caféine après l'encodage a renforcé la consolidation. Effet petit à moyen, une seule étude, chez des non-consommateurs. Si tu bois déjà trois cafés par jour, le gain est sans doute moindre. Et voir la carte sur le café de 16 h.",
+    "source": "Borota D., Murray E., Keceli G., Chang A., Watabe J.M., Ly M., Toscano J.P., Yassa M.A. (2014). Post-study caffeine administration enhances memory consolidation in humans. Nature Neuroscience, 17(2), 201-203. https://doi.org/10.1038/nn.3623",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-019",
+    "titre": "L'écran du soir",
+    "texte": "Lire sur tablette ou téléphone lumineux dans l'heure qui précède le coucher retarde la mélatonine et l'endormissement, et laisse plus groggy le matin. Papier ou liseuse sans rétroéclairage le soir.\nChang, Aeschbach, Duffy et Czeisler (2015), PNAS. 12 adultes en laboratoire lisent cinq soirs sur iPad puis cinq soirs sur papier (ou l'inverse), quatre heures avant le coucher.\nAvec l'écran : mélatonine supprimée de moitié, phase circadienne retardée d'environ 1 h 30, endormissement plus long d'une dizaine de minutes, moins de sommeil paradoxal, vigilance matinale réduite. Effet moyen, très petit échantillon, écran au maximum pendant quatre heures : les conditions réelles sont sans doute moins dures. La direction de l'effet est confirmée par d'autres travaux.",
+    "source": "Chang A.-M., Aeschbach D., Duffy J.F., Czeisler C.A. (2015). Evening use of light-emitting eReaders negatively affects sleep, circadian timing, and next-morning alertness. PNAS, 112(4), 1232-1237. https://doi.org/10.1073/pnas.1418490112",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-020",
+    "titre": "Une heure dehors, le jour",
+    "texte": "Chaque heure passée à la lumière du jour est associée à une humeur un peu meilleure, un sommeil un peu plus facile et une horloge interne plus matinale. Révise près d'une fenêtre, sors à midi.\nBurns et al. (2021), Journal of Affective Disorders. Plus de 400 000 participants de la UK Biobank, temps déclaré passé dehors de jour, croisé avec dépression, antidépresseurs, insomnie, chronotype.\nChaque heure supplémentaire dehors est associée à une baisse de 5 à 12 % des odds d'humeur basse, d'anhédonie ou d'insomnie. Petit effet par heure, très grand échantillon, mais étude observationnelle : les gens qui sortent sont peut-être différents pour d'autres raisons. L'analyse longitudinale va dans le même sens avec des effets plus petits.",
+    "source": "Burns A.C., Saxena R., Vetter C., Phillips A.J.K., Lane J.M., Cain S.W. (2021). Time spent in outdoor light is associated with mood, sleep, and circadian rhythm-related outcomes: A cross-sectional and longitudinal study in over 400,000 UK Biobank participants. Journal of Affective Disorders, 295, 347-352. https://doi.org/10.1016/j.jad.2021.08.056",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-021",
+    "titre": "Une semaine sans lumière artificielle",
+    "texte": "La lumière naturelle le matin avance ton horloge ; les lampes et écrans du soir la retardent. Si tu te couches tard sans le vouloir, c'est en partie une affaire d'éclairage.\nWright et al. (2013), Current Biology. Huit adultes mesurés une semaine en vie normale, puis une semaine de camping dans les Rocheuses sans aucune lumière électrique.\nAprès la semaine de camping, le début de la sécrétion de mélatonine est avancé d'environ deux heures et se cale sur le coucher du soleil ; les « couche-tard » sont ceux qui bougent le plus. Effet grand, mais huit personnes et une seule expérience. Les auteurs l'ont répété en 2017 avec un résultat similaire. Le mécanisme (lumière forte le jour, faible le soir) est bien établi par ailleurs.",
+    "source": "Wright K.P., McHill A.W., Birks B.R., Griffin B.R., Rusterholz T., Chinoy E.D. (2013). Entrainment of the Human Circadian Clock to the Natural Light-Dark Cycle. Current Biology, 23(16), 1554-1558. https://doi.org/10.1016/j.cub.2013.06.039",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-022",
+    "titre": "Trente minutes qui changent l'humeur",
+    "texte": "Une séance d'exercice aérobie modéré de 20 à 35 minutes améliore l'humeur juste après, surtout si elle n'était pas bonne avant. Marcher vite, pédaler, nager : l'intensité n'a pas besoin d'être forte.\nReed et Ones (2006), Psychology of Sport and Exercise. Méta-analyse de 158 études publiées entre 1979 et 2005 sur l'affect positif après une séance unique d'exercice aérobie.\nEffet moyen (d ≈ 0,47). L'effet est le plus net immédiatement après, pour une intensité faible à modérée, pour des durées jusqu'à 35 minutes, et quand l'humeur de départ est basse. Il dure au moins une demi-heure. Les groupes contrôle, eux, ont tendance à voir leur humeur baisser en attendant.",
+    "source": "Reed J., Ones D.S. (2006). The effect of acute aerobic exercise on positive activated affect: A meta-analysis. Psychology of Sport and Exercise, 7(5), 477-514. https://doi.org/10.1016/j.psychsport.2005.11.003",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-023",
+    "titre": "Bouger quatre heures après",
+    "texte": "Révise le matin, fais du sport en milieu d'après-midi. Pas tout de suite après la séance : quelques heures plus tard.\nvan Dongen, Kersten, Wagner, Morris et Fernández (2016), Current Biology. 72 participants apprennent 90 associations image-lieu, puis font 35 minutes de vélo par intervalles soit immédiatement, soit 4 h plus tard, soit pas du tout. Test 48 h après.\nLe groupe « 4 h plus tard » retient mieux (environ 10 % de plus) que le groupe sans exercice ; le groupe « immédiatement » ne gagne rien. Effet moyen, une seule étude, et seulement deux délais testés : on ne sait pas si 4 h est l'optimum. Hypothèse : l'exercice aide la consolidation une fois qu'elle a commencé.",
+    "source": "van Dongen E.V., Kersten I.H.P., Wagner I.C., Morris R.G.M., Fernández G. (2016). Physical Exercise Performed Four Hours after Learning Improves Memory Retention and Increases Hippocampal Pattern Similarity during Retrieval. Current Biology, 26(13), 1722-1727. https://doi.org/10.1016/j.cub.2016.04.071",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-024",
+    "titre": "Marcher pour trouver",
+    "texte": "Quand tu cherches un angle pour le mémoire, marche. Dehors ou sur un tapis, peu importe : c'est la marche qui compte, pas le paysage.\nOppezzo et Schwartz (2014), Journal of Experimental Psychology: Learning, Memory, and Cognition. Quatre expériences, 176 étudiants : tâches de créativité divergente (trouver des usages inhabituels d'un objet) assis ou en marchant.\nEn marchant, les participants produisent en moyenne 60 % d'idées nouvelles en plus, et l'effet persiste un moment après s'être rassis. Effet grand, mais sur la créativité divergente seulement : la marche n'améliore pas, voire dégrade légèrement, les tâches de réponse unique et convergente. Donc : marcher pour chercher, s'asseoir pour trancher.",
+    "source": "Oppezzo M., Schwartz D.L. (2014). Give your ideas some legs: The positive effect of walking on creative thinking. Journal of Experimental Psychology: Learning, Memory, and Cognition, 40(4), 1142-1152. https://doi.org/10.1037/a0036577",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-025",
+    "titre": "La micro-pause qui relance",
+    "texte": "Sur une tâche longue et répétitive, deux pauses de quelques secondes pour penser à autre chose évitent la chute d'attention de la fin.\nAriga et Lleras (2011), Cognition. 84 participants font 40 minutes d'une tâche de vigilance ; un groupe est interrompu deux fois par une tâche sans rapport de quelques secondes.\nSans pause, les performances déclinent régulièrement ; avec les deux courtes diversions, elles restent au niveau initial. Effet moyen, une seule étude de laboratoire, tâche très monotone. L'idée que l'attention s'« épuise » est contestée ; l'idée qu'une interruption brève la relance l'est moins.",
+    "source": "Ariga A., Lleras A. (2011). Brief and rare mental \"breaks\" keep you focused: Deactivation and reactivation of task goals preempt vigilance decrements. Cognition, 118(3), 439-443. https://doi.org/10.1016/j.cognition.2010.12.007",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-026",
+    "titre": "Quarante secondes de vert",
+    "texte": "Entre deux blocs, regarde quarante secondes par la fenêtre quelque chose de végétal. Un toit, un arbre, une plante. Pas le téléphone.\nLee, Williams, Sargent, Williams et Johnson (2015), Journal of Environmental Psychology. 150 étudiants font une tâche d'attention soutenue, puis regardent 40 secondes soit un toit végétalisé fleuri, soit un toit en béton, puis reprennent.\nLe groupe « toit vert » fait moins d'erreurs d'omission et répond de façon plus stable dans la seconde moitié de la tâche. Petit effet, une seule étude, tâche de laboratoire. Elle s'inscrit dans la théorie de la restauration de l'attention par la nature, qui a d'autres appuis (voir la carte sur la marche en nature).",
+    "source": "Lee K.E., Williams K.J.H., Sargent L.D., Williams N.S.G., Johnson K.A. (2015). 40-second green roof views sustain attention: The role of micro-breaks in attention restoration. Journal of Environmental Psychology, 42, 182-189. https://doi.org/10.1016/j.jenvp.2015.04.003",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-027",
+    "titre": "Le téléphone dans l'autre pièce",
+    "texte": "Pendant une séance, pose le téléphone hors de vue, dans une autre pièce. Éteint sur la table, il coûte encore.\nWard, Duke, Gneezy et Bos (2017), Journal of the Association for Consumer Research. Près de 800 participants font des tests de mémoire de travail et d'intelligence fluide avec leur téléphone soit sur la table, soit dans la poche ou le sac, soit dans une autre pièce.\nPlus le téléphone est proche, plus les scores baissent, même éteint, même sans y toucher. Les participants ne rapportent pourtant aucune distraction ressentie. Effet petit à moyen, deux études, un seul laboratoire. L'explication proposée : une partie de l'attention sert à ne pas y penser.",
+    "source": "Ward A.F., Duke K., Gneezy A., Bos M.W. (2017). Brain Drain: The Mere Presence of One's Own Smartphone Reduces Available Cognitive Capacity. Journal of the Association for Consumer Research, 2(2), 140-154. https://doi.org/10.1086/691462",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-028",
+    "titre": "Le cœur qui bat, c'est de l'aide",
+    "texte": "Avant l'épreuve, quand tu sens ton cœur s'accélérer, dis-toi que ce n'est pas de la panique : c'est le corps qui envoie de l'oxygène au cerveau. Ce changement de lecture mesuré améliore les scores.\nJamieson, Mendes, Blackstock et Schmader (2010), Journal of Experimental Social Psychology. 60 étudiants passent un GRE blanc ; la moitié lit d'abord un texte expliquant que l'excitation physiologique aide la performance.\nLe groupe « réévaluation » obtient de meilleurs scores en mathématiques le jour du test, et aussi au vrai GRE passé un à trois mois plus tard. Effet moyen, une seule étude de petite taille ; l'approche a été reproduite depuis par la même équipe dans d'autres contextes. Elle ne demande rien d'autre que deux minutes de lecture.",
+    "source": "Jamieson J.P., Mendes W.B., Blackstock E., Schmader T. (2010). Turning the knots in your stomach into bows: Reappraising arousal improves performance on the GRE. Journal of Experimental Social Psychology, 46(1), 208-212. https://doi.org/10.1016/j.jesp.2009.08.015",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-029",
+    "titre": "Dix minutes pour vider l'angoisse",
+    "texte": "Juste avant une épreuve, écris pendant dix minutes ce que tu crains, librement. Puis range la feuille.\nRamirez et Beilock (2011), Science. Deux études de laboratoire et deux en classe de lycée avant un vrai examen : les élèves écrivent soit sur leurs inquiétudes liées au test, soit sur un sujet neutre, soit rien.\nChez les élèves très anxieux, l'écriture expressive fait passer la note de B- à B+ en moyenne ; les peu anxieux ne gagnent rien. Effet moyen chez les anxieux, pas de bénéfice pour les autres. Quatre études convergentes d'une même équipe ; l'hypothèse est que l'écriture libère la mémoire de travail occupée par les ruminations.",
+    "source": "Ramirez G., Beilock S.L. (2011). Writing About Testing Worries Boosts Exam Performance in the Classroom. Science, 331(6014), 211-213. https://doi.org/10.1126/science.1199427",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-030",
+    "titre": "Deux semaines d'attention au souffle",
+    "texte": "Dix minutes par jour à ramener l'attention sur la respiration, pendant deux semaines, a amélioré dans une étude la mémoire de travail et un score de compréhension. Résultat à prendre avec des pincettes.\nMrazek, Franklin, Phillips, Baird et Schooler (2013), Psychological Science. 48 étudiants suivent soit un cours de pleine conscience, soit un cours de nutrition, deux semaines, quatre séances de 45 min par semaine plus dix minutes d'exercice quotidien.\nLe groupe pleine conscience améliore sa compréhension de lecture au GRE (d'environ 16 points de percentile) et sa mémoire de travail, en réduisant le vagabondage mental. Effet moyen à grand, mais une seule petite étude, et le domaine de la pleine conscience souffre de résultats fragiles. Le coût est faible ; l'attente doit l'être aussi.",
+    "source": "Mrazek M.D., Franklin M.S., Phillips D.T., Baird B., Schooler J.W. (2013). Mindfulness Training Improves Working Memory Capacity and GRE Performance While Reducing Mind Wandering. Psychological Science, 24(5), 776-781. https://doi.org/10.1177/0956797612459659",
+    "fiabilite": "sourcee",
+    "rarete": "longue"
+  },
+  {
+    "id": "tip-031",
+    "titre": "Le téléphone visible",
+    "texte": "Un téléphone posé en vue, même pas le tien, abaisse les performances sur les tâches qui demandent de l'attention. Thornton, Faires, Robbins et Rollins (2014), Social Psychology, deux expériences. Petit effet, sur les tâches difficiles seulement.",
+    "source": "Thornton B., Faires A., Robbins M., Rollins E. (2014). The Mere Presence of a Cell Phone May be Distracting: Implications for Attention and Task Performance. Social Psychology, 45(6), 479-488. https://doi.org/10.1027/1864-9335/a000216",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-032",
+    "titre": "Changer de tâche coûte",
+    "texte": "Passer d'une tâche à une autre fait perdre du temps à chaque bascule, d'autant plus que les tâches sont complexes ou peu familières. Rubinstein, Meyer et Evans (2001), Journal of Experimental Psychology: Human Perception and Performance. Effet robuste, répliqué depuis des décennies. Un seul dossier ouvert à la fois.",
+    "source": "Rubinstein J.S., Meyer D.E., Evans J.E. (2001). Executive control of cognitive processes in task switching. Journal of Experimental Psychology: Human Perception and Performance, 27(4), 763-797. https://doi.org/10.1037/0096-1523.27.4.763",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-033",
+    "titre": "Stylo ou clavier : contesté",
+    "texte": "Mueller et Oppenheimer (2014, Psychological Science) trouvaient que noter à la main valait mieux que taper. La réplication directe de Morehead, Dunlosky et Rawson (2019, Educational Psychology Review) n'a pas retrouvé l'effet net. Résultat contesté : choisis l'outil qui te fait reformuler plutôt que recopier.",
+    "source": "Mueller P.A., Oppenheimer D.M. (2014). The Pen Is Mightier Than the Keyboard. Psychological Science, 25(6), 1159-1168. https://doi.org/10.1177/0956797614524581 ; Morehead K., Dunlosky J., Rawson K.A. (2019). How Much Mightier Is the Pen than the Keyboard for Note-Taking? Educational Psychology Review, 31, 753-780. https://doi.org/10.1007/s10648-019-09468-2",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-034",
+    "titre": "La musique à paroles",
+    "texte": "Lire en écoutant une musique chantée dégrade la compréhension, qu'on aime le morceau ou non ; la musique sans paroles coûte moins. Perham et Currie (2014), Applied Cognitive Psychology. Petit effet, une seule étude. Pour réviser un texte : silence ou instrumental.",
+    "source": "Perham N., Currie H. (2014). Does listening to preferred music improve reading comprehension performance? Applied Cognitive Psychology, 28(2), 279-284. https://doi.org/10.1002/acp.2994",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-035",
+    "titre": "Le papier garde un petit avantage",
+    "texte": "Pour comprendre un texte informatif, surtout en temps limité, le papier l'emporte légèrement sur l'écran. Delgado, Vargas, Ackerman et Salmerón (2018), Educational Research Review, méta-analyse de 54 études. Petit effet, mais constant, et qui ne diminue pas avec les années.",
+    "source": "Delgado P., Vargas C., Ackerman R., Salmerón L. (2018). Don't throw away your printed books: A meta-analysis on the effects of reading media on reading comprehension. Educational Research Review, 25, 23-38. https://doi.org/10.1016/j.edurev.2018.09.003",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-036",
+    "titre": "Deviner avant d'apprendre",
+    "texte": "Essayer de répondre à une question avant de connaître la réponse, et se tromper, fait mieux retenir la bonne réponse que la lire directement. Kornell, Hays et Bjork (2009), Journal of Experimental Psychology: Learning, Memory, and Cognition. Effet moyen, plusieurs expériences convergentes.",
+    "source": "Kornell N., Hays M.J., Bjork R.A. (2009). Unsuccessful retrieval attempts enhance subsequent learning. Journal of Experimental Psychology: Learning, Memory, and Cognition, 35(4), 989-998. https://doi.org/10.1037/a0015729",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-037",
+    "titre": "Planifier ce qu'on laisse",
+    "texte": "Une tâche inachevée tourne dans la tête. Écrire un plan précis pour la finir suffit à la faire taire, sans la faire. Masicampo et Baumeister (2011), Journal of Personality and Social Psychology. Effet moyen, études de laboratoire.",
+    "source": "Masicampo E.J., Baumeister R.F. (2011). Consider it done! Plan making can eliminate the cognitive effects of unfulfilled goals. Journal of Personality and Social Psychology, 101(4), 667-683. https://doi.org/10.1037/a0024192",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-038",
+    "titre": "Des échéances qu'on se fixe",
+    "texte": "Se donner soi-même des dates intermédiaires et s'y tenir améliore le travail rendu, même si les gens se les fixent moins bien que ne le ferait un tiers. Ariely et Wertenbroch (2002), Psychological Science. Effet moyen, étudiants du MIT, trois études.",
+    "source": "Ariely D., Wertenbroch K. (2002). Procrastination, Deadlines, and Performance: Self-Control by Precommitment. Psychological Science, 13(3), 219-224. https://doi.org/10.1111/1467-9280.00441",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-039",
+    "titre": "Associer la corvée au plaisir",
+    "texte": "Réserver une chose agréable (un podcast, une série) au moment de la chose pénible fait faire la chose pénible plus souvent. Milkman, Minson et Volpp (2014), Management Science : fréquentation d'une salle de sport augmentée de moitié les premières semaines, puis l'effet s'estompe. Effet moyen au début, petit ensuite.",
+    "source": "Milkman K.L., Minson J.A., Volpp K.G.M. (2014). Holding the Hunger Games Hostage at the Gym: An Evaluation of Temptation Bundling. Management Science, 60(2), 283-299. https://doi.org/10.1287/mnsc.2013.1784",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-040",
+    "titre": "Se pardonner d'avoir traîné",
+    "texte": "Les étudiants qui se pardonnaient d'avoir procrastiné avant un premier examen procrastinaient moins avant le suivant. Wohl, Pychyl et Bennett (2010), Personality and Individual Differences. Une seule étude, corrélationnelle, auto-déclarée : indice, pas preuve. Mais la culpabilité, elle, n'a jamais fait réviser personne.",
+    "source": "Wohl M.J.A., Pychyl T.A., Bennett S.H. (2010). I forgive myself, now I can study: How self-forgiveness for procrastinating can reduce future procrastination. Personality and Individual Differences, 48(7), 803-808. https://doi.org/10.1016/j.paid.2010.01.029",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-041",
+    "titre": "Un objectif précis et difficile",
+    "texte": "« Faire 20 questions de déontologie » bat « travailler la déonto » et bat aussi « faire de mon mieux ». Locke et Latham (2002), American Psychologist, synthèse de 35 ans de recherche. Effet grand et très répliqué, tant que la personne a les moyens d'atteindre l'objectif.",
+    "source": "Locke E.A., Latham G.P. (2002). Building a practically useful theory of goal setting and task motivation: A 35-year odyssey. American Psychologist, 57(9), 705-717. https://doi.org/10.1037/0003-066X.57.9.705",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-042",
+    "titre": "Respirer lentement",
+    "texte": "Respirer à moins de dix cycles par minute pendant quelques minutes augmente la variabilité cardiaque et s'accompagne d'une baisse de l'anxiété déclarée. Zaccaro et al. (2018), Frontiers in Human Neuroscience, revue systématique de 15 études. Effet moyen sur les mesures physiologiques ; mécanismes encore débattus.",
+    "source": "Zaccaro A., Piarulli A., Laurino M., Garbella E., Menicucci D., Neri B., Gemignani A. (2018). How Breath-Control Can Change Your Life: A Systematic Review on Psycho-Physiological Correlates of Slow Breathing. Frontiers in Human Neuroscience, 12, 353. https://doi.org/10.3389/fnhum.2018.00353",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-043",
+    "titre": "Un verre d'eau",
+    "texte": "Une déshydratation légère dégrade un peu l'attention et l'humeur ; boire les rétablit. Masento, Golightly, Field, Butler et van Reekum (2014), British Journal of Nutrition, revue. Effets modestes, mesures hétérogènes d'une étude à l'autre. Une bouteille sur le bureau ne coûte rien.",
+    "source": "Masento N.A., Golightly M., Field D.T., Butler L.T., van Reekum C.M. (2014). Effects of hydration status on cognitive performance and mood. British Journal of Nutrition, 111(10), 1841-1852. https://doi.org/10.1017/S0007114513004455",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-044",
+    "titre": "Manger méditerranéen",
+    "texte": "Un régime de type méditerranéen a réduit les symptômes dépressifs dans un essai contrôlé de 12 semaines. Jacka et al. (2017), BMC Medicine, essai SMILES. Effet moyen, mais 67 participants, forte attrition, et résultat contesté depuis. À prendre comme une piste, pas une ordonnance.",
+    "source": "Jacka F.N. et al. (2017). A randomised controlled trial of dietary improvement for adults with major depression (the 'SMILES' trial). BMC Medicine, 15, 23. https://doi.org/10.1186/s12916-017-0791-y",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-045",
+    "titre": "Le verre du soir",
+    "texte": "L'alcool endort plus vite mais fragmente la seconde moitié de la nuit et réduit le sommeil paradoxal. Ebrahim, Shapiro, Williams et Fenwick (2013), Alcoholism: Clinical and Experimental Research, revue de 27 études. Effet constant à toutes les doses testées ; plus net à dose élevée.",
+    "source": "Ebrahim I.O., Shapiro C.M., Williams A.J., Fenwick P.B. (2013). Alcohol and Sleep I: Effects on Normal Sleep. Alcoholism: Clinical and Experimental Research, 37(4), 539-549. https://doi.org/10.1111/acer.12006",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-046",
+    "titre": "La sieste au café",
+    "texte": "Un café bu juste avant une sieste de 15 minutes : la caféine agit au réveil. Reyner et Horne (1997), Psychophysiology, chez des conducteurs somnolents sur simulateur. Effet grand sur la vigilance dans cette étude, mais très petit échantillon. Pas après 15 h.",
+    "source": "Reyner L.A., Horne J.A. (1997). Suppression of sleepiness in drivers: Combination of caffeine with a short nap. Psychophysiology, 34(6), 721-725. https://doi.org/10.1111/j.1469-8986.1997.tb02148.x",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-047",
+    "titre": "Marcher dans un parc",
+    "texte": "Une marche de 50 minutes dans un parc améliore la mémoire de travail d'environ 20 % ; la même marche en centre-ville, non. Berman, Jonides et Kaplan (2008), Psychological Science. Effet moyen, deux petites études. Si tu as le choix du trajet, prends les arbres.",
+    "source": "Berman M.G., Jonides J., Kaplan S. (2008). The Cognitive Benefits of Interacting With Nature. Psychological Science, 19(12), 1207-1212. https://doi.org/10.1111/j.1467-9280.2008.02225.x",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-048",
+    "titre": "Le sport ne rend pas plus malin, pas tout de suite",
+    "texte": "Une séance d'exercice améliore très légèrement les performances cognitives qui suivent. Chang, Labban, Gapin et Etnier (2012), Brain Research, méta-analyse de 79 études : petit effet (g ≈ 0,10), un peu plus net après un délai et pour les tâches exécutives. Fais du sport pour l'humeur et le sommeil ; le reste est un bonus.",
+    "source": "Chang Y.K., Labban J.D., Gapin J.I., Etnier J.L. (2012). The effects of acute exercise on cognitive performance: A meta-analysis. Brain Research, 1453, 87-101. https://doi.org/10.1016/j.brainres.2012.02.068",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-049",
+    "titre": "Sommeil court, émotions fortes",
+    "texte": "Manquer de sommeil rend plus réactif aux contrariétés et moins capable de les relativiser : l'amygdale s'emballe, le cortex préfrontal la retient moins. Krause et al. (2017), Nature Reviews Neuroscience, revue. Effet bien établi en laboratoire. Une mauvaise journée après une mauvaise nuit n'est pas un signe sur toi.",
+    "source": "Krause A.J., Simon E.B., Mander B.A., Greer S.M., Saletin J.M., Goldstein-Piekarski A.N., Walker M.P. (2017). The sleep-deprived human brain. Nature Reviews Neuroscience, 18(7), 404-418. https://doi.org/10.1038/nrn.2017.55",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "tip-050",
+    "titre": "L'exercice contre la déprime",
+    "texte": "Chez des personnes déprimées, l'exercice régulier réduit les symptômes avec un effet grand dans les essais, qui rétrécit quand on corrige le biais de publication. Schuch et al. (2016), Journal of Psychiatric Research, méta-analyse de 25 essais. Effet probablement moyen en réalité, et sans effet secondaire notable.",
+    "source": "Schuch F.B., Vancampfort D., Richards J., Rosenbaum S., Ward P.B., Stubbs B. (2016). Exercise as a treatment for depression: A meta-analysis adjusting for publication bias. Journal of Psychiatric Research, 77, 42-51. https://doi.org/10.1016/j.jpsychires.2016.02.023",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  }
+]

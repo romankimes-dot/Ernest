@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ernest</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1511">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ernest">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <header class="serre" id="serre">
+    <canvas id="garden"></canvas>
+    <div class="e-wrap" id="ernestWrap"></div>
+    <div class="bulle" id="bulle" hidden></div>
+    <button class="gear" id="btnSettings" aria-label="Réglages">⚙</button>
+  </header>
+  <main id="view" class="view"></main>
+  <nav class="tabs" id="tabs">
+    <button data-tab="today" class="on"><span class="ic">☀</span>Aujourd'hui</button>
+    <button data-tab="liste"><span class="ic">≡</span>Liste</button>
+    <button data-tab="semaine"><span class="ic">◷</span>Semaine</button>
+    <button data-tab="carnet"><span class="ic">✎</span>Carnet</button>
+  </nav>
+  <button class="fab" id="fab" aria-label="Ajouter">+</button>
+  <div class="sheet-bg" id="sheetBg" hidden></div>
+  <section class="sheet" id="sheet" hidden></section>
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

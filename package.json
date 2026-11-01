@@ -1,0 +1,9 @@
+{
+  "name": "ernest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "for f in js/*.js sw.js; do node --check $f || exit 1; done && node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8080"
+  }
+}

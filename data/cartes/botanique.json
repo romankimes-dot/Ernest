@@ -1,0 +1,482 @@
+[
+  {
+    "id": "bot-001",
+    "titre": "Welwitschia mirabilis",
+    "texte": "Deux feuilles, pas une de plus, qui poussent toute la vie et s'effilochent dans le vent du désert de Namibie. Certains pieds ont plus de mille ans. Kew la classe seule dans sa famille.",
+    "source": "Kew, Plants of the World Online, fiche Welwitschia mirabilis Hook.f., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-002",
+    "titre": "Amorphophallus titanum",
+    "texte": "L'arum titan produit la plus grande inflorescence non ramifiée du monde, jusqu'à 3 m. Elle chauffe à la température d'un corps humain et sent la viande pourrie pour attirer les mouches. À Kew, chaque floraison fait la queue.",
+    "source": "Kew Gardens, fiche Amorphophallus titanum (titan arum), https://www.kew.org/plants/titan-arum",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-003",
+    "titre": "Rafflesia arnoldii",
+    "texte": "La plus grande fleur simple du monde, près d'un mètre, et pas une feuille, pas une tige, pas une racine : la plante vit entièrement à l'intérieur d'une liane qu'elle parasite. On ne la voit que quand elle fleurit.",
+    "source": "Kew, Plants of the World Online, fiche Rafflesia arnoldii R.Br., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-004",
+    "titre": "Victoria amazonica",
+    "texte": "Ses feuilles de 3 m portent un enfant. Sa fleur s'ouvre blanche une première nuit, enferme des scarabées, les relâche la seconde nuit en devenant rose : un piège à une seule nuit.",
+    "source": "Kew Gardens, fiche Victoria amazonica (giant waterlily), https://www.kew.org/plants/giant-waterlily",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-005",
+    "titre": "Wolffia",
+    "texte": "La plus petite plante à fleurs connue : moins d'un millimètre, sans racine, flottant sur les mares. Une dizaine tiendrait sur un ongle. Elle fleurit quand même.",
+    "source": "Kew, Plants of the World Online, genre Wolffia Horkel ex Schleid., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-006",
+    "titre": "Sequoia sempervirens",
+    "texte": "Hyperion, dans le Redwood National Park, mesure environ 116 m : l'arbre vivant le plus haut connu. Sa position n'est pas communiquée pour qu'on arrête de piétiner ses racines.",
+    "source": "National Park Service, Redwood National and State Parks, « Tall Trees », https://www.nps.gov/redw/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-007",
+    "titre": "Pinus longaeva",
+    "texte": "Methuselah, un pin de Bristlecone des White Mountains de Californie, a plus de 4 800 ans. Il poussait déjà quand on bâtissait les pyramides. Son emplacement exact est tenu secret.",
+    "source": "USDA Forest Service, Inyo National Forest, « Ancient Bristlecone Pine Forest », https://www.fs.usda.gov/inyo",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-008",
+    "titre": "Populus tremuloides",
+    "texte": "Pando, dans l'Utah, est un seul peuplier faux-tremble : 43 hectares, plus de 40 000 troncs reliés par les mêmes racines, un seul génome. L'un des organismes les plus lourds du monde, qui ressemble à une forêt.",
+    "source": "USDA Forest Service, Fishlake National Forest, « Pando », https://www.fs.usda.gov/fishlake",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-009",
+    "titre": "Posidonia oceanica",
+    "texte": "Les prairies de posidonie de Méditerranée contiennent des clones génétiquement identiques étirés sur jusqu'à 15 km. Les auteurs estiment leur âge à des centaines, voire des milliers d'années.",
+    "source": "Arnaud-Haond S. et al. (2012). Implications of Extreme Life Span in Clonal Organisms: Millenary Clones in Meadows of the Threatened Seagrass Posidonia oceanica. PLoS ONE 7(2): e30454. https://doi.org/10.1371/journal.pone.0030454",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-010",
+    "titre": "Mimosa pudica",
+    "texte": "Lâchée 15 cm sur de la mousse, la sensitive replie ses feuilles. Au bout de quelques chutes, elle ne les replie plus : elle a appris que ça ne fait rien. Et s'en souvient un mois plus tard. Interprétation discutée.",
+    "source": "Gagliano M., Renton M., Depczynski M., Mancuso S. (2014). Experience teaches plants to learn faster and forget slower in environments where it matters. Oecologia, 175, 63-72. https://doi.org/10.1007/s00442-013-2873-7",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-011",
+    "titre": "Dionaea muscipula",
+    "texte": "La dionée compte. Un contact : rien. Deux en moins de trente secondes : le piège se ferme. Cinq : elle lance la digestion et dose ses enzymes selon le nombre de touches. Une plante qui fait de l'arithmétique sans neurone.",
+    "source": "Böhm J. et al. (2016). The Venus Flytrap Dionaea muscipula Counts Prey-Induced Action Potentials to Induce Sodium Uptake. Current Biology, 26(3), 286-295. https://doi.org/10.1016/j.cub.2015.11.057",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-012",
+    "titre": "Nepenthes lowii",
+    "texte": "Cette népenthès de Bornéo a renoncé aux insectes : son urne géante sert de toilettes aux toupayes, qui lèchent le nectar du couvercle et déposent leurs crottes dedans. Entre 57 et 100 % de son azote vient de là.",
+    "source": "Clarke C.M. et al. (2009). Tree shrew lavatories: a novel nitrogen sequestration strategy in a tropical pitcher plant. Biology Letters, 5(5), 632-635. https://doi.org/10.1098/rsbl.2009.0311",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-013",
+    "titre": "Monstera deliciosa",
+    "texte": "Le fruit de la plante à trous met environ un an à mûrir et brûle la bouche tant qu'il n'est pas prêt. Mûr, il sent l'ananas et la banane. D'où « deliciosa ». Peu de salons le voient.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Monstera deliciosa, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-014",
+    "titre": "Epipremnum aureum",
+    "texte": "Le pothos de ton bureau ne fleurit presque jamais, nulle part, même sauvage : il lui manque l'expression d'un gène de synthèse des gibbérellines. Un traitement hormonal le fait fleurir. Sinon, boutures à l'infini.",
+    "source": "Hung C.-Y. et al. (2016). Gibberellin deficiency is responsible for shy-flowering nature of Epipremnum aureum. Scientific Reports, 6, 28598. https://doi.org/10.1038/srep28598",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-015",
+    "titre": "Zamioculcas zamiifolia",
+    "texte": "Une seule feuille posée sur du terreau refait une plante entière, en formant d'abord un petit tubercule. Son rhizome stocke assez d'eau pour tenir des mois d'oubli.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Zamioculcas zamiifolia, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-016",
+    "titre": "Spathiphyllum",
+    "texte": "La réputation du spathiphyllum « dépolluant » vient d'une étude NASA de 1989 en caissons scellés. Une revue de 2019 a calculé qu'il faudrait des centaines de plantes par mètre carré pour égaler le simple renouvellement d'air d'une pièce.",
+    "source": "Wolverton B.C., Johnson A., Bounds K. (1989). Interior Landscape Plants for Indoor Air Pollution Abatement. NASA, https://ntrs.nasa.gov/citations/19930073077 ; Cummings B.E., Waring M.S. (2020). Potted plants do not improve indoor air quality. Journal of Exposure Science & Environmental Epidemiology, 30, 253-261. https://doi.org/10.1038/s41370-019-0175-9",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-017",
+    "titre": "Ficus benghalensis",
+    "texte": "Thimmamma Marrimanu, un banian d'Andhra Pradesh, couvre environ 19 000 m² d'une seule couronne portée par des milliers de racines-piliers. Un seul arbre, la surface de trois terrains de football.",
+    "source": "Guinness World Records, « Largest canopy on a living tree », https://www.guinnessworldrecords.com/world-records/66385-tree-greatest-spread",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-018",
+    "titre": "Ficus carica",
+    "texte": "La figue n'est pas un fruit mais une inflorescence retournée. Elle est pollinisée par une guêpe minuscule qui entre par un trou, pond, et meurt à l'intérieur. La figue la digère. Les variétés de jardin s'en passent.",
+    "source": "Kew, Plants of the World Online, fiche Ficus carica L., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-019",
+    "titre": "Tillandsia usneoides",
+    "texte": "La « mousse espagnole » n'est ni une mousse ni espagnole : une broméliacée sans racine fonctionnelle, qui boit l'eau de l'air par des écailles argentées et pend aux arbres sans rien leur prendre.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Tillandsia usneoides, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-020",
+    "titre": "Orchidaceae",
+    "texte": "Environ 28 000 espèces d'orchidées décrites : plus que d'oiseaux et de mammifères réunis. Une plante à fleurs sur dix est une orchidée.",
+    "source": "Christenhusz M.J.M., Byng J.W. (2016). The number of known plants species in the world and its annual increase. Phytotaxa, 261(3), 201-217. https://doi.org/10.11646/phytotaxa.261.3.1",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-021",
+    "titre": "Vanilla planifolia",
+    "texte": "La vanille est une orchidée. Hors du Mexique, aucun insecte ne la pollinise : chaque fleur est fécondée à la main, un matin, en quelques heures. Le geste a été mis au point en 1841 à La Réunion par Edmond Albius, un esclave de douze ans.",
+    "source": "Kew Gardens, fiche Vanilla planifolia, https://www.kew.org/plants/vanilla",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-022",
+    "titre": "Angraecum sesquipedale",
+    "texte": "En 1862, Darwin voit cette orchidée de Madagascar au nectar enfoui à 30 cm et prédit un papillon à trompe de 30 cm. On s'est moqué. Le sphinx Xanthopan a été décrit en 1903.",
+    "source": "Kew Gardens, « Darwin's orchid », https://www.kew.org/read-and-watch/darwins-orchid",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-023",
+    "titre": "Orchidaceae (graines)",
+    "texte": "Une capsule d'orchidée peut contenir des millions de graines fines comme de la poussière, sans réserve. Aucune ne germe sans rencontrer le bon champignon, qui la nourrit les premières années.",
+    "source": "Kew Gardens, Millennium Seed Bank, « Orchid seeds », https://www.kew.org/science/collections-and-resources/collections/seed-collection",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-024",
+    "titre": "Ophrys apifera",
+    "texte": "L'ophrys abeille imite une abeille femelle, forme et odeur, pour se faire « accoupler » par les mâles. En France et en Grande-Bretagne, faute de dupe, elle se pollinise souvent toute seule.",
+    "source": "Tela Botanica, fiche Ophrys apifera Huds., https://www.tela-botanica.org ; Kew, Plants of the World Online, Ophrys apifera Huds.",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-025",
+    "titre": "Dracula",
+    "texte": "Les orchidées Dracula des Andes imitent un champignon : labelle en forme de chapeau, odeur de bolet. Des mouches des champignons viennent y pondre et les pollinisent pour rien. Démontré avec des fleurs en silicone imprimées en 3D.",
+    "source": "Policha T. et al. (2016). Disentangling visual and olfactory signals in mushroom-mimicking Dracula orchids using realistic three-dimensional printed flowers. New Phytologist, 210(3), 1058-1071. https://doi.org/10.1111/nph.13855",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-026",
+    "titre": "Polypodiaceae (sporanges)",
+    "texte": "Les fougères catapultent leurs spores : l'anneau du sporange sèche, se courbe, puis se détend en dix microsecondes. Un mécanisme en deux temps que les ingénieurs ont mis des années à expliquer.",
+    "source": "Noblin X. et al. (2012). The Fern Sporangium: A Unique Catapult. Science, 335(6074), 1322. https://doi.org/10.1126/science.1215985",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-027",
+    "titre": "Azolla",
+    "texte": "Cette fougère aquatique de 1 cm double sa masse en quelques jours. Il y a 49 millions d'années, elle a envahi l'océan Arctique et en coulant a piégé assez de carbone pour contribuer à refroidir la planète.",
+    "source": "Brinkhuis H. et al. (2006). Episodic fresh surface waters in the Eocene Arctic Ocean. Nature, 441, 606-609. https://doi.org/10.1038/nature04692",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-028",
+    "titre": "Pleopeltis polypodioides",
+    "texte": "La fougère de résurrection perd jusqu'à 97 % de son eau, brunit, se recroqueville, et paraît morte des mois. Une pluie : en quelques heures elle est verte et ouverte.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Pleopeltis polypodioides, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-029",
+    "titre": "Sphagnum",
+    "texte": "La sphaigne retient jusqu'à vingt fois son poids en eau dans des cellules mortes vides. Les tourbières qu'elle fabrique couvrent 3 % des terres et stockent plus de carbone que toutes les forêts du monde.",
+    "source": "Kew Gardens, « Sphagnum moss », https://www.kew.org/plants/sphagnum-moss",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-030",
+    "titre": "Dawsonia superba",
+    "texte": "La plus haute mousse du monde, en Nouvelle-Zélande et en Australie : jusqu'à 60 cm, soit soixante fois une mousse ordinaire. Elle a des tissus conducteurs rudimentaires, ce que les mousses ne sont pas censées avoir.",
+    "source": "Te Ara, the Encyclopedia of New Zealand, « Mosses », https://teara.govt.nz/en/mosses/page-1",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-031",
+    "titre": "Chorisodontium aciphyllum",
+    "texte": "Un carottage de mousse antarctique congelée depuis au moins 1 530 ans a été mis en incubation. En quelques semaines, elle a repoussé. Avant, on pensait la limite à quelques décennies.",
+    "source": "Roads E., Longton R.E., Convey P. (2014). Millennial timescale regeneration in a moss from Antarctica. Current Biology, 24(6), R222-R223. https://doi.org/10.1016/j.cub.2014.01.053",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-032",
+    "titre": "Armillaria ostoyae",
+    "texte": "Dans la forêt de Malheur, Oregon, un seul individu de ce champignon couvre environ 965 hectares sous terre. Il tue lentement les arbres au-dessus de lui. Le plus grand organisme connu, invisible sauf à l'automne.",
+    "source": "Guinness World Records, « Heaviest fungus », https://www.guinnessworldrecords.com/world-records/75043-heaviest-fungi ; Oregon Encyclopedia, « Humongous Fungus », https://oregonencyclopedia.org/articles/humongous-fungus-armillaria-ostoyae",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-033",
+    "titre": "Pleurotus ostreatus",
+    "texte": "Le pleurote du supermarché est carnivore. Ses filaments portent des « sucettes » qui libèrent une cétone volatile paralysant les nématodes en quelques secondes ; le champignon les digère ensuite.",
+    "source": "Lee C.-H. et al. (2023). A carnivorous mushroom paralyzes and kills nematodes via a volatile ketone. Science Advances, 9(3), eade4809. https://doi.org/10.1126/sciadv.ade4809",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-034",
+    "titre": "Pilobolus",
+    "texte": "Ce champignon de bouse de vache projette son sac de spores à plus de 2 m avec une accélération de 180 000 g, parmi les plus fortes jamais mesurées dans le vivant. Objectif : atterrir sur l'herbe qu'une vache mangera.",
+    "source": "Yafetto L. et al. (2008). The Fastest Flights in Nature: High-Speed Spore Discharge Mechanisms among Fungi. PLoS ONE, 3(9), e3237. https://doi.org/10.1371/journal.pone.0003237",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-035",
+    "titre": "Ophiocordyceps unilateralis",
+    "texte": "Ce champignon fait grimper une fourmi infectée sur une feuille, la fait mordre une nervure vers midi, puis la tue et sort une tige de sa tête pour pleuvoir des spores sur la colonie. Les morsures sont visibles sur des feuilles fossiles.",
+    "source": "Hughes D.P. et al. (2011). Behavioral mechanisms and morphological symptoms of zombie ant death. BMC Ecology, 11, 13. https://doi.org/10.1186/1472-6785-11-13",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-036",
+    "titre": "Glomeromycota",
+    "texte": "Environ 90 % des plantes terrestres vivent en symbiose racinaire avec des champignons, qui leur fournissent phosphore et eau contre du sucre. Le réseau existe depuis plus de 400 millions d'années : il est antérieur aux racines elles-mêmes.",
+    "source": "Kew Gardens (2018). State of the World's Fungi 2018, https://www.kew.org/science/state-of-the-worlds-fungi",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-037",
+    "titre": "Lithops",
+    "texte": "Les « plantes-cailloux » d'Afrique australe ne montrent que le sommet translucide de deux feuilles enterrées, coloré comme le gravier autour. La lumière entre par une fenêtre et la photosynthèse se fait sous terre.",
+    "source": "Kew, Plants of the World Online, genre Lithops N.E.Br., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-038",
+    "titre": "Fenestraria rhopalophylla",
+    "texte": "Chaque feuille de la « plante-fenêtre » est un cylindre enfoui dont seul le bout transparent affleure : une fibre optique qui conduit le soleil jusqu'au tissu vert enterré, à l'abri de la chaleur.",
+    "source": "Kew, Plants of the World Online, fiche Fenestraria rhopalophylla (Schltr. & Diels) N.E.Br., https://powo.science.kew.org",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-039",
+    "titre": "Aloe vera",
+    "texte": "On ne connaît aucune population sauvage certaine d'Aloe vera. Cultivé depuis des millénaires, il vient sans doute de la péninsule Arabique, mais c'est un déduit : l'original a disparu dans les jardins.",
+    "source": "Kew Gardens, fiche Aloe vera, https://www.kew.org/plants/aloe-vera",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-040",
+    "titre": "Agave americana",
+    "texte": "Le « plant du siècle » vit dix à trente ans sans fleurir, puis dresse une hampe de 6 à 9 m en quelques semaines, fleurit une seule fois, et meurt. Les rejets prennent la suite.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Agave americana, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-041",
+    "titre": "Carnegiea gigantea",
+    "texte": "Un saguaro met cinquante à soixante-dix ans à pousser son premier bras. Il peut dépasser 12 m et deux siècles. Gorgé d'eau après la pluie, il pèse plusieurs tonnes.",
+    "source": "National Park Service, Saguaro National Park, « Saguaro Cactus », https://www.nps.gov/sagu/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-042",
+    "titre": "Kalanchoe daigremontiana",
+    "texte": "Sur le bord de chaque feuille poussent des dizaines de bébés complets, avec racines, qui tombent et s'enracinent. D'où « mère de milliers ». Dans un pot, ça devient vite une invasion.",
+    "source": "Missouri Botanical Garden, Plant Finder, fiche Kalanchoe daigremontiana, https://www.missouribotanicalgarden.org/PlantFinder/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-043",
+    "titre": "Mentha × piperita",
+    "texte": "Le menthol ne refroidit rien : il active TRPM8, le récepteur qui signale le froid à tes neurones. La bouche croit avoir froid. C'est la même protéine qui détecte un courant d'air frais.",
+    "source": "McKemy D.D., Neuhausser W.M., Julius D. (2002). Identification of a cold receptor reveals a general role for TRP channels in thermosensation. Nature, 416, 52-58. https://doi.org/10.1038/nature719",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-044",
+    "titre": "Capsicum",
+    "texte": "La capsaïcine brûle les mammifères et laisse les oiseaux indifférents. Un piment sauvage disperse ainsi ses graines par ceux qui les laissent intactes, et écarte ceux qui les broient.",
+    "source": "Tewksbury J.J., Nabhan G.P. (2001). Directed deterrence by capsaicin in chillies. Nature, 412, 403-404. https://doi.org/10.1038/35086653",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-045",
+    "titre": "Lavandula angustifolia",
+    "texte": "Le linalol de la lavande calme les souris anxieuses, mais seulement si elles le sentent : chez des souris privées d'odorat, rien. L'effet passe par le nez, pas par le sang.",
+    "source": "Harada H., Kashiwadani H., Kanmura Y., Kuwaki T. (2018). Linalool Odor-Induced Anxiolytic Effects in Mice. Frontiers in Behavioral Neuroscience, 12, 241. https://doi.org/10.3389/fnbeh.2018.00241",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-046",
+    "titre": "Allium sativum",
+    "texte": "Une gousse d'ail intacte ne sent presque rien. Couper libère une enzyme qui fabrique l'allicine en quelques secondes : l'odeur est une blessure. Une arme chimique montée à la demande.",
+    "source": "Block E. (1985). The Chemistry of Garlic and Onions. Scientific American, 252(3), 114-119. https://doi.org/10.1038/scientificamerican0385-114",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-047",
+    "titre": "Coffea arabica",
+    "texte": "Le nectar du caféier contient de la caféine à dose faible. Les abeilles qui en boivent mémorisent trois fois mieux l'odeur de la fleur et reviennent. La plante dope ses pollinisateurs.",
+    "source": "Wright G.A. et al. (2013). Caffeine in Floral Nectar Enhances a Pollinator's Memory of Reward. Science, 339(6124), 1202-1204. https://doi.org/10.1126/science.1228806",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-048",
+    "titre": "Hedera helix",
+    "texte": "Le lierre grimpe en sécrétant par ses racines aériennes des nanoparticules d'environ 70 nm qui collent au mur par liaisons faibles. Une colle qui tient des siècles sur la pierre.",
+    "source": "Zhang M. et al. (2008). Nanoparticles Secreted from Ivy Rootlets for Surface Climbing. Nano Letters, 8(5), 1277-1280. https://doi.org/10.1021/nl0725704",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-049",
+    "titre": "Cuscuta pentagona",
+    "texte": "La cuscute, liane parasite sans feuilles ni chlorophylle, « sent » sa proie : en laboratoire elle pousse vers l'odeur d'une tomate et évite celle du blé. Une plante qui choisit à l'odorat.",
+    "source": "Runyon J.B., Mescher M.C., De Moraes C.M. (2006). Volatile Chemical Cues Guide Host Location and Host Selection by Parasitic Plants. Science, 313(5795), 1964-1967. https://doi.org/10.1126/science.1131371",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-050",
+    "titre": "Boquila trifoliolata",
+    "texte": "Cette liane chilienne imite les feuilles de l'arbre sur lequel elle grimpe : taille, forme, couleur, nervures. Sur deux arbres différents, la même liane fait deux feuillages. Personne ne sait comment.",
+    "source": "Gianoli E., Carrasco-Urra F. (2014). Leaf Mimicry in a Climbing Plant Protects against Herbivory. Current Biology, 24(9), 984-987. https://doi.org/10.1016/j.cub.2014.03.010",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-051",
+    "titre": "Lodoicea maldivica",
+    "texte": "Le coco-fesse des Seychelles produit la plus grosse graine du monde, jusqu'à 25 kg. L'arbre met des décennies à fleurir et la graine un an à germer. Il ne pousse à l'état sauvage que sur deux îles.",
+    "source": "Kew Gardens, fiche Lodoicea maldivica (coco de mer), https://www.kew.org/plants/coco-de-mer",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-052",
+    "titre": "Wollemia nobilis",
+    "texte": "Connu seulement par des fossiles, ce conifère a été trouvé vivant en 1994 dans un canyon près de Sydney. Moins d'une centaine d'adultes. Le site est secret ; des pieds poussent à Kew, en assurance.",
+    "source": "Kew Gardens, fiche Wollemia nobilis (Wollemi pine), https://www.kew.org/plants/wollemi-pine",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-053",
+    "titre": "Eucalyptus regnans",
+    "texte": "Centurion, en Tasmanie, mesurait 100,5 m en 2018 : la plus haute plante à fleurs du monde. Les incendies de 2019 lui ont fait perdre quelques mètres. Il pousse encore.",
+    "source": "National Register of Big Trees (Australie), fiche Centurion, https://www.nationalregisterofbigtrees.com.au/",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-054",
+    "titre": "Adansonia digitata",
+    "texte": "Le baobab Panke, au Zimbabwe, a été daté au carbone 14 à environ 2 450 ans : la plus vieille plante à fleurs connue. Il s'est effondré en 2010-2011, comme la plupart des plus vieux baobabs ces quinze dernières années.",
+    "source": "Patrut A. et al. (2018). The demise of the largest and oldest African baobabs. Nature Plants, 4, 423-426. https://doi.org/10.1038/s41477-018-0170-5",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-055",
+    "titre": "Silene stenophylla",
+    "texte": "Des graines enfouies par un écureuil sibérien il y a 32 000 ans, prises dans le pergélisol, ont donné des plantes qui ont fleuri et fait des graines. Le plus vieux végétal jamais ramené à la vie.",
+    "source": "Yashina S. et al. (2012). Regeneration of whole fertile plants from 30,000-y-old fruit tissue buried in Siberian permafrost. PNAS, 109(10), 4008-4013. https://doi.org/10.1073/pnas.1118386109",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-056",
+    "titre": "Phoenix dactylifera",
+    "texte": "Une graine de dattier trouvée à Massada, vieille de 2 000 ans, a germé en 2005. On l'a appelée Methuselah. C'est un mâle ; on lui a trouvé des compagnes depuis, d'autres graines antiques.",
+    "source": "Sallon S. et al. (2008). Germination, Genetics, and Growth of an Ancient Date Seed. Science, 320(5882), 1464. https://doi.org/10.1126/science.1153600",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-057",
+    "titre": "Helianthus annuus",
+    "texte": "Le jeune tournesol suit le soleil le jour et se retourne vers l'est la nuit, grâce à une horloge interne. Adulte, il se fige face à l'est : ses fleurs chauffent plus tôt le matin et reçoivent plus d'abeilles.",
+    "source": "Atamian H.S. et al. (2016). Circadian regulation of sunflower heliotropism, floral orientation, and pollinator visits. Science, 353(6299), 587-590. https://doi.org/10.1126/science.aaf9793",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-058",
+    "titre": "Ginkgo biloba",
+    "texte": "Six ginkgos ont survécu à la bombe d'Hiroshima à moins de 2 km de l'hypocentre et poussent encore. L'espèce, seule de son ordre, a 200 millions d'années de fossiles presque identiques.",
+    "source": "Kew Gardens, fiche Ginkgo biloba (maidenhair tree), https://www.kew.org/plants/ginkgo",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-059",
+    "titre": "Arabidopsis thaliana",
+    "texte": "Fais-lui entendre, par vibration, le bruit d'une chenille qui mâche une feuille : la plante produit plus de défenses chimiques quand une vraie chenille arrive. Le vent ou un insecte inoffensif ne déclenchent rien.",
+    "source": "Appel H.M., Cocroft R.B. (2014). Plants respond to leaf vibrations caused by insect herbivore chewing. Oecologia, 175, 1257-1266. https://doi.org/10.1007/s00442-014-2995-6",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  },
+  {
+    "id": "bot-060",
+    "titre": "Raphia regalis",
+    "texte": "Ce palmier d'Afrique centrale porte la plus longue feuille connue : une fronde de 25,9 m mesurée au Congo par le botaniste Francis Hallé, dont 9 m de pétiole. Plus long qu'un bus articulé.",
+    "source": "Hallé F. (1977). The longest leaf in palms? Principes, 21, 18. Référence reprise par Kew, Plants of the World Online, fiche Raphia regalis Becc.",
+    "fiabilite": "sourcee",
+    "rarete": "courante"
+  }
+]

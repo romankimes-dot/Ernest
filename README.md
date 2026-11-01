@@ -1,0 +1,38 @@
+# Ernest
+
+Trois choses par jour, une serre qui pousse, un gobelin qui raconte. Application web installable sur iPhone, hors ligne, sans compte.
+
+Adresse : https://romankimes-dot.github.io/Ernest/ (GitHub Pages, branche `main`, dossier racine).
+
+## La boucle
+- **Aujourd'hui** : les choses posées la veille (trois au plus, la première en évidence), Démarrer / Terminer avec le temps réel, la liste des entrées datées du jour. Si rien n'est posé, Ernest propose et un tap suffit.
+- **Le soir** (bandeau « Préparer demain » à partir de 18 h) : une ligne sur la journée, l'humeur en un tap, le sort des choses non faites (demain, idée, laisser), puis les 3 de demain avec catégorie, moment (matin, midi, après-midi, soir) et durée estimée d'après tes durées réelles.
+- **Liste** : tout le reste, sans limite (courses, colis, voiture), avec date facultative, et les idées, à trier quand tu veux. Le bouton + attrape tout, de partout.
+- **Semaine** : jours actifs sur sept, fait par catégorie, minimums doux (actifs à partir du 11 novembre, réglables), objectifs avec jalons, point du dimanche (un épisode de l'histoire d'Ernest à chaque point).
+- **Carnet** : ce qu'Ernest a dit aujourd'hui, et les cartes gagnées (botanique, histoires vraies de la profession, pratiques à preuve, blagues, mots, feuilleton). Une chose faite en ouvre une sur deux ; une journée pleine en ouvre une longue ; les jalons en ouvrent une rare.
+- **La serre** (bande du haut) : une plante par chose faite dans le rang de sa catégorie, une mousse par entrée de liste, un bonsaï par objectif (une branche par jalon). Croissance par jours actifs, cycle jour/nuit sur l'heure réelle, lumière réglée par l'humeur des trois derniers jours. Un jour sans ne fane rien.
+
+Ernest parle à chaque ouverture et à chaque geste (`data/ernest/repliques.json`, ~480 répliques avec conditions et mémoire). Il ne demande rien, n'évalue rien, ne culpabilise jamais.
+
+## Ponts
+Format unique, transporté par lien profond `https://romankimes-dot.github.io/Ernest/#import=<base64url(JSON)>` ou collé dans Réglages › Pont :
+```json
+{ "v": 1, "src": "deonto|revision|memoire",
+  "things": [{ "title": "…", "cat": "revision", "est": 75, "link": "https://…", "day": "2026-11-03", "note": "…" }],
+  "goals": [{ "title": "…", "due": "2026-11-10", "milestones": [{ "text": "…", "due": "…", "done": false }] }],
+  "history": [{ "day": "2026-10-30", "n": 2 }] }
+```
+- **Dec-Deonto** : bouton « 🌱 Envoyer à Ernest » sous le plan du jour (choses du jour, objectif Épreuve 1 avec examens blancs en jalons, historique des jours travaillés pour peupler la serre).
+- **dec-revision** : même bouton sous la journée du parcours (la journée en une chose, objectif Épreuve 2 avec les annales en jalons).
+- **dec-memoire** : `python3 -I scripts/export-ernest.py --lien` (lancé par `/fin-de-session`) : objectif Mémoire avec les échéances en jalons. Titres et dates seulement.
+Ernest montre ce qui va être ajouté et demande confirmation ; rien n'est ajouté deux fois.
+
+## Données
+Tout est sur le téléphone (`localStorage`, clé `ernest.state.v1`), copie automatique toutes les 3 heures, état précédent gardé avant un import ou un effacement. Réglages › Exporter (partage ou copie) : la Semaine le rappelle au-delà de 7 jours. Rappel du soir : iOS n'autorise pas une notification locale sans serveur ; une alarme à 21 h fait le travail.
+
+## Développement
+```
+npm test                   # syntaxe + tests (modèle, ponts, contenu : sources obligatoires, ton d'Ernest)
+python3 -m http.server 8080
+```
+Fichiers : `js/model.js` (fonctions pures), `js/store.js`, `js/bridge.js`, `js/ernest.js` (personnage et répliques), `js/garden2d.js` (serre canvas), `js/cards.js`, `js/app.js` (vues), `sw.js` (hors ligne : incrémenter `VERSION` à chaque changement de code). Formats de contenu : `docs/CONTENU.md`. Prochaine étape prévue : serre 3D (three.js), démonstration à juger avant d'y engager le reste.
