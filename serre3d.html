@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ernest · la serre</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08131c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="./icons/icon-192.png">
+  <style>
+    :root{--bg:#0b1511;--bg2:#12201a;--fg:#efe6d2;--fg2:#a9b5a3;--amber:#f2b23d;--line:#243b31;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:#08131c;color:var(--fg);font-family:-apple-system,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+    .ic{width:20px;height:20px;vertical-align:-4px}
+    .top{position:fixed;left:0;right:0;top:0;padding:calc(var(--sat) + 10px) max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(rgba(8,19,28,.75),rgba(8,19,28,0));pointer-events:none}
+    .top > *{pointer-events:auto}
+    .back{display:flex;align-items:center;gap:4px;padding:8px 12px 8px 8px;border-radius:999px;background:rgba(11,21,17,.6);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:14px}
+    .title{font-family:Georgia,"Times New Roman",serif;font-size:17px;text-align:right;line-height:1.2}
+    .title small{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+    .panel{position:fixed;left:0;right:0;bottom:0;padding:12px max(14px,env(safe-area-inset-right,0px)) calc(12px + var(--sab)) max(14px,env(safe-area-inset-left,0px));background:linear-gradient(rgba(8,19,28,0),rgba(8,19,28,.85) 30%);display:flex;flex-direction:column;gap:10px}
+    .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .seg button{padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:rgba(18,32,26,.85);font-size:13px;line-height:1.15}
+    .seg button small{display:block;color:var(--fg2);font-size:10.5px;margin-top:2px}
+    .seg button.on{border-color:var(--amber);background:rgba(242,178,61,.16)}
+    .row{display:flex;align-items:center;gap:10px}
+    .seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1}
+    .seg3 button{padding:8px 4px;border-radius:10px;border:1px solid var(--line);background:rgba(18,32,26,.85);font-size:12.5px}
+    .seg3 button.on{border-color:var(--amber);color:var(--amber)}
+    label{font-size:12px;color:var(--fg2);white-space:nowrap}
+    input[type=range]{flex:1;accent-color:var(--amber)}
+    .hint{font-size:11.5px;color:var(--fg2);text-align:center}
+    .fps{position:fixed;right:max(14px,env(safe-area-inset-right,0px));top:calc(var(--sat) + 62px);font:11px ui-monospace,monospace;color:var(--fg2);background:rgba(11,21,17,.6);padding:3px 7px;border-radius:6px}
+    .loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--fg2);font-size:14px}
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js" } }
+  </script>
+</head>
+<body>
+  <div class="loading" id="loading">La serre se prépare…</div>
+  <div class="top">
+    <a class="back" href="./index.html"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"/></svg>Ernest</a>
+    <div class="title"><small>Maquette 3D</small>La serre</div>
+  </div>
+  <div class="fps" id="fps"></div>
+  <div class="panel">
+    <div class="seg" id="stages">
+      <button data-s="0">Jour 1<small>3 choses</small></button>
+      <button data-s="1">Semaine 2<small>une trentaine</small></button>
+      <button data-s="2" class="on">Mois 3<small>une centaine</small></button>
+      <button data-s="3">Un an<small>luxuriante</small></button>
+    </div>
+    <div class="row">
+      <div class="seg3" id="time"><button data-t="day">Jour</button><button data-t="dusk">Soir</button><button data-t="night" class="on">Nuit</button></div>
+    </div>
+    <div class="row"><label for="mood">Humeur</label><input type="range" id="mood" min="0" max="4" step="1" value="3"></div>
+    <div class="hint">Glisse pour tourner, pince pour approcher. Les plantes bougent avec l'air.</div>
+  </div>
+  <script type="module" src="./js/serre3d.js"></script>
+</body>
+</html>
