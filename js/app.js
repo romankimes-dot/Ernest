@@ -7,7 +7,7 @@ import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpiso
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.6.0';
+const VERSION = '0.6.1';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -260,6 +260,7 @@ function viewToday() {
   const dueToday = sortList(S.list).filter((l) => !l.done && l.due && l.due <= today);
   const all = d.things.length > 0 && d.things.every((t) => t.done);
   let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(S.settings.examLabel)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
+  h += moodBar(d);
   if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
   if (!d.things.length) {
     const sug = suggestions(S, today).filter((s) => s.kind === 'list').slice(0, 3);
@@ -300,6 +301,17 @@ function tourSheet(i = 0) {
   if ($('#tPrev')) $('#tPrev').addEventListener('click', () => tourSheet(i - 1));
   if ($('#tSkip')) $('#tSkip').addEventListener('click', done);
 }
+// Humeur, à toute heure : la dernière note du jour fait foi, les précédentes restent dans l'historique du jour.
+function moodBar(d) {
+  const last = (d.moods || []).slice(-1)[0];
+  const lt = last ? new Date(last.at) : null, when = lt ? `${lt.getHours()} h ${String(lt.getMinutes()).padStart(2, '0')}` : '';
+  return `<div class="moodbar"><div class="row spread"><span class="small muted">${d.mood === null || d.mood === undefined ? 'Et là, comment ça va ?' : `Noté : ${moodLabel(d.mood)}${when ? ` · ${when}` : ''}`}</span>${(d.moods || []).length > 1 ? `<span class="small muted">${d.moods.map((x) => moodLabel(x.m)).slice(-3).join(' › ')}</span>` : ''}</div><div class="moods compact">${[0, 1, 2, 3, 4].map((i) => `<button data-act="mood" data-v="${i}" class="${d.mood === i ? 'on' : ''}" aria-label="${moodLabel(i)}">${icon('m' + i)}</button>`).join('')}</div></div>`;
+}
+function setMood(d, m) {
+  d.mood = m; d.moods = d.moods || []; const now = Date.now();
+  const last = d.moods[d.moods.length - 1];
+  if (last && now - Date.parse(last.at) < 10 * 60000) last.m = m; else d.moods.push({ m, at: new Date(now).toISOString() });
+}
 function helpCard() {
   const r = (ic, t) => `<div class="help-row">${icon(ic)}<div>${t}</div></div>`;
   return `<div class="card help stack"><div class="eyebrow">Comment ça marche</div>
@@ -326,7 +338,7 @@ function bindView(v) {
 function action(act, ds, el, v) {
   const d = ensureDay(S, today);
   const thing = ds.id ? d.things.find((t) => t.id === ds.id) : null;
-  label({ jListToggle: 'la coche', jListDel: 'la suppression', toggle: 'la coche', listToggle: 'la coche', listToday: "le passage dans la journée", start: 'le démarrage', pause: 'la pause', jToggle: 'la coche', jToday: "la remise à aujourd'hui", jDel: 'la suppression', ideaAct: "le tri de l'idée", goalMs: "l'étape", acceptSug: 'les choses posées' }[act] || null);
+  label({ mood: "l'humeur", jListToggle: 'la coche', jListDel: 'la suppression', toggle: 'la coche', listToggle: 'la coche', listToday: "le passage dans la journée", start: 'le démarrage', pause: 'la pause', jToggle: 'la coche', jToday: "la remise à aujourd'hui", jDel: 'la suppression', ideaAct: "le tri de l'idée", goalMs: "l'étape", acceptSug: 'les choses posées' }[act] || null);
   switch (act) {
     case 'installOk': S.ernest.installHint = true; save(); render(); break;
     case 'listToday': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; d.things.push({ id: uid(), title: l.text, cat: l.cat || 'perso', est: estimate(S, l.cat || 'perso'), slot: null, done: false, real: 0, fromList: l.id }); d.planned = true; save(); toast('Placée dans ta journée.'); render(); break; }
@@ -352,6 +364,7 @@ function action(act, ds, el, v) {
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'history': historySheet(); break;
+    case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = say(S, 'semaine-grise', ernestEnv(S, today, plantNames())); if (t) bubble(t); } break; }
     case 'seriesEdit': seriesSheet(S.series.find((x) => x.id === ds.id)); break;
     case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; save(); toast('Décochée, de retour dans la liste.'); render(); break; }
     case 'jListDel': removeList(ds.id); break;
@@ -498,7 +511,7 @@ function ritualSheet() {
   <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}<div class="row"><input class="rE" type="number" inputmode="numeric" value="${r.est || estimate(S, r.cat)}" style="width:90px"><span class="muted small">min${r.src ? ` · ${esc(r.src)}` : ''}</span></div></div>`).join('')}</div></div>
   <button class="btn" id="rSave">Bonne nuit</button>`);
   const sh = $('#sheet'); bindChips(sh);
-  sh.querySelectorAll('[data-mood]').forEach((b) => b.addEventListener('click', () => { d.mood = Number(b.dataset.mood); sh.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('on', x === b)); }));
+  sh.querySelectorAll('[data-mood]').forEach((b) => b.addEventListener('click', () => { setMood(d, Number(b.dataset.mood)); sh.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('on', x === b)); }));
   const slots = rows.map((r) => r.slot);
   sh.querySelectorAll('[data-r]').forEach((row) => { const i = Number(row.dataset.r); row.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slots[i] = slots[i] === b.dataset.b ? null : b.dataset.b; row.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slots[i])); })); row.querySelector('[data-chips]').addEventListener('change', (ev) => { if (ev.detail) row.querySelector('.rE').value = estimate(S, ev.detail); }); });
   const uacts = {};
