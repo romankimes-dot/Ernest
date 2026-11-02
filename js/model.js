@@ -195,3 +195,14 @@ export function materialize(state, k) {
   }
   return n;
 }
+
+// Temps mesuré (minutes) par catégorie sur des jours : choses faites (durée réelle) + temps en cours ou en pause.
+export function timeByCat(state, days, now = Date.now()) {
+  const out = {};
+  for (const k of days) for (const t of dayOf(state, k).things) {
+    const ms = t.done ? (t.real || 0) * 60000 : (t.spent || 0) + (t.startedAt ? now - t.startedAt : 0);
+    if (ms > 0) out[t.cat] = (out[t.cat] || 0) + Math.round(ms / 60000);
+  }
+  return out;
+}
+export const fmtMin = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''}`);

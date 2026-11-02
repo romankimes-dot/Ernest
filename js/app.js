@@ -1,13 +1,13 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.6.1';
+const VERSION = '0.7.0';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -274,7 +274,7 @@ function viewToday() {
     if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => swipeWrap('thing', t.id, thingRow(t, t === firstUndone))).join('')}</div></div>`;
   }
   const cur = ordered.find((t) => !t.done && t.startedAt) || ordered.find((t) => !t.done && t.spent) || firstUndone;
-  if (cur) {
+  if (cur && tracking()) {
     if (cur.startedAt) h += `<div class="btns"><button class="btn quiet" data-act="pause" data-id="${cur.id}">${icon('pause', 'sm')} Pause</button><button class="btn" data-act="done" data-id="${cur.id}">${icon('check', 'sm')} Terminer · <span class="timer">${elapsed(cur)}</span></button></div><div class="muted small center">En cours : ${esc(cur.title)}</div>`;
     else if (cur.spent) h += `<div class="btns"><button class="btn" data-act="start" data-id="${cur.id}">${icon('play', 'sm')} Reprendre · ${elapsed(cur)}</button><button class="btn quiet" data-act="done" data-id="${cur.id}">${icon('check', 'sm')} Terminer</button></div><div class="muted small center">En pause : ${esc(cur.title)}</div>`;
     else h += `<button class="btn" data-act="start" data-id="${cur.id}">${icon('play', 'sm')} Démarrer : ${esc(cur.title)}</button>`;
@@ -324,9 +324,10 @@ function helpCard() {
 }
 function thingRow(t, first) {
   const c = catOf(t.cat);
-  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? icon('check') : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${t.seriesId ? `<span class="rep-ic">${icon('repeat', 'sm')}</span>` : ''}${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(c.nom)}${t.done && t.real ? ` · ${t.real} min` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.spent && !t.done ? ` · en pause ${elapsed(t)}` : t.est ? ` · ~${t.est} min` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">${icon('open')}</button>` : ''}</div>`;
+  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? icon('check') : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${t.seriesId ? `<span class="rep-ic">${icon('repeat', 'sm')}</span>` : ''}${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(c.nom)}${t.done && t.real ? ` · ${fmtMin(t.real)}` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.spent && !t.done ? ` · en pause ${elapsed(t)}` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">${icon('open')}</button>` : ''}</div>`;
 }
 const spentMs = (t) => (t.spent || 0) + (t.startedAt ? Date.now() - t.startedAt : 0);
+const tracking = () => S.settings.trackTime !== false;
 const elapsed = (t) => { const m = Math.round(spentMs(t) / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
 function renderTimerOnly() { const t = dayOf(S, today).things.find((x) => x.startedAt && !x.done); if (t) document.querySelectorAll('.timer').forEach((el) => { el.textContent = elapsed(t); }); }
 
@@ -388,10 +389,11 @@ function startThing(t) {
   render();
 }
 function doneSheet(t) {
-  const est = t.est || estimate(S, t.cat);
-  const ms = spentMs(t), real = ms > 0 ? Math.max(1, Math.min(Math.round(ms / 60000), est * 2)) : est;
-  openSheet(`<h2>${esc(t.title)}</h2><div class="kv"><label>Ça a pris combien de temps ?</label><div class="row"><input id="realMin" type="number" inputmode="numeric" min="1" max="600" value="${real}" style="width:110px"><span class="muted">minutes${ms > 0 ? ' (chrono)' : ' (estimation)'}</span></div></div><button class="btn" id="okDone">C'est fait</button><button class="btn quiet" id="noDone">Pas encore</button>`);
-  $('#okDone').addEventListener('click', () => { markDone(t, Number($('#realMin').value) || real); closeSheet(); });
+  const ms = spentMs(t);
+  if (!tracking() || ms <= 0) { markDone(t, 0); return; }
+  const real = Math.max(1, Math.round(ms / 60000));
+  openSheet(`<h2>${esc(t.title)}</h2><div class="kv"><label>Temps mesuré</label><div class="row"><input id="realMin" type="number" inputmode="numeric" min="0" max="900" value="${real}" style="width:110px"><span class="muted">minutes, à corriger si le chrono a tourné pour rien</span></div></div><button class="btn" id="okDone">C'est fait</button><button class="btn quiet" id="noDone">Pas encore</button>`);
+  $('#okDone').addEventListener('click', () => { markDone(t, Math.max(0, Number($('#realMin').value) || 0)); closeSheet(); });
   $('#noDone').addEventListener('click', closeSheet);
 }
 function markDone(t, real) {
@@ -414,11 +416,10 @@ function milestones() {
 // Feuille : une chose (créer ou modifier)
 function thingSheet(t) {
   const d = ensureDay(S, today), isNew = !t; t = t || { id: uid(), title: '', cat: 'perso', est: null, slot: null, done: false, real: 0 };
-  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div>${repeatHtml(t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : [])}<div class="kv"><label>Durée estimée (min)</label><input id="thEst" type="number" inputmode="numeric" value="${t.est || estimate(S, t.cat)}" style="width:120px"></div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('bulb', 'sm')} En idée</button><button class="btn danger" id="thDrop">${icon('trash', 'sm')} Supprimer</button></div>`}`);
+  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div>${repeatHtml(t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : [])}<div class="kv" ${tracking() && (t.done || t.spent) ? '' : 'hidden'}><label>Temps passé (min)</label><input id="thEst" type="number" inputmode="numeric" value="${t.done ? t.real || 0 : Math.round(spentMs(t) / 60000)}" style="width:120px"></div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('bulb', 'sm')} En idée</button><button class="btn danger" id="thDrop">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh); let slot = t.slot; const repDays = bindRepeat(sh, t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : []);
-  sh.querySelector('[data-chips]').addEventListener('change', (e) => { if (e.detail) $('#thEst').value = estimate(S, e.detail); });
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
-  $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; t.est = Number($('#thEst').value) || null; t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
+  $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; if (tracking() && (t.done || t.spent)) { const m = Math.max(0, Number($('#thEst').value) || 0); if (t.done) t.real = m; else { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } } t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
   if (!isNew) {
     $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(today, 1)).things.push({ ...t, startedAt: null, spent: 0 }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
     $('#thIdea').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); save(); closeSheet(); render(); });
@@ -508,15 +509,15 @@ function ritualSheet() {
   <div class="kv"><label>Et toi, aujourd'hui</label><div class="moods">${[0, 1, 2, 3, 4].map((i) => `<button data-mood="${i}" class="${d.mood === i ? 'on' : ''}" aria-label="${moodLabel(i)}">${icon('m' + i)}<small>${moodLabel(i)}</small></button>`).join('')}</div></div>
   ${undone.length ? `<div class="kv"><label>Pas fait aujourd'hui</label><div class="stack" id="rUndone">${undone.map((t) => `<div class="list-item" data-u="${t.id}"><div class="t">${esc(t.title)}</div><button class="chip" data-uact="tomorrow">demain</button><button class="chip" data-uact="idea">idée</button><button class="chip" data-uact="drop">laisser</button></div>`).join('')}</div></div>` : ''}
   <div class="kv"><label>Les 3 de demain, ${esc(fmtDay(tomorrow))}</label>${sug.length ? `<div class="chips" id="rSug">${sug.map((s, i) => `<button class="chip" data-s="${i}"><span class="dot" style="background:${catOf(s.cat).couleur}"></span>${esc(s.title)} <span class="muted">· ${esc(s.why)}</span></button>`).join('')}</div>` : ''}
-  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}<div class="row"><input class="rE" type="number" inputmode="numeric" value="${r.est || estimate(S, r.cat)}" style="width:90px"><span class="muted small">min${r.src ? ` · ${esc(r.src)}` : ''}</span></div></div>`).join('')}</div></div>
+  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}${r.src ? `<span class="muted small">${esc(r.src)}</span>` : ''}</div>`).join('')}</div></div>
   <button class="btn" id="rSave">Bonne nuit</button>`);
   const sh = $('#sheet'); bindChips(sh);
   sh.querySelectorAll('[data-mood]').forEach((b) => b.addEventListener('click', () => { setMood(d, Number(b.dataset.mood)); sh.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('on', x === b)); }));
   const slots = rows.map((r) => r.slot);
-  sh.querySelectorAll('[data-r]').forEach((row) => { const i = Number(row.dataset.r); row.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slots[i] = slots[i] === b.dataset.b ? null : b.dataset.b; row.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slots[i])); })); row.querySelector('[data-chips]').addEventListener('change', (ev) => { if (ev.detail) row.querySelector('.rE').value = estimate(S, ev.detail); }); });
+  sh.querySelectorAll('[data-r]').forEach((row) => { const i = Number(row.dataset.r); row.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slots[i] = slots[i] === b.dataset.b ? null : b.dataset.b; row.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slots[i])); })); });
   const uacts = {};
   sh.querySelectorAll('[data-u]').forEach((row) => row.querySelectorAll('[data-uact]').forEach((b) => b.addEventListener('click', () => { uacts[row.dataset.u] = b.dataset.uact; row.querySelectorAll('[data-uact]').forEach((x) => x.classList.toggle('on', x === b)); if (b.dataset.uact === 'tomorrow') fillRow(d.things.find((t) => t.id === row.dataset.u)); })));
-  function fillRow(src) { const rs = [...sh.querySelectorAll('[data-r]')]; const free = rs.find((r) => !r.querySelector('.rT').value.trim()); if (!free) return; free.querySelector('.rT').value = src.title; const g = free.querySelector('[data-chips]'); g.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.v === src.cat)); free.querySelector('.rE').value = src.est || estimate(S, src.cat); }
+  function fillRow(src) { const rs = [...sh.querySelectorAll('[data-r]')]; const free = rs.find((r) => !r.querySelector('.rT').value.trim()); if (!free) return; free.querySelector('.rT').value = src.title; const g = free.querySelector('[data-chips]'); g.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.v === src.cat)); }
   sh.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => { const s = sug[Number(b.dataset.s)]; fillRow({ title: s.title, cat: s.cat, est: estimate(S, s.cat) }); b.classList.add('on'); }));
   $('#rSave').addEventListener('click', () => {
     label('le rituel du soir');
@@ -524,7 +525,7 @@ function ritualSheet() {
     for (const [id, a] of Object.entries(uacts)) { const t = d.things.find((x) => x.id === id); if (!t) continue; if (a === 'idea') { S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); d.things = d.things.filter((x) => x !== t); } else if (a === 'drop') d.things = d.things.filter((x) => x !== t); }
     const kept = dt.things.filter((t) => !rows.some((r) => r.id === t.id));
     const news = [];
-    sh.querySelectorAll('[data-r]').forEach((row, i) => { const title = row.querySelector('.rT').value.trim(); if (!title) return; const cat = chipValue(row, 'cat' + i) || 'perso'; const prev = rows[i].id ? dt.things.find((t) => t.id === rows[i].id) : null; news.push({ ...(prev || { id: uid(), done: false, real: 0 }), title, cat, est: Number(row.querySelector('.rE').value) || null, slot: slots[i], src: prev ? prev.src : null, link: prev ? prev.link : (uacts && null) }); });
+    sh.querySelectorAll('[data-r]').forEach((row, i) => { const title = row.querySelector('.rT').value.trim(); if (!title) return; const cat = chipValue(row, 'cat' + i) || 'perso'; const prev = rows[i].id ? dt.things.find((t) => t.id === rows[i].id) : null; news.push({ ...(prev || { id: uid(), done: false, real: 0 }), title, cat, est: null, slot: slots[i], src: prev ? prev.src : null, link: prev ? prev.link : (uacts && null) }); });
     for (const t of d.things.filter((x) => !x.done && uacts[x.id] === 'tomorrow')) { if (!news.some((n) => n.title === t.title)) news.push({ ...t, id: uid(), startedAt: null }); d.things = d.things.filter((x) => x !== t); }
     dt.things = [...news, ...kept]; dt.planned = true;
     const fin = say(S, 'rituel.fin', ernestEnv(S, today, plantNames()));
@@ -545,7 +546,9 @@ function viewSemaine() {
   h += `<div class="week">${days.map((k, i) => `<div class="${isActive(S, k) ? 'on' : ''} ${k === today ? 'today' : ''} ${k > today ? 'dim' : ''}">${labels[i]}</div>`).join('')}</div>`;
   h += `<div class="lights" title="Lumière de la serre">${days.map((k) => { const m = dayOf(S, k).mood; return `<span style="background:${m === null || m === undefined ? 'var(--bg3)' : `rgba(242,178,61,${0.15 + m * 0.2})`}"></span>`; }).join('')}</div>`;
   const cats = CATS.filter((c) => counts[c.id] || mins.some((m) => m.cat === c.id));
-  if (cats.length) h += `<div class="bars">${cats.map((c) => { const m = mins.find((x) => x.cat === c.id); const n = counts[c.id] || 0; return `<div><span>${c.nom}</span><i style="width:${Math.round((n / max) * 100)}%;background:${c.couleur}"></i><span class="muted">${n}${m && minsOn ? ` / ${m.min}` : ''}</span></div>`; }).join('')}</div>`;
+  const tm = timeByCat(S, days), tTot = Object.values(tm).reduce((a, b) => a + b, 0);
+  if (cats.length) h += `<div class="bars">${cats.map((c) => { const m = mins.find((x) => x.cat === c.id); const n = counts[c.id] || 0; return `<div><span>${c.nom}</span><i style="width:${Math.round((n / max) * 100)}%;background:${c.couleur}"></i><span class="muted">${n}${m && minsOn ? ` / ${m.min}` : ''}${tracking() && tm[c.id] ? ` · ${fmtMin(tm[c.id])}` : ''}</span></div>`; }).join('')}</div>`;
+  if (tracking() && tTot) h += `<div class="card row spread"><span class="row">${icon('history')}<span>Temps mesuré cette semaine</span></span><b>${fmtMin(tTot)}</b></div>`;
   if (!minsOn) h += `<div class="muted small">Les minimums doux démarrent le ${new Date(S.settings.minimumsFrom + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. D'ici là, seule la révision compte.</div>`;
   h += journalHtml();
   const reviewed = S.weeks[wk] && S.weeks[wk].reviewedAt;
@@ -581,10 +584,10 @@ function historySheet() {
 }
 function seriesSheet(se) {
   if (!se) return;
-  openSheet(`<div class="eyebrow">Série</div><h2>${esc(se.title)}</h2><input id="seTitle" value="${esc(se.title)}" autocomplete="off">${chips(se.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(se.slot)}</div>${repeatHtml(se.days)}<div class="kv"><label>Durée estimée (min)</label><input id="seEst" type="number" inputmode="numeric" value="${se.est || 30}" style="width:120px"></div><button class="btn" id="seSave">Enregistrer</button><button class="btn danger" id="seStop">${icon('trash', 'sm')} Arrêter la série</button><div class="muted small">Arrêter ne touche pas ce qui est déjà dans tes journées.</div>`);
+  openSheet(`<div class="eyebrow">Série</div><h2>${esc(se.title)}</h2><input id="seTitle" value="${esc(se.title)}" autocomplete="off">${chips(se.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(se.slot)}</div>${repeatHtml(se.days)}<button class="btn" id="seSave">Enregistrer</button><button class="btn danger" id="seStop">${icon('trash', 'sm')} Arrêter la série</button><div class="muted small">Arrêter ne touche pas ce qui est déjà dans tes journées.</div>`);
   const sh = $('#sheet'); bindChips(sh); let slot = se.slot; const get = bindRepeat(sh, se.days);
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
-  $('#seSave').addEventListener('click', () => { label('la série'); const days = get(); if (!days.length) { se.active = false; } else Object.assign(se, { title: $('#seTitle').value.trim() || se.title, cat: chipValue(sh, 'cat') || se.cat, slot, est: Number($('#seEst').value) || se.est, days }); save(); closeSheet(); render(); toast(days.length ? 'Série mise à jour.' : 'Série arrêtée.'); });
+  $('#seSave').addEventListener('click', () => { label('la série'); const days = get(); if (!days.length) { se.active = false; } else Object.assign(se, { title: $('#seTitle').value.trim() || se.title, cat: chipValue(sh, 'cat') || se.cat, slot, days }); save(); closeSheet(); render(); toast(days.length ? 'Série mise à jour.' : 'Série arrêtée.'); });
   $('#seStop').addEventListener('click', () => { label("l'arrêt de la série"); se.active = false; save(); closeSheet(); render(); toast('Série arrêtée.', 5000, () => { se.active = true; }); });
 }
 function goalSheet(g) {
@@ -598,7 +601,7 @@ function reviewSheet() {
   const wk = isoWeek(today), days = weekDays(today), goals = S.goals.filter((g) => g.status === 'active'), counts = catCounts(S, days), e = ernestEnv(S, today, plantNames());
   const inbox = S.ideas.filter((i) => i.status === 'inbox');
   openSheet(`<div class="eyebrow">Le point de la semaine</div><h2>${esc(say(S, 'dimanche', e) || 'On regarde ce qui a poussé.')}</h2>
-  <div class="card stack"><div>${activeDays(S, days)} jour${activeDays(S, days) > 1 ? 's' : ''} actif${activeDays(S, days) > 1 ? 's' : ''}, ${Object.values(counts).reduce((a, b) => a + b, 0)} choses faites.</div><div class="muted small">${CATS.filter((c) => counts[c.id]).map((c) => `${c.nom} ${counts[c.id]}`).join(' · ') || 'Une semaine calme.'}</div></div>
+  <div class="card stack"><div>${activeDays(S, days)} jour${activeDays(S, days) > 1 ? 's' : ''} actif${activeDays(S, days) > 1 ? 's' : ''}, ${Object.values(counts).reduce((a, b) => a + b, 0)} choses faites${(() => { const tm = timeByCat(S, days), tt = Object.values(tm).reduce((a, b) => a + b, 0); return tracking() && tt ? `, ${fmtMin(tt)} mesurées` : ''; })()}.</div><div class="muted small">${CATS.filter((c) => counts[c.id]).map((c) => `${c.nom} ${counts[c.id]}`).join(' · ') || 'Une semaine calme.'}</div></div>
   ${goals.length ? `<div class="kv"><label>Objectifs</label><div class="stack">${goals.map((g) => `<div class="card" data-g="${g.id}"><div><b>${esc(g.title)}</b></div><div class="chips" style="margin-top:6px">${['avancé', 'stable', 'à revoir'].map((v) => `<button class="chip ${g.reviews && g.reviews[wk] === v ? 'on' : ''}" data-v="${v}">${v}</button>`).join('')}</div></div>`).join('')}</div></div>` : ''}
   ${inbox.length ? `<div class="muted small">${inbox.length} idée${inbox.length > 1 ? 's' : ''} à trier dans la Liste, quand tu veux.</div>` : ''}
   <div class="kv"><label>Une ligne pour cette semaine</label><input id="wNote" value="${esc((S.weeks[wk] || {}).note || '')}" autocomplete="off"></div>
@@ -643,6 +646,7 @@ function settingsSheet() {
   <div class="row"><div class="kv" style="flex:1"><label>Prénom</label><input id="sName" value="${esc(s.prenom)}"></div><div class="kv" style="flex:1"><label>Rituel du soir à partir de</label><input id="sHour" type="number" min="17" max="23" value="${s.ritualHour}"></div></div>
   <div class="row"><div class="kv" style="flex:1"><label>Prochain examen</label><input id="sExam" type="date" value="${s.exam || ''}"></div><div class="kv" style="flex:1"><label>Son nom</label><input id="sExamL" value="${esc(s.examLabel)}"></div></div>
   <div class="kv"><label>Minimums doux par semaine (0 = aucun), actifs à partir du</label><div class="row"><input id="sMinFrom" type="date" value="${s.minimumsFrom || ''}"></div><div class="chips">${CATS.map((c) => `<span class="chip"><span class="dot" style="background:${c.couleur}"></span>${c.nom} <input data-min="${c.id}" type="number" min="0" max="14" value="${s.minimums[c.id] || 0}" style="width:48px;padding:2px 6px;border-radius:8px"></span>`).join('')}</div></div>
+  <label class="row" style="gap:10px"><input type="checkbox" id="sTrack" style="width:auto" ${s.trackTime !== false ? 'checked' : ''}> Mesurer le temps passé <span class="muted small">(Démarrer, Pause, bilan de la semaine)</span></label>
   <label class="row" style="gap:10px"><input type="checkbox" id="s3d" style="width:auto" ${s.garden3d !== false ? 'checked' : ''}> Serre en 3D <span class="muted small">(sinon la serre dessinée, plus légère)</span></label>
   <div class="muted small">Rappel du soir : iOS ne permet pas à Ernest d'envoyer une notification seul. Une alarme « ${s.ritualHour} h, Ernest » dans Horloge fait le travail.</div>
   <button class="btn" id="sSave">Enregistrer</button>
@@ -652,7 +656,7 @@ function settingsSheet() {
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
-  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
+  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });
   $('#sBridgeGo').addEventListener('click', () => { const p = decode($('#sBridge').value); if (!p) { toast('Pont illisible.'); return; } importSheet(p); });

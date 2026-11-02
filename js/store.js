@@ -12,7 +12,7 @@ export const defaultState = () => ({
   version: 1,
   settings: {
     ritualHour: 21, minimums: { corps: 4, esprit: 3 },
-    exam: '2026-11-10', examLabel: 'Épreuve 1', prenom: 'Roman', garden3d: true, minimumsFrom: '2026-11-11',
+    exam: '2026-11-10', examLabel: 'Épreuve 1', prenom: 'Roman', garden3d: true, trackTime: true, minimumsFrom: '2026-11-11',
   },
   days: {},     // 'YYYY-MM-DD' -> { things: [...], journal, mood, planned }
   list: [],     // { id, text, cat?, due?, done, at, doneAt }

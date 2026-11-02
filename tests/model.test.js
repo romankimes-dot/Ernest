@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { materialize, daysLabel, seriesDue, isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums } from '../js/model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums } from '../js/model.js';
 import { defaultState, hydrate } from '../js/store.js';
 
 const st = () => { const s = defaultState(); s.days['2026-11-03'] = { things: [{ id: 'a', title: 'x', cat: 'revision', done: true, real: 80 }, { id: 'b', title: 'y', cat: 'corps', done: false }], journal: '', mood: 1, planned: true }; return s; };
@@ -83,4 +83,11 @@ test('séries : placées une fois par jour dû, jamais recréées', () => {
   assert.equal(daysLabel([1, 2, 3, 4, 5]), 'Du lundi au vendredi');
   assert.equal(daysLabel([0, 1, 2, 3, 4, 5, 6]), 'Chaque jour');
   assert.equal(daysLabel([5, 1, 3]), 'lun, mer, ven');
+});
+
+test('temps mesuré par catégorie', () => {
+  const s = defaultState();
+  s.days['2026-11-02'] = { things: [{ cat: 'revision', done: true, real: 75 }, { cat: 'revision', done: false, spent: 15 * 60000 }, { cat: 'corps', done: false, startedAt: 1000, spent: 0 }], journal: '', mood: null };
+  assert.deepEqual(timeByCat(s, ['2026-11-02'], 1000 + 30 * 60000), { revision: 90, corps: 30 });
+  assert.equal(fmtMin(45), '45 min'); assert.equal(fmtMin(90), '1 h 30'); assert.equal(fmtMin(120), '2 h');
 });
