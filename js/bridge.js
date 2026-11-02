@@ -30,7 +30,8 @@ export function merge(state, payload, today) {
     if (!t || !t.title) continue;
     const day = /^\d{4}-\d{2}-\d{2}$/.test(t.day || '') ? t.day : today;
     const d = ensureDay(state, day);
-    if (d.things.some((x) => x.title === t.title && x.src === payload.src)) continue;
+    // déjà reçue une fois pour ce jour (même supprimée depuis) : jamais remise
+    if (d.things.some((x) => x.title === t.title && x.src === payload.src) || (br.days[day] || []).includes(t.title)) continue;
     d.things.push({ id: uid(), title: String(t.title).slice(0, 120), cat: t.cat || 'revision', est: Number(t.est) || 30, slot: t.slot || null, src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 });
     (br.days[day] = br.days[day] || []).push(t.title);
     r.things++;
@@ -50,4 +51,17 @@ export function merge(state, payload, today) {
     }
   }
   return r;
+}
+
+export const SRC_NAMES = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
+// Jours déjà travaillés dans l'app de révision : des plantes dans la serre (trois au plus par jour), une fois par jour.
+export function plantHistory(state, payload) {
+  if (!Array.isArray(payload.history)) return 0;
+  let n = 0;
+  for (const hd of payload.history) {
+    if (!hd || !/^\d{4}-\d{2}-\d{2}$/.test(hd.day || '') || state.garden.plants.some((x) => x.day === hd.day && x.src === payload.src)) continue;
+    for (let i = 0; i < Math.min(3, Number(hd.n) || 0); i++) { state.garden.plants.push({ id: uid(), cat: 'revision', day: hd.day, seed: Math.floor(Math.random() * 1e9), kind: 'plant', src: payload.src }); n++; }
+    if (!state.days[hd.day] && hd.n > 0) ensureDay(state, hd.day).things.push({ id: uid(), title: `Révision (${SRC_NAMES[payload.src] || payload.src})`, cat: 'revision', est: 0, done: true, real: 0, src: payload.src, doneAt: hd.day + 'T20:00:00' });
+  }
+  return n;
 }
