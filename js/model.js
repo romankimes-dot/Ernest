@@ -234,3 +234,15 @@ export function timeByCat(state, days, now = Date.now()) {
   return out;
 }
 export const fmtMin = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''}`);
+
+// Moments de la journée et heure à laquelle chacun se termine.
+const SLOT_END = { matin: 12, midi: 14, aprem: 18, soir: 24 };
+export const slotAt = (hour) => (hour < 12 ? 'matin' : hour < 14 ? 'midi' : hour < 18 ? 'aprem' : 'soir');
+// Choses posées par un pont (slotAuto) et pas encore faites : un moment passé glisse vers le moment en cours.
+// Un moment choisi à la main n'a pas slotAuto : jamais déplacé. Retourne le nombre de choses déplacées.
+export function reslot(state, day, hour) {
+  const d = state.days[day]; if (!d) return 0;
+  const now = slotAt(hour); let n = 0;
+  for (const t of d.things) if (t.slotAuto && !t.done && t.slot && SLOT_END[t.slot] <= hour) { t.slot = now; n++; }
+  return n;
+}

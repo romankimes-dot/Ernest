@@ -26,3 +26,14 @@ test('fusion sans doublon', () => {
   assert.equal(s.goals[0].milestones[1].done, true);
   assert.ok(s.bridges.deonto.last);
 });
+
+test('moment proposé par le pont : appliqué aux choses déjà reçues sans moment', () => {
+  const s = defaultState();
+  merge(s, { v: 1, src: 'deonto', things: [{ title: 'A', day: '2026-11-03' }], goals: [] }, '2026-11-03');
+  assert.equal(s.days['2026-11-03'].things[0].slot, null);
+  merge(s, { v: 1, src: 'deonto', things: [{ title: 'A', day: '2026-11-03', slot: 'matin' }, { title: 'B', day: '2026-11-03', slot: 'soir' }], goals: [] }, '2026-11-03');
+  assert.deepEqual(s.days['2026-11-03'].things.map((t) => [t.title, t.slot]), [['A', 'matin'], ['B', 'soir']]);
+  s.days['2026-11-03'].things[0].slot = 'midi';
+  merge(s, { v: 1, src: 'deonto', things: [{ title: 'A', day: '2026-11-03', slot: 'soir' }], goals: [] }, '2026-11-03');
+  assert.equal(s.days['2026-11-03'].things[0].slot, 'midi', 'choix fait dans Ernest gardé');
+});
