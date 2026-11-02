@@ -145,6 +145,7 @@ export function suggestions(state, tomorrow) {
   for (const m of minsOn ? minimums(state, days) : []) {
     if (m.done < m.min) out.push({ kind: 'min', title: catOf(m.cat).nom, cat: m.cat, why: `${m.done} / ${m.min} cette semaine` });
   }
+  for (const h of organize(state, tomorrow, { max: 4 }).filter((x) => x.kind === 'habit')) if (!out.some((o) => norm(o.title) === norm(h.title))) out.push({ kind: 'habit', title: h.title, cat: h.cat, why: 'ton habitude' });
   if (!minsOn) out.push({ kind: 'walk', title: 'Marche de 20 minutes', cat: 'corps', why: 'facultatif, pour souffler' });
   return out.slice(0, 7);
 }
@@ -245,4 +246,63 @@ export function reslot(state, day, hour) {
   const now = slotAt(hour); let n = 0;
   for (const t of d.things) if (t.slotAuto && !t.done && t.slot && SLOT_END[t.slot] <= hour) { t.slot = now; n++; }
   return n;
+}
+
+// ---------- Ernest organisateur : ce qu'il observe sur les 3 dernières semaines ----------
+// Renvoie au plus `max` propositions { id, kind, text, act, ... } pour le jour k. Rien n'est imposé : chaque ligne se prend ou se laisse.
+const norm = (s) => String(s || '').trim().toLowerCase();
+const slotOfHour = (h) => (h < 12 ? 'matin' : h < 14 ? 'midi' : h < 18 ? 'aprem' : 'soir');
+const SLOT_FR = { matin: 'le matin', midi: 'à midi', aprem: "l'après-midi", soir: 'le soir' };
+const DOW_FR = ['le dimanche', 'le lundi', 'le mardi', 'le mercredi', 'le jeudi', 'le vendredi', 'le samedi'];
+export function observe(state, k, days = 21) {
+  const seen = new Map(); // titre -> { title, cat, n, dows, slots, mins }
+  for (let i = 1; i <= days; i++) {
+    const dk = addDays(k, -i);
+    for (const t of dayOf(state, dk).things) {
+      if (!t.done || t.prep) continue;
+      const key = norm(t.title); let o = seen.get(key);
+      if (!o) { o = { title: t.title, cat: t.cat, n: 0, dows: {}, slots: {}, mins: [], last: dk, series: !!t.seriesId }; seen.set(key, o); }
+      o.n++; o.dows[dow(dk)] = (o.dows[dow(dk)] || 0) + 1;
+      const h = t.doneAt && t.doneAt.length > 13 ? parseInt(t.doneAt.slice(11, 13), 10) : null;
+      const sl = t.slot || (h !== null && !Number.isNaN(h) ? slotOfHour(h) : null); if (sl) o.slots[sl] = (o.slots[sl] || 0) + 1;
+      const m = t.spent ? Math.round(t.spent / 60000) : t.real || 0; if (m >= 5) o.mins.push(m);
+      if (t.seriesId) o.series = true;
+    }
+  }
+  return [...seen.values()];
+}
+const top = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1])[0] || null;
+export function organize(state, k, { max = 3, dismissed = {} } = {}) {
+  const out = [], obs = observe(state, k), d = dayOf(state, k), here = new Set(d.things.map((t) => norm(t.title)));
+  const inSeries = new Set((state.series || []).filter((s) => s.active).map((s) => norm(s.title)));
+  const wd = dow(k);
+  // 1. habitude du jour de la semaine : fait au moins 2 fois ce jour-là, pas encore posé aujourd'hui
+  for (const o of obs) {
+    if (here.has(norm(o.title)) || inSeries.has(norm(o.title))) continue;
+    if ((o.dows[wd] || 0) >= 2) { const sl = top(o.slots); out.push({ id: `hab:${norm(o.title)}:${k}`, kind: 'habit', title: o.title, cat: o.cat, slot: sl ? sl[0] : null, text: `Tu fais souvent « ${o.title} » ${DOW_FR[wd]}${sl ? `, plutôt ${SLOT_FR[sl[0]]}` : ''}. Je le pose ?`, yes: 'Le poser' }); }
+  }
+  // 2. répétition sans série : 3 fois ou plus en 2 semaines
+  for (const o of obs) {
+    if (o.series || inSeries.has(norm(o.title)) || o.n < 3) continue;
+    const ds = Object.keys(o.dows).map(Number).sort();
+    out.push({ id: `ser:${norm(o.title)}`, kind: 'series', title: o.title, cat: o.cat, slot: (top(o.slots) || [null])[0], days: ds, text: `« ${o.title} » revient souvent (${o.n} fois en 3 semaines). On en fait une série ?`, yes: 'Créer la série' });
+  }
+  // 3. moment habituel : une chose du jour sans moment, alors que sa catégorie a un moment net
+  const catSlots = {}; for (const o of obs) for (const [s, n] of Object.entries(o.slots)) { catSlots[o.cat] = catSlots[o.cat] || {}; catSlots[o.cat][s] = (catSlots[o.cat][s] || 0) + n; }
+  for (const t of d.things) {
+    if (t.done || t.slot || !catSlots[t.cat]) continue; const tot = Object.values(catSlots[t.cat]).reduce((a, b) => a + b, 0), best = top(catSlots[t.cat]);
+    if (tot >= 3 && best[1] / tot >= 0.6) out.push({ id: `slot:${t.id}`, kind: 'slot', thing: t.id, slot: best[0], text: `« ${t.title} » : ${catOf(t.cat).nom.toLowerCase()}, tu la fais surtout ${SLOT_FR[best[0]]}. Je la range là ?`, yes: 'Ranger' });
+  }
+  // 4. charge : plus de 5 choses à faire
+  const open = d.things.filter((t) => !t.done && !t.prep);
+  if (open.length > 5) out.push({ id: `load:${k}`, kind: 'load', keep: 3, text: `${open.length} choses aujourd'hui, c'est beaucoup. On garde les 3 premières et je décale le reste à demain ?`, yes: 'Alléger' });
+  // 5. durée réelle : une chose du jour qui prend nettement plus que prévu d'habitude
+  for (const t of open) { const o = obs.find((x) => norm(x.title) === norm(t.title)); if (!o || o.mins.length < 2) continue; const avg = Math.round(o.mins.reduce((a, b) => a + b, 0) / o.mins.length); if (avg >= 30) out.push({ id: `dur:${t.id}`, kind: 'info', text: `« ${t.title} » te prend en moyenne ${avg >= 60 ? `${Math.floor(avg / 60)} h ${String(avg % 60).padStart(2, '0')}` : `${avg} min`}. Prévois de la place.`, yes: 'Noté' }); }
+  // 6. équilibre (minimums actifs) : une catégorie avec minimum, rien depuis 6 jours
+  const minsOn = !state.settings.minimumsFrom || k >= state.settings.minimumsFrom;
+  if (minsOn) for (const [cat, min] of Object.entries(state.settings.minimums || {})) {
+    if (!min) continue; let last = null; for (let i = 0; i < 6 && !last; i++) if (doneOn(state, addDays(k, -i)).things.some((t) => t.cat === cat)) last = i;
+    if (last === null && !d.things.some((t) => t.cat === cat)) { const o = obs.filter((x) => x.cat === cat).sort((a, b) => b.n - a.n)[0]; out.push({ id: `bal:${cat}:${k}`, kind: 'habit', title: o ? o.title : (cat === 'corps' ? 'Marche de 20 minutes' : 'Lire 20 minutes'), cat, slot: o ? (top(o.slots) || [null])[0] : null, text: `Rien en ${catOf(cat).nom} depuis six jours. ${o ? `« ${o.title} », comme d'habitude ?` : 'Une petite chose ?'}`, yes: 'Le poser' }); }
+  }
+  return out.filter((x) => !dismissed[x.id]).slice(0, max);
 }
