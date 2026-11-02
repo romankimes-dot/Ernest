@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { svg as ernestSvg } from './ernest.js';
+import { buildCottage } from './cottage3d.js';
 import { growth, totalDone, moodAvg, catCounts, activeDays } from './model.js';
 
 // ---------- Outils ----------
@@ -296,26 +297,13 @@ const mist = [];
 { const tex = softTex((x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
   const r = rngOf(14); for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 })); const a = r() * 6.28, d = 14 + r() * 18; sp.position.set(Math.cos(a) * d, 0.8 + r() * 1.2, Math.sin(a) * d); sp.scale.set(16 + r() * 10, 3 + r() * 2, 1); mist.push(sp); scene.add(sp); } }
 
-// La maison d'Ernest : pierre, toit, fenêtre qui s'allume le soir, cheminée qui fume
-const cottage = new THREE.Group(); scene.add(cottage);
-const windowMat = new THREE.MeshStandardMaterial({ color: 0x2a2116, emissive: 0xffb85c, emissiveIntensity: 0.2 });
-{
-  const stoneM = new THREE.MeshStandardMaterial({ color: 0x9a907c, roughness: 1, flatShading: true }), roofM = new THREE.MeshStandardMaterial({ color: 0x6b3a2a, roughness: 0.9, flatShading: true }), woodM = M.woodDark;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.7, 2.1), stoneM); body.position.y = 0.85; cottage.add(body);
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 1.85, 1.2, 4, 1), roofM); roof.rotation.y = Math.PI / 4; roof.scale.set(1.15, 1, 0.95); roof.position.y = 2.25; cottage.add(roof);
-  const chim = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.1, 0.32), stoneM); chim.position.set(0.7, 2.6, -0.4); cottage.add(chim);
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.05, 0.06), woodM); door.position.set(-0.55, 0.53, 1.06); cottage.add(door);
-  for (const x of [0.55]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.06), windowMat); w.position.set(x, 1.05, 1.06); cottage.add(w); const sill = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.06, 0.14), woodM); sill.position.set(x, 0.82, 1.1); cottage.add(sill); }
-  const side = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.45), windowMat); side.position.set(1.31, 1.05, 0.2); cottage.add(side);
-  const winLight = new THREE.PointLight(0xffb070, 0, 5, 1.8); winLight.position.set(0.5, 1.1, 1.5); cottage.add(winLight); cottage.userData.light = winLight;
-  // tas de bois et banc
-  for (let i = 0; i < 9; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.6, 6), M.bark); l.rotation.x = Math.PI / 2; l.position.set(-1.6 + (i % 3) * 0.15, 0.08 + Math.floor(i / 3) * 0.13, -0.3 + (i % 2) * 0.05); cottage.add(l); }
-  cottage.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  const cx = -8.6, cz = -6.2; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.75;
-}
+// La maison d'Ernest : chaumière de conte (js/cottage3d.js), fenêtres qui s'allument le soir, cheminée qui fume
+const cottageB = buildCottage(THREE, { rng: rngOf(77), M });
+const cottage = cottageB.group; scene.add(cottage);
+{ const cx = -8.6, cz = -6.2; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.75; }
 const smoke = [];
 { const tex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(230,226,215,.7)'); g.addColorStop(1, 'rgba(230,226,215,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
-  const base = new THREE.Vector3(0.7, 3.2, -0.4); cottage.updateMatrixWorld(); base.applyMatrix4(cottage.matrixWorld);
+  const base = cottageB.smokeOrigin.clone(); cottage.updateMatrixWorld(); base.applyMatrix4(cottage.matrixWorld);
   for (let i = 0; i < 12; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); smoke.push({ sp, t: i / 12, base }); scene.add(sp); } }
 // La mare : eau, nénuphars, roseaux
 {
@@ -360,7 +348,7 @@ function updateLife(a, t, dt, sd, hour) {
   const { rise } = sunTimes(), mf = Math.max(0, 1 - Math.abs(hour - (rise + 1.2)) / 2.2) * 0.55;
   for (const m of mist) { m.material.opacity = mf; m.visible = mf > 0.01; m.material.color.set(a.fog); }
   // maison : fenêtre et fumée
-  const night = 1 - dayF; windowMat.emissiveIntensity = 0.2 + night * 2.2; cottage.userData.light.intensity = night * 3; ext.serre2.g.userData.light.intensity = night * 2.5 * ext.serre2.cur;
+  const night = 1 - dayF; cottageB.update(clock.elapsedTime, night); ext.serre2.g.userData.light.intensity = night * 2.5 * ext.serre2.cur;
   for (const s of smoke) { s.t = (s.t + dt * 0.08) % 1; const k = s.t; s.sp.position.set(s.base.x + Math.sin(k * 6 + t * 0.3) * 0.3 + k * 1.2, s.base.y + k * 4, s.base.z - k * 0.6); s.sp.scale.setScalar(0.4 + k * 1.8); s.sp.material.opacity = (1 - k) * 0.45 * (0.6 + night * 0.4); s.sp.material.color.set(night > 0.5 ? '#8a8a90' : '#e6e2d7'); }
   // oiseaux
   for (const b of birds) { b.g.visible = dayF > 0.4; if (!b.g.visible) continue; b.a += b.v * dt; b.g.position.set(Math.cos(b.a) * b.rad, b.h + Math.sin(t * 0.5 + b.ph) * 0.8, Math.sin(b.a) * b.rad); b.g.rotation.y = -b.a; const f = Math.sin(t * 9 + b.ph) * 0.6; b.L.rotation.z = f; b.R.rotation.z = -f; }
