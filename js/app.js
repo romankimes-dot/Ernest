@@ -101,9 +101,11 @@ async function runSync({ manual = false } = {}) {
   const cfg = SY.config(); if (!cfg || syncing) return;
   clearTimeout(syncTimer); syncTimer = null; syncing = true;
   try {
-    const m = SY.meta(), seq = editSeq;
-    const r = await SY.pull(cfg, S, m, today);
-    if (seq !== editSeq || !$('#sheet').hidden) { scheduleSync(15000); return; } // on réessaie quand l'écran est libre
+    // Un changement pendant la lecture (une réplique d'Ernest suffit) : on relit, trois fois au plus.
+    let r = null;
+    for (let i = 0; i < 3 && !r; i++) { const seq = editSeq; const x = await SY.pull(cfg, S, SY.meta(), today); if (seq === editSeq) r = x; }
+    if (!r || (!manual && !$('#sheet').hidden)) { scheduleSync(10000); return; } // on réessaie quand l'écran est libre
+    if (!$('#sheet').hidden && (r.state !== S)) closeSheet(); // demandé à la main : la fiche ouverte se ferme
     if (r.state !== S) {
       if (r.conflict) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
       S = r.state; materialize(S, today); S._light = moodAvg(S, today); store.save(S);
@@ -388,7 +390,6 @@ function viewToday() {
   }
   if (d.things.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
   if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
-  h += `<button class="chip paste" data-act="pasteBridge">${icon('arrow', 'sm')} Coller depuis une app de révision</button>`;
   const dn = doneOn(S, today).n; if (dn) h += `<div class="muted small">${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout.</div>`;
   return h;
 }
@@ -475,7 +476,6 @@ function action(act, ds, el, v) {
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'history': historySheet(); break;
-    case 'pasteBridge': pasteBridge(); break;
     case 'newSeries': captureSheet('series'); break;
     case 'jEdit': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (t) thingSheet(t, ds.day); break; }
     case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = say(S, 'semaine-grise', ernestEnv(S, today, plantNames())); if (t) bubble(t); } break; }
@@ -802,7 +802,7 @@ function settingsSheet() {
   <label class="toggle"><input type="checkbox" id="sAutoR" ${s.autoRitual ? 'checked' : ''}><span>Ouvrir le rituel du soir tout seul<small>Dès 18 h, à la première ouverture, si demain n'est pas encore préparé</small></span></label>
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
-  <div class="kv"><label>Pont : dans Deonto ou dec-revision, « Copier pour Ernest », puis colle ici</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
+  <div class="kv"><label>Pont manuel (dec-revision, mémoire) : colle ici le plan copié. Deonto arrive tout seul par la synchronisation.</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
   ${syncSection()}
   <div class="btns"><button class="btn quiet" id="sHelp">${icon('help', 'sm')} La visite</button><button class="btn quiet" id="sIntro">${icon('leaf', 'sm')} L'arrivée d'Ernest</button></div>
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
@@ -829,15 +829,6 @@ function handleImport() {
   const p = decode(location.hash); if (!p) return;
   history.replaceState(null, '', location.pathname + location.search);
   importSheet(p);
-}
-// Coller le plan copié dans Deonto ou dec-revision (« Copier pour Ernest »).
-async function pasteBridge() {
-  let txt = '';
-  try { txt = await navigator.clipboard.readText(); } catch { txt = ''; }
-  const p = decode(txt);
-  if (p) { importSheet(p); return; }
-  settingsSheet();
-  setTimeout(() => { const t = $('#sBridge'); if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); } toast(txt ? "Ce qui est copié n'est pas un plan. Dans Deonto, touche « Copier pour Ernest », puis reviens." : 'Colle le plan ici (appui long, Coller), puis « Lire le pont ».', 5000); }, 150);
 }
 function importSheet(p) {
   const names = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
