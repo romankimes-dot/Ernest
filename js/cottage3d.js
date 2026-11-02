@@ -83,20 +83,31 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const wallPt = (p, y, off = 0) => { const r = wR(y) * (1 + wn(p, y) * damp(p, y)) + off; return V(Math.sin(p) * r * XS + lean(y), y, Math.cos(p) * r); };
   const wallN = (p) => V(Math.sin(p) / XS, 0, Math.cos(p)).normalize();
   {
-    const g = new THREE.LatheGeometry(wProf.map(([r, y]) => new THREE.Vector2(r, y)), 30);
+    // profil densifié pour que le relief des pierres sous la chaux se voie
+    const prof = []; for (let i = 0; i < wProf.length - 1; i++) { const [r0, y0] = wProf[i], [r1, y1] = wProf[i + 1]; for (let k = 0; k < 4; k++) { const f = k / 4; prof.push(new THREE.Vector2(r0 + (r1 - r0) * f, y0 + (y1 - y0) * f)); } } prof.push(new THREE.Vector2(...wProf[wProf.length - 1]));
+    const g = new THREE.LatheGeometry(prof, 84);
+    // pierres noyées dans la chaux : bosses en rangs irréguliers (cellules), plus fortes en bas
+    const cell = (p, y) => { const row = Math.floor(y / 0.2), yy = y / 0.2 - row, off = (row * 0.37) % 1, u = p * 6.2 / Math.PI + off, col = Math.floor(u), uu = u - col; const h = Math.sin(row * 12.9 + col * 78.2) * 0.5 + 0.5; return Math.sin(Math.PI * uu) ** 0.6 * Math.sin(Math.PI * yy) ** 0.6 * (0.55 + 0.45 * h); };
     const pos = g.attributes.position, cols = [];
     const white = C('#f1ead9'), warm = C('#e6d9bd'), dirt = C('#8f8366'), green = C('#6f7d4c'), c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), r0 = Math.hypot(x, z), p = Math.atan2(x, z);
-      const r = r0 * (1 + wn(p, y) * damp(p, y));
+      const lump = r0 > 0.6 ? (cell(p, y) * 0.045 + 0.008 * Math.sin(p * 37 + y * 23) * Math.sin(p * 17 - y * 41)) * (1 - sstep(1.75, 2.05, y)) * (1 - 0.8 * Math.exp(-p * p * 14) * (1 - sstep(1.3, 1.7, y))) : 0;
+      const r = r0 * (1 + wn(p, y) * damp(p, y)) + lump;
       pos.setXYZ(i, Math.sin(p) * r * XS + lean(y), y, Math.cos(p) * r);
       c.copy(white).lerp(warm, clamp01(0.5 + 0.5 * Math.sin(4 * p + ph[4] + y * 2.3)) * 0.7);
       c.lerp(dirt, (1 - sstep(0.0, 0.5, y)) * 0.75);
+      c.multiplyScalar(0.78 + 0.22 * clamp01(lump / 0.04)); // joints plus sombres, pierres plus claires
       c.lerp(green, (1 - sstep(0.0, 0.35, y)) * clamp01(-Math.cos(p) + 0.3) * 0.5);
       cols.push(c.r, c.g, c.b);
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     g.computeVertexNormals();
+    // grain de la chaux et petites fissures (bump procédural)
+    if (typeof document !== 'undefined') { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'); x.fillStyle = '#808080'; x.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 2600; i++) { const v = 100 + Math.floor(rng() * 70); x.fillStyle = `rgba(${v},${v},${v},0.5)`; const r = 1 + rng() * 3.5; x.beginPath(); x.arc(rng() * 256, rng() * 256, r, 0, 6.29); x.fill(); }
+      x.strokeStyle = 'rgba(40,40,40,0.55)'; x.lineWidth = 1; for (let i = 0; i < 9; i++) { let px = rng() * 256, py = rng() * 256; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 6; k++) { px += (rng() - 0.5) * 22; py += rng() * 14; x.lineTo(px, py); } x.stroke(); }
+      const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(6, 2); MAT.wash.bumpMap = tx; MAT.wash.bumpScale = 4; MAT.wash.needsUpdate = true; }
     const walls = new THREE.Mesh(g, MAT.wash); walls.castShadow = walls.receiveShadow = true; group.add(walls);
   }
 
