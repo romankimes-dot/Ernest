@@ -154,12 +154,12 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   for (let i = 0; i < 120; i++) { const p = (i / 120) * Math.PI * 2 + R(-0.02, 0.02); tuft(p, R(0.19, 0.25), R(0.3, 0.44), R(0.09, 0.14), 0.025); }
   for (let i = 0; i < 260; i++) { const p = rng() * Math.PI * 2, s = R(0.3, 0.68); tuft(p, s, R(0.22, 0.34), R(0.04, 0.07), 0.008); }
   // liens de noisetier croisés sur le faîtage (motif des chaumes irlandais)
-  const stick = (a, b, th = 0.018) => { const d = b.clone().sub(a), len = d.length(); put('dark', a.clone().addScaledVector(d, 0.5), new THREE.Quaternion().setFromUnitVectors(Y, d.normalize()), [th, len, th], '#c09a68'); };
+  const stick = (a, b, th = 0.018) => { const d = b.clone().sub(a), len = d.length(); put('woodB', a.clone().addScaledVector(d, 0.5), new THREE.Quaternion().setFromUnitVectors(Y, d.normalize()), [th, len, th], '#a8845a'); };
   const lig = (p, s) => roofPt(p, s, 0.006);
   for (let i = 0; i < 28; i++) { const p0 = (i / 28) * Math.PI * 2, p1 = ((i + 1) / 28) * Math.PI * 2, pm = (p0 + p1) / 2;
     stick(lig(p0, 0.74), lig(pm, 0.82)); stick(lig(pm, 0.82), lig(p1, 0.74));
     stick(lig(p0, 0.735), lig(p1, 0.735), 0.022); stick(lig(p0, 0.825), lig(p1, 0.825), 0.022); }
-  for (let i = 0; i < 26; i++) { const p = R(1.2, 5.0), s = R(0.26, 0.55), { n } = roofFrame(p, s); put('moss', roofPt(p, s, 0.01), qFace(n, rng() * 6), [R(0.25, 0.4), R(0.18, 0.3), 0.04], vary('#6b7a3a', 0.1)); }
+  for (let i = 0; i < 16; i++) { const p = R(1.6, 4.6), s = R(0.26, 0.55), { n } = roofFrame(p, s); put('moss', roofPt(p, s, 0.01), qFace(n, rng() * 6), [R(0.25, 0.4), R(0.18, 0.3), 0.04], vary('#7d8a45', 0.08)); }
 
   // ---------- Cheminée de pierres qui penche ----------
   let smokeOrigin;
@@ -224,7 +224,6 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const flowerCols = ['#e8473a', '#f2c84b', '#f4efe6', '#7a5cc8', '#e77fb0'];
   for (const [p, y, box] of [[0.8, 1.05, true], [-0.92, 1.0, true], [1.95, 1.05, false], [-2.05, 1.12, false]]) {
     const n = wallN(p), w = wallPt(p, y), qq = qFace(n);
-    put('stone', w.clone().addScaledVector(n, 0.01), qq, [0.56, 0.56, 0.06], '#d9cfb8'); // embrasure plus claire
     put('glass', w.clone().addScaledVector(n, 0.05), qq, 0.36);
     put('frame', w.clone().addScaledVector(n, 0.06), qq, [0.4, 0.4, 0.5]);
     put('dark', w.clone().addScaledVector(n, 0.065), qq, [0.025, 0.36, 0.02]);
