@@ -507,6 +507,19 @@ BEDS.forEach((b, bi) => {
   bm.visible = !!PAL.leaves;
   const um = new THREE.InstancedMesh(grad(lumpy(new THREE.IcosahedronGeometry(1, 2), 0.16, 4.1), -0.8, 0.7, 0.6, 1.1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, vertexColors: true }), bushes.length);
   bushes.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, v * 6.28, 0); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, vary(col(SEASON === 'automne' ? ['#6f7f34', '#8a7a30', '#a0662c', '#5f7432'][i % 4] : '#3f6e3a'), rngOf(i), 0.12)); });
+  // vent dans les houppiers : le haut bouge plus que le bas, chaque arbre à son rythme (position de l'instance)
+  const sway = (mat, amp, key) => {
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = windU;
+      sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        vec3 wp = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
+        float hk = clamp(position.y + 0.6, 0.0, 1.6);
+        float w = sin(uTime * 0.9 + wp.x * 0.21 + wp.z * 0.17) * 0.7 + sin(uTime * 2.3 + wp.x * 0.9 + position.y * 2.0 + position.x * 1.7) * 0.3;
+        transformed.x += w * hk * ${amp.toFixed(3)}; transformed.z += w * hk * ${(amp * 0.5).toFixed(3)};`);
+    };
+    mat.customProgramCacheKey = () => key;
+  };
+  sway(cm.material, 0.035, 'swayCone'); sway(bm.material, 0.05, 'swayBlob'); sway(um.material, 0.06, 'swayBush');
   for (const m of [tm, cm, bm, um]) { m.castShadow = true; m.receiveShadow = true; outdoor.add(m); }
 }
 
@@ -1189,6 +1202,8 @@ function frame(now) {
   if (!visible) return;
   if (mode === 'band') {
     // fenêtre d'animation (lanterne, graines, feuille) : quelques secondes d'images, puis une image fixe propre
+    // ordinateur : le bandeau vit en continu (vent dans l'herbe et les arbres), à 30 images/s
+    if (LIVE_BAND) { if (stillDirty || stillSlot !== Math.floor(Date.now() / 1800000)) stillFrame(); if ((bandTick++ & 1) === 0) bandAnimFrame(); animOn = true; return; }
     if (performance.now() < animUntil) { if (stillSlot < 0) stillFrame(); bandAnimFrame(); animOn = true; }
     else { if (animOn) { animOn = false; stillDirty = true; } stillFrame(); }
     return;
@@ -1212,11 +1227,11 @@ function stillFrame() {
   const a = ANGLES[forcedAngle ?? ((slot % ANGLES.length) + ANGLES.length) % ANGLES.length], w = angleWorld(a);
   camera.position.copy(w.pos); camera.lookAt(w.t); camera.fov = a.fov || 40; camera.updateProjectionMatrix();
   if (camera.position.y < heightAt(camera.position.x, camera.position.z) + 0.9) camera.position.y = heightAt(camera.position.x, camera.position.z) + 0.9;
-  const t = 2.5; pop = null;
+  const t = LIVE_BAND && bandT0 ? 2.5 + (performance.now() - bandT0) / 1000 : 2.5; pop = null; // bandeau vivant : le vent ne saute pas
   for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
   windU.value = t; updateFx(nowS(), t); renderer.shadowMap.needsUpdate = true; refreshEnv(true);
   draw();
-  stillDirty = false; stillSlot = slot; bandT0 = 0;
+  stillDirty = false; stillSlot = slot; if (!LIVE_BAND) bandT0 = 0;
 }
 // Une image animée du bandeau : la caméra reste celle de l'image fixe, le temps repart de celui de l'image fixe.
 let bandT0 = 0, bandFrames = 0;
@@ -1232,6 +1247,7 @@ function bandAnimFrame() {
 // Réservé à l'ordinateur (pointeur fin, pas de mobile) : sur téléphone, la batterie passe avant. Chargé à la demande.
 const DESK = typeof window !== 'undefined' && window.matchMedia && matchMedia('(pointer: fine) and (min-width: 900px)').matches && !/iPhone|iPad|Android/i.test(navigator.userAgent);
 let composer = null, bloom = null;
+const LIVE_BAND = DESK && !matchMedia('(prefers-reduced-motion: reduce)').matches; let bandTick = 0;
 const draw = () => (composer ? composer.render() : renderer.render(scene, camera));
 async function setupPost() {
   try {

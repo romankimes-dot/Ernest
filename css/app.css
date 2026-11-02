@@ -337,3 +337,8 @@ body.running .view,body.running main{padding-bottom:190px}
 }
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 input:focus-visible,textarea:focus-visible{outline:none}
+/* Semaine : les trois barres toujours, avec leur piste */
+.bars div{grid-template-columns:84px 1fr auto}
+.bars div>span:first-child{white-space:nowrap}
+.bars .track{display:block;height:8px;border-radius:4px;background:var(--bg3)}
+.bars .track i{height:100%}
