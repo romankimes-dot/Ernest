@@ -131,3 +131,19 @@ test('Ernest organisateur : habitude du jour, série proposée, charge, moment',
   assert.equal(organize(st, k, { max: 9, dismissed: { [`hab:courir:${k}`]: 1 } }).some((x) => x.kind === 'habit' && x.title === 'Courir'), false, 'une proposition refusée ne revient pas');
   assert.equal(observe(st, k)[0].n, 3);
 });
+
+import { smallProposals } from '../js/model.js';
+test('équilibre des serres : la Liste compte pour Vie perso, une petite chose proposée dans la serre en retard', () => {
+  const s = defaultState();
+  s.list.push({ id: 'l1', text: 'Courses', done: true, doneAt: '2026-11-03T18:00:00Z' }, { id: 'l2', text: 'Rendre le colis', done: false });
+  s.days['2026-11-03'] = { things: [{ id: 'a', title: 'Session', cat: 'travail', done: true }, { id: 'b', title: 'Marche', cat: 'bienetre', done: true }, { id: 'c', title: 'Étirements', cat: 'bienetre', done: true }] };
+  assert.equal(catCounts(s, ['2026-11-03']).perso, 1); // la course cochée, sans catégorie
+  const p = smallProposals(s, '2026-11-04');
+  assert.equal(p[0].cat, 'perso'); // 1 perso contre 2 bien-être
+  assert.ok(p.some((o) => o.title === 'Rendre le colis' && o.fromList === 'l2'));
+  assert.ok(p.some((o) => o.cat === 'bienetre'));
+  s.days['2026-11-04'] = { things: [{ id: 'd', title: 'Rendre le colis', cat: 'perso', done: false }] };
+  assert.ok(!smallProposals(s, '2026-11-04').some((o) => o.title === 'Rendre le colis')); // déjà posée
+  const h = hydrate({ ...defaultState(), garden: { plants: [{ id: 'm', cat: 'perso', day: '2026-11-01', seed: 1, kind: 'moss' }], objects: [] } });
+  assert.equal(h.garden.plants[0].kind, 'plant'); assert.equal(h.garden.plants[0].list, true);
+});

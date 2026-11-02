@@ -1157,7 +1157,7 @@ export function houseFromState(S, today, id, counts, n) {
   let hn = H.cats.reduce((a, c) => a + (counts[c] || 0), 0);
   if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
   const plants = ps.filter((p) => p.kind === 'plant' && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
-  const mossN = ps.filter((p) => p.kind === 'moss' && mine(p)).length;
+  const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
   const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || (goals.get(p.goal) || {}).status === 'active'))
     .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0 }));
   return { n: hn, plants, moss: Math.min(MOSS_MAX, mossN * 8 + Math.max(0, hn - 10) * 3), vine: Math.min(1, hn / 80), hanging: [8, 25, 50].filter((k) => hn >= k).length, bonsai };

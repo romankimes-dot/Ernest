@@ -1,6 +1,6 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot, organize } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot, organize, smallProposals } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
@@ -495,7 +495,7 @@ function action(act, ds, el, v) {
     case 'done': if (thing) doneSheet(thing); break;
     case 'toggle': if (thing) { if (thing.done) { thing.done = false; thing.doneAt = null; save(); render(); } else doneSheet(thing); } break;
     case 'thingMenu': if (thing) thingSheet(thing); break;
-    case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; } else { l.done = true; l.doneAt = new Date().toISOString(); plant(l.cat || 'perso', 'moss'); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
+    case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; } else { l.done = true; l.doneAt = new Date().toISOString(); plant(l.cat || 'perso', 'plant', { list: true }); /* une vraie plante, dans Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
     case 'listEdit': listSheet(S.list.find((x) => x.id === ds.id)); break;
     case 'ideaAct': { const i = S.ideas.find((x) => x.id === ds.id); if (!i) return; if (ds.v === 'todo') { S.list.push({ id: uid(), text: i.text, cat: null, due: null, done: false, at: new Date().toISOString() }); i.status = 'done'; } else if (ds.v === 'keep') i.status = 'kept'; else if (ds.v === 'drop') i.status = 'dropped'; else if (ds.v === 'goal') { S.goals.push({ id: uid(), title: i.text, cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} }); i.status = 'done'; } save(); render(); break; }
     case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) t.real = 0; save(); render(); break; }
@@ -547,7 +547,7 @@ function markDone(t, real) {
   if (all) { const L = drawLong(S, today); if (L) toast(`Carnet : « ${L.titre || 'une histoire'} »`, 4000); }
   milestones(); save(); render();
 }
-function plant(cat, kind) { S.garden.plants.push({ id: uid(), cat, day: today, seed: Math.floor(Math.random() * 1e9), kind }); if (S.garden.plants.length > 600) S.garden.plants.splice(0, S.garden.plants.length - 600); }
+function plant(cat, kind, extra = {}) { S.garden.plants.push({ id: uid(), cat, day: today, seed: Math.floor(Math.random() * 1e9), kind, ...extra }); if (S.garden.plants.length > 600) S.garden.plants.splice(0, S.garden.plants.length - 600); }
 function milestones() {
   const n = totalDone(S), M = S.milestones;
   for (const k of [1, 10, 50, 100, 250, 500]) if (n >= k && !M[`n${k}`]) { M[`n${k}`] = today; const c = drawRare(S, `n${k}`); if (c) toast(`Carnet : carte rare « ${c.titre || ''} »`, 4000); S.garden.objects.push({ kind: `n${k}`, day: today }); }
@@ -667,6 +667,7 @@ function ritualSheet() {
   const tomorrow = addDays(today, 1), d = ensureDay(S, today), dt = ensureDay(S, tomorrow), e = ernestEnv(S, today, plantNames());
   const undone = d.things.filter((t) => !t.done && !t.prep && t.slot !== 'soir'); // le soir et la veille d'examen ne se reportent pas
   const sug = suggestions(S, tomorrow);
+  const small = smallProposals(S, tomorrow); let smI = 0, smTaken = null; // équilibre des serres : une petite chose Bien-être ou Vie perso
   const bridgeSug = Object.values(S.bridges).flatMap((b) => []); // les ponts créent déjà leurs choses pour le bon jour
   const rows = [0, 1, 2].map((i) => { const t = dt.things[i]; return { title: t ? t.title : '', cat: t ? t.cat : defCat(), est: t ? t.est : null, slot: t ? t.slot : null, id: t ? t.id : null, src: t ? t.src : null, link: t ? t.link : null, fromList: t ? t.fromList : null }; });
   // brouillon : un tap à côté ne perd rien de ce qui a été écrit
@@ -679,6 +680,7 @@ function ritualSheet() {
   </div><div class="rstep" data-step="2" hidden>${undone.length ? `<div class="kv"><label>Pas fait aujourd'hui</label><div class="stack" id="rUndone">${undone.map((t) => `<div class="list-item" data-u="${t.id}"><div class="t">${esc(t.title)}</div><button class="chip" data-uact="tomorrow">demain</button><button class="chip" data-uact="idea">idée</button><button class="chip" data-uact="drop">laisser</button></div>`).join('')}</div></div>` : ''}
   </div><div class="rstep" data-step="3" hidden><div class="kv"><label>Les 3 de demain, ${esc(fmtDay(tomorrow))}</label>${sug.length ? `<div class="chips" id="rSug">${sug.map((s, i) => `<button class="chip" data-s="${i}"><span class="dot" style="background:${catOf(s.cat).couleur}"></span>${esc(s.title)} <span class="muted">· ${esc(s.why)}</span></button>`).join('')}</div>` : ''}
   <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off"><details class="more"><summary><span class="dot" style="background:${catOf(r.cat).couleur}"></span> ${esc(catOf(r.cat).nom)}${r.slot ? ' · ' + esc(BLOCKS[r.slot]) : ''} <span class="muted">· détails</span></summary>${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}</details>${r.src ? `<span class="muted small">${esc(r.src)}</span>` : ''}</div>`).join('')}</div></div>
+  ${small.length ? `<div class="card ernest-card stack" id="rSmall"><div class="small muted">Et une petite chose pour toi ?</div><div class="row"><span class="dot" id="rSmDot"></span><b id="rSmT"></b></div><div class="small muted" id="rSmWhy"></div><div class="btns"><button class="btn quiet" id="rSmTake">Je la prends</button><button class="btn quiet" id="rSmNext">Autre idée</button></div></div>` : ''}
   <div class="muted small">${icon('moon', 'sm')} Coucher visé : ${esc((S.settings.bedtime || '22:30').replace(':', ' h '))}. Écrans posés une demi-heure avant.</div>
   </div><div class="rfoot"><button class="btn quiet" id="rBack" hidden>Retour</button><button class="btn" id="rNext">Suivant</button><button class="btn" id="rSave" hidden>Bonne nuit</button></div>`);
   const sh = $('#sheet'); bindChips(sh);
@@ -692,14 +694,25 @@ function ritualSheet() {
   $('#rNext').addEventListener('click', () => { si = Math.min(steps.length - 1, si + 1); show(); }); $('#rBack').addEventListener('click', () => { si = Math.max(0, si - 1); show(); }); show();
   for (const [id, a] of Object.entries(uacts)) { const row = sh.querySelector(`[data-u="${id}"]`); if (row) row.querySelectorAll('[data-uact]').forEach((x) => x.classList.toggle('on', x.dataset.uact === a)); }
   sh.querySelectorAll('[data-u]').forEach((row) => row.querySelectorAll('[data-uact]').forEach((b) => b.addEventListener('click', () => { uacts[row.dataset.u] = b.dataset.uact; row.querySelectorAll('[data-uact]').forEach((x) => x.classList.toggle('on', x === b)); keepDraft(); if (b.dataset.uact === 'tomorrow') { const t = d.things.find((x) => x.id === row.dataset.u); if (t) fillRow({ title: t.title, cat: t.cat, fromList: t.fromList }); } })));
-  function fillRow(src) { const rs = [...sh.querySelectorAll('[data-r]')]; const norm = (x) => x.trim().toLowerCase();
+  function fillRow(src, last = false) { const rs = [...sh.querySelectorAll('[data-r]')]; const norm = (x) => x.trim().toLowerCase();
     if (rs.some((r) => norm(r.querySelector('.rT').value) === norm(src.title))) { toast('Déjà posée pour demain.'); return; }
-    const free = rs.find((r) => !r.querySelector('.rT').value.trim()); if (!free) { toast('Les trois places sont prises.'); return; }
+    const free = (last ? [...rs].reverse() : rs).find((r) => !r.querySelector('.rT').value.trim()); if (!free) { toast('Les trois places sont prises.'); return; }
     const i = Number(free.dataset.r); free.querySelector('.rT').value = src.title; rows[i].fromList = src.fromList || null; const g = free.querySelector('[data-chips]'); g.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.v === src.cat)); syncSum(free); keepDraft(); }
   function syncSum(row) { const c = catOf(chipValue(row, 'cat' + row.dataset.r) || defCat()), sl = slots[Number(row.dataset.r)]; const su = row.querySelector('summary'); if (su) su.innerHTML = `<span class="dot" style="background:${c.couleur}"></span> ${esc(c.nom)}${sl ? ' · ' + esc(BLOCKS[sl]) : ''} <span class="muted">· détails</span>`; }
   function keepDraft() { S.ritualDraft = { day: today, uacts, journal: $('#rJournal').value, rows: [...sh.querySelectorAll('[data-r]')].map((r, i) => ({ title: r.querySelector('.rT').value, cat: chipValue(r, 'cat' + i) || defCat(), slot: slots[i], fromList: rows[i].fromList })) }; store.save(S); }
   sh.addEventListener('input', keepDraft); sh.addEventListener('click', (ev) => { const r = ev.target.closest('[data-r]'); if (r && ev.target.closest('.chip,[data-b]')) setTimeout(() => { syncSum(r); keepDraft(); }); });
   sh.addEventListener('focusin', (ev) => { if (ev.target.matches('input,textarea')) setTimeout(() => ev.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320); });
+  const smShow = () => { const o = small[smI % small.length]; $('#rSmT').textContent = o.title; $('#rSmWhy').textContent = o.why; $('#rSmDot').style.background = catOf(o.cat).couleur; const tk = smTaken === o; $('#rSmTake').textContent = tk ? 'Prise' : 'Je la prends'; $('#rSmTake').classList.toggle('on', tk); };
+  if (small.length) {
+    smShow();
+    $('#rSmNext').addEventListener('click', () => { smI++; smShow(); });
+    $('#rSmTake').addEventListener('click', () => {
+      const o = small[smI % small.length]; if (smTaken === o) return;
+      const rs = [...sh.querySelectorAll('[data-r]')], free = rs.find((r) => !r.querySelector('.rT').value.trim());
+      if (free) { fillRow({ title: o.title, cat: o.cat, fromList: o.fromList || null }, true); smTaken = null; toast('Posée pour demain.'); smI++; smShow(); }
+      else { smTaken = o; smShow(); toast('Prise, en plus des trois. Elle est petite.'); }
+    });
+  }
   sh.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => { const s = sug[Number(b.dataset.s)]; fillRow({ title: s.title, cat: s.cat, est: estimate(S, s.cat), fromList: s.kind === 'list' ? s.id : null }); b.classList.add('on'); }));
   $('#rSave').addEventListener('click', () => {
     label('le rituel du soir');
@@ -710,6 +723,7 @@ function ritualSheet() {
     sh.querySelectorAll('[data-r]').forEach((row, i) => { const title = row.querySelector('.rT').value.trim(); if (!title) return; const cat = chipValue(row, 'cat' + i) || defCat(); const prev = rows[i].id ? dt.things.find((t) => t.id === rows[i].id) : null; news.push({ ...(prev || { id: uid(), done: false, real: 0 }), title, cat, est: null, slot: slots[i], src: prev ? prev.src : null, link: prev ? prev.link : null, fromList: rows[i].fromList || (prev && prev.fromList) || null }); });
     for (const t of d.things.filter((x) => !x.done && uacts[x.id] === 'tomorrow')) { if (!news.some((n) => n.title.trim().toLowerCase() === t.title.trim().toLowerCase())) news.push({ ...t, id: uid(), startedAt: null }); d.things = d.things.filter((x) => x !== t); }
     dt.things = [...news, ...kept.filter((k) => !news.some((n) => n.title.trim().toLowerCase() === k.title.trim().toLowerCase()))]; dt.planned = true; S.ritualDraft = null;
+    if (smTaken && !dt.things.some((t) => t.title.trim().toLowerCase() === smTaken.title.trim().toLowerCase())) dt.things.push({ id: uid(), title: smTaken.title, cat: smTaken.cat, est: smTaken.est || null, slot: smTaken.slot || null, done: false, real: 0, small: true, fromList: smTaken.fromList || null });
     if (g3d && g3d.plantSeeds) g3d.plantSeeds(news.length);
     const fin = say(S, 'rituel.fin', ernestEnv(S, today, plantNames()));
     save(); closeSheet(); render(); setErnest('dort'); setTimeout(() => setErnest(), 6000);

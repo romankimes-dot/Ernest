@@ -77,7 +77,7 @@ export function catCounts(state, days) {
   for (const k of days) {
     const d = doneOn(state, k);
     for (const t of d.things) out[t.cat] = (out[t.cat] || 0) + 1;
-    for (const l of d.list) if (l.cat) out[l.cat] = (out[l.cat] || 0) + 1;
+    for (const l of d.list) { const c = l.cat ? catId(l.cat) : 'perso'; out[c] = (out[c] || 0) + 1; } // la Liste (courses, colis…) : Vie perso par défaut
   }
   return out;
 }
@@ -167,6 +167,32 @@ export function suggestions(state, tomorrow) {
   for (const h of organize(state, tomorrow, { max: 4 }).filter((x) => x.kind === 'habit')) if (!out.some((o) => norm(o.title) === norm(h.title))) out.push({ kind: 'habit', title: h.title, cat: h.cat, why: 'ton habitude' });
   if (!minsOn) out.push({ kind: 'walk', title: 'Marche de 20 minutes', cat: 'bienetre', why: 'facultatif, pour souffler' });
   return out.slice(0, 7);
+}
+
+// Une petite chose pour l'équilibre des serres, proposée au rituel du soir : dans la catégorie Bien-être ou Vie perso
+// la moins fournie des 7 derniers jours. D'abord ce que tu as déjà fait toi-même dans cette catégorie (3 semaines),
+// puis une entrée de la Liste (pour Vie perso), puis des idées courtes. → [{ title, cat, est, slot, why }]
+const SMALL = {
+  bienetre: [['Marche de 20 minutes', 20, 'midi'], ['Étirements, 10 minutes', 10, 'soir'], ['10 minutes dehors, sans téléphone', 10, 'aprem'], ['Cuisiner un vrai repas', 40, 'soir'], ['Respirer 5 minutes, au calme', 5, 'aprem'], ['Séance de sport courte', 30, 'matin'], ['Écrans posés une heure avant le coucher', 0, 'soir']],
+  perso: [['Appeler quelqu’un qui compte', 15, 'soir'], ['Ranger un coin, 15 minutes', 15, 'aprem'], ['Lire 20 pages pour le plaisir', 20, 'soir'], ['Envoyer un message à un ami', 5, 'midi'], ['Préparer ses affaires pour le lendemain', 10, 'soir'], ['Une sortie, même courte', 45, 'aprem']],
+};
+export function smallProposals(state, tomorrow) {
+  const last7 = Array.from({ length: 7 }, (_, i) => addDays(tomorrow, -1 - i)), c = catCounts(state, last7);
+  const be = c.bienetre || 0, pe = c.perso || 0;
+  const order = be < pe ? ['bienetre', 'perso'] : pe < be ? ['perso', 'bienetre'] : (Number(tomorrow.slice(-2)) % 2 ? ['bienetre', 'perso'] : ['perso', 'bienetre']);
+  const taken = new Set([addDays(tomorrow, -1), tomorrow].flatMap((k) => dayOf(state, k).things.map((t) => norm(t.title))));
+  const out = [], seen = new Set();
+  const add = (o) => { const k = norm(o.title); if (!o.title || taken.has(k) || seen.has(k)) return; seen.add(k); out.push(o); };
+  for (const cat of order) {
+    const why = `${catOf(cat).nom} : ${c[cat] || 0} cette semaine`;
+    const mine = {};
+    for (const k of Array.from({ length: 21 }, (_, i) => addDays(tomorrow, -1 - i))) for (const t of dayOf(state, k).things) if (t.done && catId(t.cat) === cat && !t.src) mine[t.title] = (mine[t.title] || 0) + 1;
+    Object.entries(mine).sort((a, b) => b[1] - a[1]).slice(0, 3).forEach(([title]) => add({ title, cat, est: estimate(state, cat, 20), slot: null, why: `${why} · tu l’as déjà fait` }));
+    if (cat === 'perso') sortList(state.list).filter((l) => !l.done && !l.due && (!l.cat || catId(l.cat) === 'perso')).slice(0, 2).forEach((l) => add({ title: l.text, cat, est: 15, slot: null, why: `${why} · dans ta Liste`, fromList: l.id }));
+    const pool = SMALL[cat], off = Number(tomorrow.replace(/-/g, '')) % pool.length;
+    for (let i = 0; i < pool.length; i++) { const [title, est, slot] = pool[(i + off) % pool.length]; add({ title, cat, est, slot, why }); }
+  }
+  return out;
 }
 
 // ---------- Ernest : choix d'une réplique ----------

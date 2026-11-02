@@ -37,6 +37,7 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 export function hydrate(s) {
   if (isObj(s)) migrateCats(s); // six anciennes catégories → trois serres
+  if (isObj(s) && isObj(s.garden) && Array.isArray(s.garden.plants)) for (const p of s.garden.plants) if (p && p.kind === 'moss') { p.kind = 'plant'; p.list = true; } // entrées de Liste : de vraies plantes (avant : de la mousse)
   const d = defaultState();
   return {
     ...d, ...s,
