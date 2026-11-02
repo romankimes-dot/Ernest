@@ -1,6 +1,7 @@
 // Persistance locale (localStorage), sauvegardes de secours, export/import JSON.
 // Rien n'est jamais écrasé sans copie : texte illisible conservé, sauvegarde automatique (au plus une toutes
 // les 3 h), état précédent gardé avant un import ou un effacement. Repris de Dec-Deonto.
+import { migrateCats } from './model.js';
 const KEY = 'ernest.state.v1';
 const BACKUP_KEY = 'ernest.state.backup';
 const BACKUP_T_KEY = 'ernest.state.backup.t';
@@ -11,7 +12,7 @@ const BACKUP_EVERY_MS = 3 * 60 * 60 * 1000;
 export const defaultState = () => ({
   version: 1,
   settings: {
-    ritualHour: 18, bedtime: '22:30', minimums: { corps: 4, esprit: 3 },
+    ritualHour: 18, bedtime: '22:30', minimums: { bienetre: 5 },
     exam: '2026-11-10', examLabel: 'Épreuve 1', prenom: 'Roman', garden3d: true, trackTime: true, minimumsFrom: '2026-11-11',
   },
   days: {},     // 'YYYY-MM-DD' -> { things: [...], journal, mood, planned }
@@ -35,6 +36,7 @@ const del = (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 export function hydrate(s) {
+  if (isObj(s)) migrateCats(s); // six anciennes catégories → trois serres
   const d = defaultState();
   return {
     ...d, ...s,

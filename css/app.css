@@ -269,3 +269,6 @@ body.running .fab{bottom:calc(136px + var(--sab))}
 .ernest-props{border-color:rgba(242,178,61,.35)}
 .ernest-props .prop{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
 .ernest-props .prop:first-of-type{border-top:0;padding-top:0}
+.sf-pick{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 64px);display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(11,21,17,.72);border:1px solid var(--line);backdrop-filter:blur(8px);z-index:2;max-width:calc(100% - 24px)}
+.sf-pick button{padding:9px 12px;min-height:40px;border-radius:999px;font-size:13px;color:var(--fg2);white-space:nowrap}
+.sf-pick button.on{background:rgba(242,178,61,.18);color:var(--amber)}

@@ -1,5 +1,5 @@
 // Ernest : le gobelin (SVG), ses états, sa bulle, et le moteur de répliques.
-import { chooseLine, fillLine, jMinus, moodAvg, dayOf, addDays, dow, totalDone, catOf } from './model.js';
+import { chooseLine, fillLine, jMinus, moodAvg, dayOf, addDays, dow, totalDone, catOf, floraOf } from './model.js';
 
 let LINES = [];
 export async function loadLines() {
@@ -80,4 +80,4 @@ export function stateFor(hour, { allDone = false, justDid = false, sunday = fals
   if (hour >= 19) return 'lanterne';
   return 'attend';
 }
-export const plantName = (p) => ({ revision: 'la lavande', corps: 'le cactus', esprit: 'la fougère', cuisine: 'le basilic', boulot: 'le ficus', perso: 'la menthe' }[p.cat] || catOf(p.cat).nom.toLowerCase());
+export const plantName = (p) => floraOf(p)[1];
