@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 
-const CTX = ['ouverture.matin', 'ouverture.midi', 'ouverture.soir', 'ouverture.nuit', 'coche', 'coche.derniere', 'demarre', 'retour', 'idee', 'liste', 'laisse', 'reporte', 'dimanche', 'rituel.debut', 'rituel.fin', 'jmoins', 'apres-examen', 'semaine-grise', 'manies', 'premiere.ouverture'];
+const CTX = ['ouverture.matin', 'ouverture.midi', 'ouverture.soir', 'ouverture.nuit', 'coche', 'coche.derniere', 'demarre', 'retour', 'idee', 'liste', 'laisse', 'reporte', 'dimanche', 'rituel.debut', 'rituel.fin', 'jmoins', 'apres-examen', 'absence', 'semaine-grise', 'manies', 'premiere.ouverture'];
 const BAD = [/\btu devrais\b/i, /\bil faut que tu\b/i, /\bbravo\b/i, /\bdommage\b/i, /\bça va aller\b/i, /\?\s*$/];
 
 test('répliques : JSON valide, tous les contextes servis, ton respecté', { skip: !existsSync('data/ernest/repliques.json') && 'pas encore écrites' }, () => {

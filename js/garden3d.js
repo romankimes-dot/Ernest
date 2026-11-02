@@ -811,6 +811,7 @@ export const api = {
   update(S, today) { applyModel(modelFromState(S, today)); },
   setModel: applyModel,
   setTime(k) { amb.fixed = k; poke(); },
+  onFps(fn) { onFps = fn; },
   water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
   stop() { running = false; }, start() { if (!running && renderer) { running = true; clock.getDelta(); requestAnimationFrame(frame); } },
   get camera() { return camera; }, get controls() { return controls; },

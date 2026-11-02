@@ -235,3 +235,13 @@ input[type=checkbox]{width:22px!important;height:22px;min-width:22px;padding:0;m
 .toggle{display:grid;grid-template-columns:22px 1fr;column-gap:12px;align-items:start;font-size:15px}
 .toggle input{margin-top:1px}
 .toggle small{display:block;color:var(--fg2);font-size:12.5px;margin-top:2px}
+/* Lot B : bandeau plus bas hors Aujourd'hui, cibles de 44 pt, onglets lisibles */
+.serre{transition:height .25s ease}
+body[data-tab="liste"] .serre,body[data-tab="semaine"] .serre,body[data-tab="carnet"] .serre{height:calc(110px + var(--sat) + 6px)}
+.gear{width:44px;height:44px;top:calc(var(--sat) + 10px)}
+.help-btn{right:62px}
+.undo-btn{right:112px}
+.tabs button{font-size:12.5px;min-height:48px}
+.sf-fps{position:absolute;right:12px;top:calc(var(--sat) + 12px);font:11px ui-monospace,monospace;color:var(--fg2);background:rgba(11,21,17,.6);padding:3px 7px;border-radius:6px;pointer-events:none}
+body:not([data-tab="today"]) #bulle{display:none!important}
+body:not([data-tab="today"]) #ernestWrap{transform:scale(.62);transform-origin:bottom right}

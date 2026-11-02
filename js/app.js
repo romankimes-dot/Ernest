@@ -64,7 +64,7 @@ const fmtDay = (k) => new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekd
 async function init() {
   S = store.load(); today = dayKey(); if (materialize(S, today)) store.save(S); lastKey = userKey();
   S._light = moodAvg(S, today);
-  garden = new Garden($('#garden')); gardenUpdate(); garden.start();
+  document.body.dataset.tab = 'today'; garden = new Garden($('#garden')); gardenUpdate(); garden.start();
   setupGarden3d();
   document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('#fab').addEventListener('click', () => captureSheet(tab === 'liste' ? (listeFilter === 'series' ? 'series' : 'list') : tab === 'semaine' ? 'goal' : 'today'));
@@ -117,6 +117,8 @@ function openSerre() {
   $('#sfCap').innerHTML = `<b>${pl} plante${pl > 1 ? 's' : ''}</b> · ${n} chose${n > 1 ? 's' : ''} faite${n > 1 ? 's' : ''}<br><span>Glisse pour tourner, pince pour approcher.</span>`;
   const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
   g3d.setMode('full');
+  if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
+  g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
 }
 function closeSerre() {
   $('#serre').prepend($('#garden3d')); $('#serreFull').hidden = true;
@@ -180,6 +182,7 @@ function greet() {
   const e = ernestEnv(S, today, plantNames());
   const E = S.ernest; let ctx = hourCtx(nowHour()); let extra = {};
   if (E.firstSeq < 10) { ctx = 'premiere.ouverture'; extra.seq = E.firstSeq + 1; }
+  else if (E.lastGreetDay && Math.round((new Date(today) - new Date(E.lastGreetDay)) / 86400000) >= 3) ctx = 'absence';
   else if (e.j !== null && e.j === -1 && !S.milestones['apres-examen']) { ctx = 'apres-examen'; S.milestones['apres-examen'] = today; }
   else if (E.lastGreetDay === today && E.lastGreetCtx === ctx) { if (Math.random() < 0.25) { const t = say(S, 'manies', e); if (t) bubble(t); save(); } return; }
   else if (e.mood === 'low' && Math.random() < 0.5) ctx = 'semaine-grise';
@@ -190,10 +193,12 @@ function greet() {
   if (ctx === 'premiere.ouverture') { E.firstSeq += 1; if (!t) t = ['Bonjour. Je suis Ernest. Je m\'occupe de la serre.', 'Chaque chose que tu fais y plante quelque chose.', 'Le soir, on pose trois choses pour demain. Pas plus.', 'La liste, à côté, c\'est pour tout le reste. Les courses, les colis.', 'Le dimanche, on regarde ce qui a poussé.', 'Les idées, tu les poses, je les range.', 'Je ne demande rien. Je raconte.', 'Un jour sans, ça arrive. La serre attend.', 'Le bouton + est là pour tout attraper.', 'Voilà. Je retourne compter les lucioles.'][E.firstSeq - 1]; }
   else { E.lastGreetDay = today; E.lastGreetCtx = ctx; }
   bubble(t || 'Bonjour.'); save();
+  // premier soir : Ernest ouvre lui-même le rituel, une seule fois
+  if (E.firstSeq >= 10 && !E.firstEvening && nowHour() >= RITUAL_HOUR && !Object.values(S.days).some((d) => d.planned)) { E.firstEvening = today; save(); setTimeout(() => { bubble('Premier soir ensemble. On choisit trois choses pour demain, je te montre.'); setTimeout(ritualSheet, 1800); }, 1500); }
 }
 
 // ---------- Navigation ----------
-function switchTab(t) { tab = t; document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); render(); window.scrollTo(0, 0); }
+function switchTab(t) { tab = t; document.body.dataset.tab = t; setTimeout(() => { if (g3d) g3d.resize(); if (garden.resize) garden.resize(); }, 260); document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); render(); window.scrollTo(0, 0); }
 function render() {
   S._light = moodAvg(S, today); gardenUpdate();
   const v = $('#view');
@@ -272,6 +277,7 @@ function viewToday() {
   }
   let pending = 0; for (let i = 1; i <= 7; i++) pending += dayOf(S, addDays(today, -i)).things.filter((t) => !t.done).length;
   if (pending) h += `<button class="card row spread" data-act="history" style="width:100%;text-align:left"><span class="row">${icon('history')}<span><b>${pending} chose${pending > 1 ? 's' : ''} en suspens ces derniers jours</b><br><span class="muted small">Les remettre à aujourd'hui ou les supprimer</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
+  if (nowHour() < RITUAL_HOUR && !Object.values(S.days).some((x) => x.planned)) h += `<div class="card row" style="gap:12px">${icon('moon')}<div><b>Ce soir, dès 18 h</b><div class="muted small">Ernest t'aide à poser trois choses pour demain. C'est le cœur de l'app : le matin, tu sais par où commencer.</div></div></div>`;
   if (nowHour() >= RITUAL_HOUR && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span class="row">${icon('moon')}<span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
   for (const [k, label] of MOMENTS) {
     const items = ordered.filter((t) => (BLOCKS[t.slot] ? t.slot : null) === k).sort((a, b) => a.done - b.done);
@@ -565,7 +571,7 @@ function viewSemaine() {
   const days = weekDays(today), wk = isoWeek(today), act = activeDays(S, days), counts = catCounts(S, days), max = Math.max(1, ...Object.values(counts));
   const minsOn = !S.settings.minimumsFrom || today >= S.settings.minimumsFrom, mins = minimums(S, days);
   const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-  let h = `<div class="row spread"><h1>${act === 0 ? 'La semaine commence.' : act === 7 ? 'Sept jours sur sept.' : `${['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six'][act]} jour${act > 1 ? 's' : ''} sur sept.`}</h1><span class="muted small">${esc(wk)}</span></div>`;
+  let h = `<div class="row spread"><h1>${act === 0 ? 'La semaine commence.' : act === 7 ? 'Sept jours sur sept.' : `${['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six'][act]} jour${act > 1 ? 's' : ''} sur sept.`}</h1><span class="muted small" style="text-align:right">Semaine ${Number(wk.slice(-2))}${(() => { const dl = nextDeadline(S, today), j = dl ? jMinus(dl.date, today) : null; return j !== null && j >= 0 && j <= 60 ? `<br><b style="color:var(--amber)">J-${j}</b>` : ''; })()}</span></div>`;
   h += `<div class="week">${days.map((k, i) => `<div class="${isActive(S, k) ? 'on' : ''} ${k === today ? 'today' : ''} ${k > today ? 'dim' : ''}">${labels[i]}</div>`).join('')}</div>`;
   h += `<div class="moodweek"><div class="row spread"><span class="small muted">Humeur de la semaine</span><span class="small muted">la dernière note de chaque jour</span></div><div class="mw">${days.map((k, i) => { const m = dayOf(S, k).mood, n = (dayOf(S, k).moods || []).length; return `<div class="${k > today ? 'dim' : ''}">${m === null || m === undefined ? '<span class="mw-none"></span>' : `<span class="mw-ic" style="color:${['#c98a7a', '#b8a98a', '#a9b5a3', '#9cc46a', '#f2b23d'][m]}">${icon('m' + m)}</span>`}<small>${labels[i]}${n > 1 ? ` · ${n}` : ''}</small></div>`; }).join('')}</div></div>`;
   const cats = CATS.filter((c) => counts[c.id] || mins.some((m) => m.cat === c.id));
@@ -647,7 +653,7 @@ function reviewSheet() {
 function viewCarnet() {
   const all = allCards(), log = S.cards.log || [], seen = Object.keys(S.cards.seen).length;
   const said = (S.ernest.log || []).filter((l) => l.at.slice(0, 10) === today).slice(0, 6);
-  let h = `<h1>Le carnet.</h1><div class="muted small">${seen} carte${seen > 1 ? 's' : ''} sur ${all.length}. Elles arrivent avec ce que tu fais.</div>`;
+  let h = `<h1>Le carnet.</h1><div class="muted small">${seen ? `${seen} carte${seen > 1 ? 's' : ''} trouvée${seen > 1 ? 's' : ''}. ` : ''}La prochaine : une chance sur deux à chaque chose cochée, et une histoire quand toute la journée est faite.</div>`;
   if (said.length) h += `<div class="card stack"><div class="eyebrow">Ernest, aujourd'hui</div>${said.map((l) => `<div class="small">${esc(l.t)}</div>`).join('')}</div>`;
   h += `<div class="chips"><button class="chip ${carnetFam === 'all' ? 'on' : ''}" data-act="fam" data-v="all">Tout</button>${FAMILLES.map((f) => `<button class="chip ${carnetFam === f.id ? 'on' : ''}" data-act="fam" data-v="${f.id}">${f.nom}</button>`).join('')}</div>`;
   const items = log.map((l) => ({ ...l, card: cardById(l.id) })).filter((x) => x.card && (carnetFam === 'all' || x.card.famille === carnetFam)).slice(0, 60);

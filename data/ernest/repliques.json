@@ -2688,5 +2688,53 @@
 "ctx": "premiere.ouverture",
 "seq": 10,
 "t": "Voilà. Je ne demande rien, je ne presse personne. La porte grince quand tu entres, c'est ma façon de dire bonjour."
+},
+{
+"ctx": "absence",
+"t": "Te revoilà. J'ai gardé la serre au chaud, rien ne s'est perdu."
+},
+{
+"ctx": "absence",
+"t": "Bonjour. Les plantes ont attendu sans se plaindre, elles sont comme ça."
+},
+{
+"ctx": "absence",
+"t": "Tu étais ailleurs, et c'était sans doute nécessaire. On reprend où tu veux."
+},
+{
+"ctx": "absence",
+"t": "La porte n'était pas fermée. Elle ne l'est jamais."
+},
+{
+"ctx": "absence",
+"t": "J'ai arrosé pour deux. On peut commencer petit, une seule chose suffit."
+},
+{
+"ctx": "absence",
+"t": "Le thym a poussé un peu de travers pendant ton absence. Il a du caractère."
+},
+{
+"ctx": "absence",
+"t": "Pas de bilan, pas de compte. Juste aujourd'hui."
+},
+{
+"ctx": "absence",
+"t": "Revenir, c'est déjà quelque chose. Je le note dans mon carnet à moi."
+},
+{
+"ctx": "absence",
+"t": "Les jours d'absence ne laissent pas de trou dans la serre. Ils laissent de la place."
+},
+{
+"ctx": "absence",
+"t": "Je t'ai fait du thé, il a refroidi. J'en refais."
+},
+{
+"ctx": "absence",
+"t": "On repart doucement : une chose, puis on verra."
+},
+{
+"ctx": "absence",
+"t": "La serre ne compte pas les jours. Moi non plus."
 }
 ]
