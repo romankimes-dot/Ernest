@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14263d"/><stop offset=".55" stop-color="#16302a"/><stop offset="1" stop-color="#0b1511"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="512" cy="600" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2b23d" stop-opacity=".42"/><stop offset=".45" stop-color="#f2b23d" stop-opacity=".12"/><stop offset="1" stop-color="#f2b23d" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity=".30"/><stop offset="1" stop-color="#ffb84a" stop-opacity=".78"/>
+    </linearGradient>
+    <linearGradient id="roofglass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe2a8" stop-opacity=".22"/><stop offset="1" stop-color="#ffc35e" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8fd19a"/><stop offset="1" stop-color="#3f8a5c"/>
+    </linearGradient>
+    <linearGradient id="leaf2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7cc488"/><stop offset="1" stop-color="#2f6b48"/>
+    </linearGradient>
+    <radialGradient id="moon" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#fbf4e2"/><stop offset="1" stop-color="#e6dcc2"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <rect width="1024" height="1024" fill="url(#halo)"/>
+  <!-- étoiles, lune -->
+  <g fill="#efe6d2">
+    <circle cx="236" cy="226" r="5" opacity=".7"/><circle cx="318" cy="168" r="3.5" opacity=".5"/><circle cx="182" cy="330" r="3" opacity=".45"/>
+    <circle cx="640" cy="190" r="3" opacity=".45"/><circle cx="846" cy="352" r="3.5" opacity=".5"/>
+  </g>
+  <mask id="crescent"><rect width="1024" height="1024" fill="#fff"/><circle cx="796" cy="220" r="48" fill="#000"/></mask>
+  <circle cx="770" cy="236" r="54" fill="url(#moon)" mask="url(#crescent)"/>
+  <!-- colline -->
+  <path d="M0 790 C 220 730 360 740 512 752 S 820 736 1024 780 V1024 H0Z" fill="#12261c"/>
+  <ellipse cx="512" cy="792" rx="300" ry="34" fill="#f2b23d" opacity=".16"/>
+  <g transform="translate(512 560) scale(1.12) translate(-512 -560)">
+  <!-- serre -->
+  <g stroke="#efe6d2" stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M298 488 L512 300 L726 488 Z" fill="url(#roofglass)"/>
+    <rect x="320" y="488" width="384" height="276" fill="url(#glass)"/>
+    <path d="M512 300 V488 M405 394 L405 488 M619 394 L619 488" fill="none" stroke-width="9"/>
+    <path d="M416 488 V764 M608 488 V764 M320 616 H704" fill="none" stroke-width="9"/>
+  </g>
+  <rect x="300" y="760" width="424" height="34" rx="8" fill="#8a5a2b"/>
+  <rect x="300" y="760" width="424" height="10" rx="5" fill="#a8703a"/>
+  <!-- la pousse -->
+  <g>
+    <path d="M512 770 C 512 700 506 640 514 572" stroke="#3f8a5c" stroke-width="16" fill="none" stroke-linecap="round"/>
+    <path d="M512 650 C 440 650 392 600 382 540 C 450 534 506 580 512 650Z" fill="url(#leaf2)"/>
+    <path d="M514 590 C 586 594 640 548 656 480 C 584 474 524 520 514 590Z" fill="url(#leaf)"/>
+    <path d="M514 574 C 494 530 500 488 526 456 C 548 494 544 538 514 574Z" fill="url(#leaf)"/>
+    <path d="M512 650 C 470 630 436 600 412 560" stroke="#2f6b48" stroke-width="4" fill="none" opacity=".6"/>
+    <path d="M514 590 C 560 576 600 548 632 504" stroke="#2f6b48" stroke-width="4" fill="none" opacity=".6"/>
+  </g>
+  </g>
+  <!-- lucioles -->
+  <g fill="#ffd77a"><circle cx="262" cy="640" r="6" opacity=".8"/><circle cx="790" cy="590" r="5" opacity=".7"/><circle cx="742" cy="700" r="4" opacity=".6"/></g>
+</svg>

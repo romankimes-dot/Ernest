@@ -45,6 +45,22 @@ const skyMat = new THREE.ShaderMaterial({
   fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform vec3 sunDir; uniform vec3 glow; uniform float glowK; varying vec3 vP; void main(){ float h = clamp(vP.y*1.4+0.15,0.0,1.0); vec3 c = mix(bottom, top, h); float g = max(dot(normalize(vP), normalize(sunDir)), 0.0); c += glow * (pow(g, 12.0) * 0.9 + pow(g, 3.0) * 0.25) * glowK; c += glow * pow(1.0 - abs(vP.y), 6.0) * 0.18 * glowK; gl_FragColor = vec4(c, 1.0); }',
 });
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(95, 24, 12), skyMat));
+// Lumière d'ambiance réfléchie : le ciel (et un sol d'herbe) rendu dans une petite scène à part, puis filtré (PMREM).
+// Le verre, la fonte et les pots reflètent le vrai ciel de l'heure ; régénéré seulement quand le ciel change.
+const envU = { k: { value: 0.35 }, ground: { value: col('#3c5530') } };
+const envSkyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, uniforms: Object.assign({}, skyMat.uniforms, envU), vertexShader: skyMat.vertexShader,
+  fragmentShader: skyMat.fragmentShader.replace('uniform vec3 top;', 'uniform float k; uniform vec3 ground; uniform vec3 top;').replace('gl_FragColor = vec4(c, 1.0);', 'c = mix(c, ground, smoothstep(0.02, -0.12, vP.y)); gl_FragColor = vec4(c * k, 1.0);'),
+});
+const envScene = new THREE.Scene(); envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
+let pmrem = null, envRT = null, envKey = '', envT = -99;
+function refreshEnv(force) {
+  if (!renderer) return; const now = performance.now() / 1000; if (!force && now - envT < 1.5) return;
+  const u = skyMat.uniforms, key = [u.top.value.getHexString(), u.bottom.value.getHexString(), u.glowK.value.toFixed(2), u.sunDir.value.x.toFixed(2), u.sunDir.value.y.toFixed(2), envU.ground.value.getHexString()].join();
+  if (key === envKey) return; envKey = key; envT = now;
+  if (!pmrem) pmrem = new THREE.PMREMGenerator(renderer);
+  const rt = pmrem.fromScene(envScene, 0, 0.1, 50); scene.environment = rt.texture; if (envRT) envRT.dispose(); envRT = rt;
+}
 const starsGeo = new THREE.BufferGeometry(); { const r = rngOf(7), p = []; for (let i = 0; i < 500; i++) { const th = r() * Math.PI * 2, ph = r() * 1.3; p.push(70 * Math.sin(ph) * Math.cos(th), 70 * Math.cos(ph) + 4, 70 * Math.sin(ph) * Math.sin(th)); } starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); }
 const stars = new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xefe6d2, size: 0.18, sizeAttenuation: true, transparent: true, opacity: 0.8, fog: false, depthWrite: false }));
 scene.add(stars);
@@ -54,7 +70,7 @@ moon.position.set(-22, 26, -40); scene.add(moon);
 // ---------- Matériaux ----------
 const M = {
   frame: new THREE.MeshStandardMaterial({ color: 0xe9e3cf, roughness: 0.6, metalness: 0 }), // fonte peinte crème, à la victorienne
-  glass: new THREE.MeshStandardMaterial({ color: 0xa8d0c8, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false }),
+  glass: new THREE.MeshStandardMaterial({ color: 0x8fb3ab, roughness: 0.04, metalness: 0.2, envMapIntensity: 0.4, transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false }),
   wood: new THREE.MeshStandardMaterial({ color: 0x8a5a2b, roughness: 0.85 }),
   woodDark: new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 }),
   terra: new THREE.MeshStandardMaterial({ color: 0xb4652a, roughness: 0.9 }),
@@ -1098,7 +1114,8 @@ function updateAmbience(dt, t) {
   skyMat.uniforms.top.value.set(a.top); skyMat.uniforms.bottom.value.set(a.bottom); scene.fog.color.set(a.fog); scene.fog.near = a.fogNear; scene.fog.far = a.fogFar;
   rimU.uRimK.value = a.rim * (mode === 'band' ? 1.6 : 1); rimU.uRimCol.value.set(a.rimCol); glassU.uGlassK.value = a.glass; glassU.uGlow.value = a.glow * (0.8 + mood * 0.05); vignette.material.uniforms.uK.value = a.vig;
   pond.water.material.color.set(a.top).lerp(col(a.bottom), 0.25).lerp(col('#3d6a6c'), 0.55);
-  hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m * 1.2;
+  hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m * 1.0; // le reste de l'ambiance vient du ciel réfléchi (refreshEnv)
+  envU.ground.value.set(a.hemiGround).lerp(col('#4f7a3a'), 0.5).multiplyScalar(0.4 + a.sunI * 0.15);
   const sd = sunDirAt(hourSun); skyLife.sunDir.copy(sd);
   sun.color.set(a.sun); sun.intensity = a.sunI * m * 0.9;
   if (sd.y > 0.02) sun.position.copy(sd).multiplyScalar(16); else sun.position.set(...a.sunPos);
@@ -1109,6 +1126,7 @@ function updateAmbience(dt, t) {
   moon.position.copy(sd).multiplyScalar(-60).setY(Math.max(18, -sd.y * 60)); flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
   if (renderer) renderer.toneMappingExposure = a.exposure * (0.9 + mood * 0.04);
   updateLife(a, t, dt, sd, hourSun);
+  refreshEnv(false);
   return a;
 }
 
@@ -1195,7 +1213,7 @@ function stillFrame() {
   if (camera.position.y < heightAt(camera.position.x, camera.position.z) + 0.9) camera.position.y = heightAt(camera.position.x, camera.position.z) + 0.9;
   const t = 2.5; pop = null;
   for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
-  windU.value = t; updateFx(nowS(), t); renderer.shadowMap.needsUpdate = true;
+  windU.value = t; updateFx(nowS(), t); renderer.shadowMap.needsUpdate = true; refreshEnv(true);
   renderer.render(scene, camera);
   stillDirty = false; stillSlot = slot; bandT0 = 0;
 }
@@ -1237,7 +1255,7 @@ export function setMode(m) {
   mode = m;
   if (!renderer) return;
   controls.enabled = m === 'full';
-  renderer.setPixelRatio(m === 'full' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // bandeau net aussi : surtout une image fixe, le surcoût est faible
   if (ext.grass) ext.grass.im.count = m === 'full' ? ext.grass.n : Math.round(ext.grass.n * 0.3); // moins de brins dans le bandeau
   poke();
   ernestSprite.visible = ernestSprite.userData.shadow.visible = m === 'full';
