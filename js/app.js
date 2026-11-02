@@ -108,12 +108,13 @@ async function runSync({ manual = false } = {}) {
     if (!r || (!manual && !$('#sheet').hidden)) { scheduleSync(10000); return; } // on réessaie quand l'écran est libre
     if (!$('#sheet').hidden && (r.state !== S)) closeSheet(); // demandé à la main : la fiche ouverte se ferme
     if (r.state !== S) {
-      if (r.conflict) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
+      if (r.conflict || r.merged) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
       S = r.state; materialize(S, today); reslot(S, today, nowHour()); S._light = moodAvg(S, today); store.save(S);
       lastKey = userKey(); UNDO.length = 0; updateUndoBtn(); gardenUpdate(); render(); setErnest();
     }
     let rev = r.rev; const pushSeq = editSeq;
     if (r.needPush) rev = await SY.push(cfg, S, r.rev);
+    else if (r.adopted && r.remoteText) SY.setBase(r.rev, r.remoteText);
     SY.setMeta({ rev, dirty: editSeq !== pushSeq, at: Date.now(), error: null });
     const nb = r.bridged.reduce((a, b) => a + b.things, 0), nd = r.bridged.reduce((a, b) => a + (b.done || 0), 0);
     if (nd) { gardenWater(); toast(`${nd} chose${nd > 1 ? 's' : ''} cochée${nd > 1 ? 's' : ''} depuis tes révisions.`, 3500); }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-const mem = new Map();
+let mem = new Map(); // un stockage par appareil (voir device)
 globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
 const { defaultState } = await import('../js/store.js');
 const SY = await import('../js/sync.js');
@@ -26,11 +26,12 @@ const T = '2026-11-03';
 
 // Un appareil : son état et sa mémoire de synchro, comme dans app.js
 function device(f, state) {
-  const d = { S: state, m: { rev: null, dirty: true } };
+  const d = { S: state, m: { rev: null, dirty: true }, mem: new Map() };
   d.sync = async () => {
+    mem = d.mem;
     const r = await SY.pull(cfg, d.S, d.m, T, { fetch: f });
     if (r.state !== d.S) d.S = r.state;
-    let rev = r.rev; if (r.needPush) rev = await SY.push(cfg, d.S, r.rev, { fetch: f });
+    let rev = r.rev; if (r.needPush) rev = await SY.push(cfg, d.S, r.rev, { fetch: f }); else if (r.adopted && r.remoteText) SY.setBase(r.rev, r.remoteText);
     d.m = { rev, dirty: false }; return r;
   };
   d.edit = (fn) => { fn(d.S); d.S.updatedAt = (d.S.updatedAt || 0) + 1000; d.m.dirty = true; };
@@ -55,17 +56,33 @@ test('téléphone puis ordinateur : le second reprend l’état du premier, puis
   assert.deepEqual(pc.S.list.map((x) => x.text), ['Voiture']);
 });
 
-test('modifié des deux côtés : la version la plus récente gagne, signalé comme conflit', async () => {
+test('modifié des deux côtés : les deux versions sont fusionnées', async () => {
   const { f } = server();
   const a = device(f, { ...defaultState(), updatedAt: 1 }); await a.sync();
   const b = device(f, { ...defaultState(), updatedAt: 1 }); await b.sync();
   a.edit((s) => s.ideas.push({ id: 'i1', text: 'A' })); await a.sync();
   b.edit((s) => s.ideas.push({ id: 'i2', text: 'B' })); b.S.updatedAt = a.S.updatedAt + 5000;
   const r = await b.sync();
-  assert.equal(r.adopted, false); assert.equal(r.needPush, true);
-  assert.deepEqual(b.S.ideas.map((x) => x.text), ['B']);
+  assert.equal(r.merged, true); assert.equal(r.needPush, true);
+  assert.deepEqual(b.S.ideas.map((x) => x.text).sort(), ['A', 'B']);
   const ra = await a.sync();
-  assert.equal(ra.adopted, true); assert.deepEqual(a.S.ideas.map((x) => x.text), ['B']);
+  assert.equal(ra.adopted, true); assert.deepEqual(a.S.ideas.map((x) => x.text).sort(), ['A', 'B']);
+});
+
+test('cochée sur l’ordinateur, téléphone modifié tout seul à l’ouverture : la chose reste cochée', async () => {
+  const { f } = server();
+  const day = { things: [{ id: 't1', title: 'Shorts', cat: 'travail', done: false, real: 0 }, { id: 't2', title: 'Sport', cat: 'bienetre', done: false, real: 0 }] };
+  const pc = device(f, { ...defaultState(), updatedAt: 1, days: { [T]: day } }); await pc.sync();
+  const phone = device(f, { ...defaultState(), updatedAt: 1 }); await phone.sync();
+  pc.edit((s) => { Object.assign(s.days[T].things[0], { done: true, doneAt: '2026-11-03T09:00:00Z', real: 8 }); s.garden.plants.push({ id: 'p1', cat: 'travail' }); }); await pc.sync();
+  // le téléphone, plus récent, a seulement salué et supprimé « Sport »
+  phone.edit((s) => { s.ernest.said = { x: 1 }; s.days[T].things = s.days[T].things.filter((t) => t.id !== 't2'); }); phone.S.updatedAt = pc.S.updatedAt + 60000;
+  const r = await phone.sync();
+  assert.equal(r.merged, true);
+  assert.deepEqual(phone.S.days[T].things.map((t) => [t.id, t.done, t.real]), [['t1', true, 8]]);
+  assert.equal(phone.S.garden.plants.length, 1); assert.deepEqual(phone.S.ernest.said, { x: 1 });
+  await pc.sync();
+  assert.deepEqual(pc.S.days[T].things.map((t) => [t.id, t.done]), [['t1', true]]);
 });
 
 test('plan déposé par Deonto : ajouté une fois, jamais remis après suppression', async () => {
