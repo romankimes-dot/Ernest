@@ -205,3 +205,16 @@ h3{font-size:17px;color:var(--amber)}
 .moodbar{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:var(--bg2);border:1px solid var(--line)}
 .moods.compact button{padding:6px 0;max-height:none;aspect-ratio:auto}
 .moods.compact button .ic{width:26px;height:26px}
+
+/* Jauge d'humeur, journal */
+.moodweek{display:flex;flex-direction:column;gap:8px}
+.mw{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.mw > div{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mw .ic{width:26px;height:26px}
+.mw small{font-size:10.5px;color:var(--fg2)}
+.mw-none{width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--line);margin:2px 0}
+.jmoods{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.jm{display:inline-flex;align-items:center;gap:3px;color:var(--amber)}
+.jm small{color:var(--fg2);font-size:11px}
+.jj{flex-basis:100%}
+.jrow .t{cursor:pointer}

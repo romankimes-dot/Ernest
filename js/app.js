@@ -7,7 +7,7 @@ import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpiso
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.7.0';
+const VERSION = '0.7.1';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -64,7 +64,7 @@ async function init() {
   garden = new Garden($('#garden')); gardenUpdate(); garden.start();
   setupGarden3d();
   document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-  $('#fab').addEventListener('click', () => captureSheet(tab === 'liste' ? 'list' : tab === 'semaine' ? 'goal' : 'today'));
+  $('#fab').addEventListener('click', () => captureSheet(tab === 'liste' ? (listeFilter === 'series' ? 'series' : 'list') : tab === 'semaine' ? 'goal' : 'today'));
   $('#btnSettings').addEventListener('click', settingsSheet);
   $('#btnUndo').addEventListener('click', undoLast); updateUndoBtn();
   $('#sheetBg').addEventListener('click', closeSheet);
@@ -365,6 +365,8 @@ function action(act, ds, el, v) {
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'history': historySheet(); break;
+    case 'newSeries': captureSheet('series'); break;
+    case 'jEdit': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (t) thingSheet(t, ds.day); break; }
     case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = say(S, 'semaine-grise', ernestEnv(S, today, plantNames())); if (t) bubble(t); } break; }
     case 'seriesEdit': seriesSheet(S.series.find((x) => x.id === ds.id)); break;
     case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; save(); toast('Décochée, de retour dans la liste.'); render(); break; }
@@ -414,33 +416,38 @@ function milestones() {
 }
 
 // Feuille : une chose (créer ou modifier)
-function thingSheet(t) {
-  const d = ensureDay(S, today), isNew = !t; t = t || { id: uid(), title: '', cat: 'perso', est: null, slot: null, done: false, real: 0 };
-  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div>${repeatHtml(t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : [])}<div class="kv" ${tracking() && (t.done || t.spent) ? '' : 'hidden'}><label>Temps passé (min)</label><input id="thEst" type="number" inputmode="numeric" value="${t.done ? t.real || 0 : Math.round(spentMs(t) / 60000)}" style="width:120px"></div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('bulb', 'sm')} En idée</button><button class="btn danger" id="thDrop">${icon('trash', 'sm')} Supprimer</button></div>`}`);
+function thingSheet(t, k = today) {
+  const d = ensureDay(S, k), isNew = !t; t = t || { id: uid(), title: '', cat: 'perso', est: null, slot: null, done: false, real: 0 };
+  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div>${repeatHtml(t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : [])}<div class="row" style="gap:16px;flex-wrap:wrap"><label class="row" style="gap:8px"><input type="checkbox" id="thDone" style="width:auto" ${t.done ? 'checked' : ''}> Fait</label>${tracking() ? `<label class="row" style="gap:8px">Temps passé <input id="thEst" type="number" inputmode="numeric" min="0" value="${t.done ? t.real || 0 : Math.round(spentMs(t) / 60000)}" style="width:90px"> min</label>` : ''}</div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('bulb', 'sm')} En idée</button><button class="btn danger" id="thDrop">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh); let slot = t.slot; const repDays = bindRepeat(sh, t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : []);
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
-  $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; if (tracking() && (t.done || t.spent)) { const m = Math.max(0, Number($('#thEst').value) || 0); if (t.done) t.real = m; else { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } } t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
+  $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; const m = tracking() ? Math.max(0, Number($('#thEst').value) || 0) : 0, nowDone = $('#thDone').checked, wasDone = !!t.done;
+    if (nowDone) { t.done = true; t.real = tracking() ? m : t.real || 0; t.startedAt = null; if (!wasDone) { t.doneAt = k === today ? new Date().toISOString() : `${k}T20:00:00`; plant(t.cat, 'plant'); gardenWater(); } }
+    else { t.done = false; t.doneAt = null; if (tracking()) { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } }
+    t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
   if (!isNew) {
-    $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(today, 1)).things.push({ ...t, startedAt: null, spent: 0 }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
+    $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(k, 1) > today ? addDays(k, 1) : addDays(today, 1)).things.push({ ...t, startedAt: null, spent: 0 }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
     $('#thIdea').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); save(); closeSheet(); render(); });
-    $('#thDrop').addEventListener('click', () => { closeSheet(); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'laisse', e)); removeThing(t.id); });
+    $('#thDrop').addEventListener('click', () => { closeSheet(); if (k !== today) { label('la suppression'); const i = d.things.findIndex((x) => x.id === t.id); const [x] = d.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => d.things.splice(i, 0, x)); return; } const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'laisse', e)); removeThing(t.id); });
   }
   setTimeout(() => $('#thTitle').focus(), 50);
 }
 
 // ---------- Capture (+) ----------
 function captureSheet(preset = 'today') {
+  const repInit = preset === 'series' ? [0, 1, 2, 3, 4, 5, 6] : []; if (preset === 'series') preset = 'today';
   let dest = preset, due = null, slot = null, repGet = () => [];
   const DEST = [['today', 'sun', "Aujourd'hui", 'Je le fais aujourd\'hui'], ['list', 'list', 'Liste', 'Plus tard, ou à une date'], ['idea', 'bulb', 'Idée', 'Une pensée à garder'], ['goal', 'flag', 'Objectif', 'Un cap, avec des étapes']];
   openSheet(`<input id="capText" placeholder="Qu'est-ce que tu veux attraper ?" autocomplete="off"><div class="dest">${DEST.map(([k, ic, t, sub]) => `<button data-dest="${k}" class="${k === dest ? 'on' : ''}">${icon(ic)}<span><b>${t}</b><small>${sub}</small></span></button>`).join('')}</div><div id="capOpts" class="stack"></div><button class="btn" id="capSave">Attraper</button>`);
   const sh = $('#sheet');
   const opts = () => {
     const o = $('#capOpts');
-    if (dest === 'today') o.innerHTML = `${chips(null)}<div class="kv"><label>Quand dans la journée (facultatif)</label>${blocksHtml(slot)}</div>${repeatHtml([])}`;
-    else if (dest === 'list') o.innerHTML = `${chips(null)}<div class="kv"><label>Pour quand (facultatif)</label><div class="chips"><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Dans la semaine</button><input type="date" id="capDate" class="chip-date"></div></div>`;
+    if (dest === 'today') o.innerHTML = `${chips(null)}<div class="row" style="gap:16px;flex-wrap:wrap"><label class="row" style="gap:8px"><input type="checkbox" id="capDone" style="width:auto"> Déjà fait</label>${tracking() ? '<label class="row" style="gap:8px">Temps passé <input id="capMin" type="number" inputmode="numeric" min="0" placeholder="0" style="width:80px"> min</label>' : ''}</div><div class="kv"><label>Quand dans la journée (facultatif)</label>${blocksHtml(slot)}</div>${repeatHtml(repInit)}`;
+    else if (dest === 'list') o.innerHTML = `${chips(null)}${repeatHtml([])}<div class="kv list-date"><label>Pour quand (facultatif)</label><div class="chips"><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Dans la semaine</button><input type="date" id="capDate" class="chip-date"></div></div>`;
     else if (dest === 'goal') o.innerHTML = `${chips(null)}<div class="kv"><label>Échéance (facultative)</label><input type="date" id="capGoalDue"></div><div class="kv"><label>Étapes, une par ligne (facultatif)</label><textarea id="capGoalMs" placeholder="Première étape&#10;Deuxième étape"></textarea></div>`;
     else o.innerHTML = `<div class="muted small">Elle ira dans Liste › Idées. Tu la trieras quand tu voudras.</div>`;
-    bindChips(o); repGet = o.querySelector('.rep') ? bindRepeat(o, []) : () => [];
+    bindChips(o); repGet = o.querySelector('.rep') ? bindRepeat(o, dest === 'today' ? repInit : []) : () => [];
+    const ld = o.querySelector('.list-date'); if (ld) o.querySelectorAll('[data-rep]').forEach((b) => b.addEventListener('click', () => { ld.hidden = b.dataset.rep !== 'none'; }));
     o.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; o.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
     o.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { const was = b.classList.contains('on'); o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); due = was ? null : addDays(today, Number(b.dataset.d)); if (!was) b.classList.add('on'); const cd = $('#capDate'); if (cd) cd.value = due || ''; }));
     const cd = $('#capDate'); if (cd) cd.addEventListener('change', () => { due = cd.value || null; o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); });
@@ -454,8 +461,16 @@ function captureSheet(preset = 'today') {
     if (dest === 'today') {
       const d = ensureDay(S, today), t = { id: uid(), title: text, cat: cat || 'perso', est: estimate(S, cat || 'perso'), slot, done: false, real: 0 }, rd = repGet();
       saveSeries(t, rd); const due = !rd.length || rd.includes(dow(today));
-      if (due) { d.things.push(t); d.planned = true; }
+      const already = $('#capDone') && $('#capDone').checked;
+      if (already) { t.done = true; t.real = tracking() ? Math.max(0, Number(($('#capMin') || {}).value) || 0) : 0; t.doneAt = new Date().toISOString(); plant(t.cat, 'plant'); gardenWater(); }
+      if (due || already) { d.things.push(t); d.planned = true; }
+      if (already) { save(); closeSheet(); toast(`Noté comme fait${t.real ? `, ${fmtMin(t.real)}` : ''}.`); switchTab('today'); return; }
       save(); closeSheet(); toast(rd.length ? `Série posée : ${daysLabel(rd).toLowerCase()}.${due ? '' : " Pas aujourd'hui."}` : 'Placée dans ta journée.'); switchTab('today');
+    }
+    else if (dest === 'list' && repGet().length) {
+      const rd = repGet(), t = { id: uid(), title: text, cat: cat || 'perso', slot: null, done: false, real: 0 }; saveSeries(t, rd);
+      const dueNow = rd.includes(dow(today)); if (dueNow) { const d = ensureDay(S, today); d.things.push(t); d.planned = true; }
+      save(); closeSheet(); toast(`Série posée : ${daysLabel(rd).toLowerCase()}.${dueNow ? " Dès aujourd'hui." : ''}`); listeFilter = 'series'; switchTab('liste');
     }
     else if (dest === 'list') { addList(text, 'todo', cat, due); closeSheet(); toast(due && due <= today ? "Dans la liste, et visible aujourd'hui." : due ? `Dans la liste, pour le ${new Date(due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Dans la liste.'); render(); }
     else if (dest === 'idea') { addList(text, 'idea'); closeSheet(); toast('Rangée dans les idées.'); render(); }
@@ -477,7 +492,7 @@ function viewListe() {
   const open = sortList(S.list).filter((l) => !l.done), done = sortList(S.list).filter((l) => l.done).slice(0, 30), ideas = S.ideas.filter((i) => i.status === 'inbox' || i.status === 'kept');
   let h = `<h1>La liste.</h1><div class="muted small">Tout ce qui attend, sans date ou pour plus tard. Le soleil fait passer une entrée dans ta journée.</div><input id="capture" placeholder="${listeFilter === 'ideas' ? 'Une idée…' : 'Une chose à faire, un jour…'}" autocomplete="off"><div class="chips"><button class="chip ${listeFilter === 'todo' ? 'on' : ''}" data-act="filter" data-v="todo">À faire · ${open.length}</button><button class="chip ${listeFilter === 'ideas' ? 'on' : ''}" data-act="filter" data-v="ideas">Idées · ${ideas.length}</button><button class="chip ${listeFilter === 'series' ? 'on' : ''}" data-act="filter" data-v="series">${icon('repeat', 'sm')} Séries · ${S.series.filter((x) => x.active).length}</button><button class="chip ${listeFilter === 'done' ? 'on' : ''}" data-act="filter" data-v="done">Faites</button></div>`;
   if (listeFilter === 'todo') h += open.length ? `<div class="stack">${open.map(listRow).join('')}</div>` : `<div class="muted">Rien en attente. La serre est calme.</div>`;
-  else if (listeFilter === 'series') { const ss = S.series.filter((x) => x.active); h += `<div class="muted small">Ce qui revient tout seul dans ta journée, certains jours. Pour en créer une : le +, « Aujourd'hui », puis « Revient ».</div>`; h += ss.length ? `<div class="stack">${ss.map((x) => `<button class="list-item" data-act="seriesEdit" data-id="${x.id}" style="width:100%;text-align:left"><span class="dot" style="background:${catOf(x.cat).couleur}"></span><span class="t"><b>${esc(x.title)}</b><br><span class="muted small">${esc(daysLabel(x.days))}${x.slot ? ` · ${esc(BLOCKS[x.slot] || '').toLowerCase()}` : ''}${seriesDue(x, today) ? " · aujourd'hui" : ''}</span></span><span style="color:var(--fg2)">${icon('arrow', 'sm')}</span></button>`).join('')}</div>` : `<div class="muted">Aucune série. Le sport trois fois par semaine, la révision chaque matin : c'est fait pour ça.</div>`; }
+  else if (listeFilter === 'series') { const ss = S.series.filter((x) => x.active); h += `<div class="muted small">Ce qui revient tout seul dans ta journée, certains jours.</div><button class="btn" data-act="newSeries">${icon('repeat', 'sm')} Nouvelle série</button>`; h += ss.length ? `<div class="stack">${ss.map((x) => `<button class="list-item" data-act="seriesEdit" data-id="${x.id}" style="width:100%;text-align:left"><span class="dot" style="background:${catOf(x.cat).couleur}"></span><span class="t"><b>${esc(x.title)}</b><br><span class="muted small">${esc(daysLabel(x.days))}${x.slot ? ` · ${esc(BLOCKS[x.slot] || '').toLowerCase()}` : ''}${seriesDue(x, today) ? " · aujourd'hui" : ''}</span></span><span style="color:var(--fg2)">${icon('arrow', 'sm')}</span></button>`).join('')}</div>` : `<div class="muted">Aucune série. Le sport trois fois par semaine, la révision chaque matin : c'est fait pour ça.</div>`; }
   else if (listeFilter === 'done') h += done.length ? `<div class="stack">${done.map(listRow).join('')}</div>` : `<div class="muted">Pas encore.</div>`;
   else h += ideas.length ? `<div class="stack">${ideas.map((i) => `<div class="card stack"><div>${esc(i.text)}</div><div class="muted small">${new Date(i.at).toLocaleDateString('fr-FR')}${i.status === 'kept' ? ' · gardée' : ''}</div><div class="chips"><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="todo">${icon('arrow', 'sm')} à faire</button><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="goal">${icon('arrow', 'sm')} objectif</button>${i.status === 'inbox' ? `<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="keep">garder</button>` : ''}<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="drop">jeter</button></div></div>`).join('')}</div>` : `<div class="muted">Aucune idée posée. Elles viendront.</div>`;
   return h;
@@ -544,7 +559,7 @@ function viewSemaine() {
   const labels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
   let h = `<div class="row spread"><h1>${act === 0 ? 'La semaine commence.' : act === 7 ? 'Sept jours sur sept.' : `${['Zéro', 'Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six'][act]} jour${act > 1 ? 's' : ''} sur sept.`}</h1><span class="muted small">${esc(wk)}</span></div>`;
   h += `<div class="week">${days.map((k, i) => `<div class="${isActive(S, k) ? 'on' : ''} ${k === today ? 'today' : ''} ${k > today ? 'dim' : ''}">${labels[i]}</div>`).join('')}</div>`;
-  h += `<div class="lights" title="Lumière de la serre">${days.map((k) => { const m = dayOf(S, k).mood; return `<span style="background:${m === null || m === undefined ? 'var(--bg3)' : `rgba(242,178,61,${0.15 + m * 0.2})`}"></span>`; }).join('')}</div>`;
+  h += `<div class="moodweek"><div class="row spread"><span class="small muted">Humeur de la semaine</span><span class="small muted">la dernière note de chaque jour</span></div><div class="mw">${days.map((k, i) => { const m = dayOf(S, k).mood, n = (dayOf(S, k).moods || []).length; return `<div class="${k > today ? 'dim' : ''}">${m === null || m === undefined ? '<span class="mw-none"></span>' : `<span class="mw-ic" style="color:${['#c98a7a', '#b8a98a', '#a9b5a3', '#9cc46a', '#f2b23d'][m]}">${icon('m' + m)}</span>`}<small>${labels[i]}${n > 1 ? ` · ${n}` : ''}</small></div>`; }).join('')}</div></div>`;
   const cats = CATS.filter((c) => counts[c.id] || mins.some((m) => m.cat === c.id));
   const tm = timeByCat(S, days), tTot = Object.values(tm).reduce((a, b) => a + b, 0);
   if (cats.length) h += `<div class="bars">${cats.map((c) => { const m = mins.find((x) => x.cat === c.id); const n = counts[c.id] || 0; return `<div><span>${c.nom}</span><i style="width:${Math.round((n / max) * 100)}%;background:${c.couleur}"></i><span class="muted">${n}${m && minsOn ? ` / ${m.min}` : ''}${tracking() && tm[c.id] ? ` · ${fmtMin(tm[c.id])}` : ''}</span></div>`; }).join('')}</div>`;
@@ -566,11 +581,13 @@ function journalHtml(n = 7) {
   for (let i = 0; i < n; i++) {
     const k = addDays(today, -i), d = dayOf(S, k);
     const listDone = S.list.filter((l) => l.done && l.doneAt && l.doneAt.slice(0, 10) === k);
-    if (!d.things.length && !listDone.length) continue;
+    if (!d.things.length && !listDone.length && !(d.moods && d.moods.length) && (d.mood === null || d.mood === undefined)) continue;
     const done = d.things.filter((t) => t.done).length + listDone.length, open = d.things.filter((t) => !t.done).length;
     const dl = i === 0 ? "Aujourd'hui" : i === 1 ? 'Hier' : new Date(k + 'T12:00').toLocaleDateString('fr-FR', i < 7 ? { weekday: 'long', day: 'numeric' } : { weekday: 'long', day: 'numeric', month: 'long' });
+    const ms = d.moods && d.moods.length ? d.moods : d.mood !== null && d.mood !== undefined ? [{ m: d.mood }] : [];
     out.push(`<div class="jday"><div class="row spread"><b>${esc(dl.charAt(0).toUpperCase() + dl.slice(1))}</b><span class="muted small">${done} fait${done > 1 ? 's' : ''}${open ? ` · ${open} en suspens` : ''}</span></div>
-    ${d.things.map((t) => `<div class="jrow ${t.done ? 'done' : ''}"><button class="check sm" data-act="jToggle" data-day="${k}" data-id="${t.id}" aria-label="${t.done ? 'Annuler' : 'Fait'}">${t.done ? icon('check') : ''}</button><span class="dot" style="background:${catOf(t.cat).couleur}"></span><span class="t">${esc(t.title)}</span>${t.done ? `<span class="muted small">${t.real ? `${t.real} min` : ''}</span><button class="mini" data-act="jDel" data-day="${k}" data-id="${t.id}" aria-label="Supprimer">${icon('trash')}</button>` : `${i ? `<button class="mini" data-act="jToday" data-day="${k}" data-id="${t.id}" aria-label="Remettre à aujourd'hui">${icon('sun')}</button>` : ''}<button class="mini" data-act="jDel" data-day="${k}" data-id="${t.id}" aria-label="Supprimer">${icon('trash')}</button>`}</div>`).join('')}
+    ${ms.length ? `<div class="jmoods">${ms.map((x) => `<span class="jm" title="${moodLabel(x.m)}">${icon('m' + x.m, 'sm')}${x.at ? `<small>${new Date(x.at).getHours()} h ${String(new Date(x.at).getMinutes()).padStart(2, '0')}</small>` : ''}</span>`).join('')}${d.journal ? `<span class="small muted jj">« ${esc(d.journal)} »</span>` : ''}</div>` : d.journal ? `<div class="small muted">« ${esc(d.journal)} »</div>` : ''}
+    ${d.things.map((t) => `<div class="jrow ${t.done ? 'done' : ''}"><button class="check sm" data-act="jToggle" data-day="${k}" data-id="${t.id}" aria-label="${t.done ? 'Annuler' : 'Fait'}">${t.done ? icon('check') : ''}</button><span class="dot" style="background:${catOf(t.cat).couleur}"></span><span class="t" data-act="jEdit" data-day="${k}" data-id="${t.id}">${esc(t.title)}</span>${t.done ? `<span class="muted small">${t.real ? fmtMin(t.real) : ''}</span><button class="mini" data-act="jDel" data-day="${k}" data-id="${t.id}" aria-label="Supprimer">${icon('trash')}</button>` : `${i ? `<button class="mini" data-act="jToday" data-day="${k}" data-id="${t.id}" aria-label="Remettre à aujourd'hui">${icon('sun')}</button>` : ''}<button class="mini" data-act="jDel" data-day="${k}" data-id="${t.id}" aria-label="Supprimer">${icon('trash')}</button>`}</div>`).join('')}
     ${listDone.map((l) => `<div class="jrow done"><button class="check sm" data-act="jListToggle" data-id="${l.id}" aria-label="Annuler">${icon('check')}</button><span class="dot" style="background:${l.cat ? catOf(l.cat).couleur : 'var(--fg2)'}"></span><span class="t">${esc(l.text)}</span><span class="muted small">liste</span><button class="mini" data-act="jListDel" data-id="${l.id}" aria-label="Supprimer">${icon('trash')}</button></div>`).join('')}</div>`);
   }
   if (n > 7) return out.length ? `<div class="stack">${out.join('')}</div>` : '<div class="muted">Rien encore.</div>';
