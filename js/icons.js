@@ -22,6 +22,7 @@ const P = {
   pause: '<path d="M9 6v12M15 6v12"/>',
   play: '<path d="M8 5.5v13l10.5-6.5z"/>',
   history: '<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4.5V8h3.5"/><path d="M12 8v4.5l3 2"/>',
+  repeat: '<path d="M17 3.5l3 3-3 3"/><path d="M4 11.5v-1a4 4 0 0 1 4-4h12"/><path d="M7 20.5l-3-3 3-3"/><path d="M20 12.5v1a4 4 0 0 1-4 4H4"/>',
   leaf: '<path d="M5 19c.5-8.5 5.5-13.5 14-14-.5 8.5-5.5 13.5-14 14z"/><path d="M5 19l7.5-7.5"/>',
   // Humeur : cinq visages du même dessin
   m0: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 10.2h2M13.5 10.2h2M9 16q3-2.2 6 0"/>',

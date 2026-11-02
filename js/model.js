@@ -171,3 +171,27 @@ export function growth(plant, state, today) {
   }
   return Math.min(1, n / 7);
 }
+
+// ---------- Séries : des choses qui reviennent certains jours ----------
+// serie : { id, title, cat, est, slot, days: [0..6] (0 = dimanche), start, active }
+export const DOW_SHORT = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+export function seriesDue(serie, k) { return !!serie.active && (!serie.start || k >= serie.start) && serie.days.includes(dow(k)); }
+export function daysLabel(days) {
+  const d = [...days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+  if (d.length === 7) return 'Chaque jour';
+  if (d.length === 5 && [1, 2, 3, 4, 5].every((x) => d.includes(x))) return 'Du lundi au vendredi';
+  if (d.length === 2 && d.includes(0) && d.includes(6)) return 'Le week-end';
+  return d.map((x) => DOW_SHORT[x]).join(', ');
+}
+// Place les séries du jour k, une seule fois par jour : une occurrence supprimée ou déplacée ne revient pas.
+export function materialize(state, k) {
+  state.seriesMade = state.seriesMade || {}; let n = 0;
+  for (const se of state.series || []) {
+    const key = `${se.id}|${k}`;
+    if (!seriesDue(se, k) || state.seriesMade[key]) continue;
+    state.seriesMade[key] = 1;
+    ensureDay(state, k).things.push({ id: uid(), title: se.title, cat: se.cat, est: se.est || null, slot: se.slot || null, done: false, real: 0, seriesId: se.id });
+    n++;
+  }
+  return n;
+}

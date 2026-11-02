@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums } from '../js/model.js';
+import { materialize, daysLabel, seriesDue, isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums } from '../js/model.js';
 import { defaultState, hydrate } from '../js/store.js';
 
 const st = () => { const s = defaultState(); s.days['2026-11-03'] = { things: [{ id: 'a', title: 'x', cat: 'revision', done: true, real: 80 }, { id: 'b', title: 'y', cat: 'corps', done: false }], journal: '', mood: 1, planned: true }; return s; };
@@ -67,4 +67,20 @@ test('croissance : jours actifs depuis la plantation, plafonnée à 7', () => {
 test('hydratation tolérante', () => {
   const h = hydrate({ days: {}, settings: { minimums: { corps: 2 } }, list: 'nope' });
   assert.equal(h.settings.minimums.corps, 2); assert.equal(h.settings.minimums.esprit, 3); assert.deepEqual(h.list, []);
+});
+
+test('séries : placées une fois par jour dû, jamais recréées', () => {
+  const s = defaultState();
+  s.series.push({ id: 'se', title: 'Courir', cat: 'corps', days: [1, 3, 5], start: '2026-11-01', active: true });
+  assert.equal(materialize(s, '2026-11-02'), 1); // lundi
+  assert.equal(materialize(s, '2026-11-02'), 0);
+  s.days['2026-11-02'].things = []; // supprimée par l'utilisateur
+  assert.equal(materialize(s, '2026-11-02'), 0, 'ne revient pas');
+  assert.equal(materialize(s, '2026-11-03'), 0); // mardi
+  assert.equal(materialize(s, '2026-11-04'), 1); // mercredi
+  s.series[0].active = false; assert.equal(materialize(s, '2026-11-06'), 0);
+  assert.equal(seriesDue({ days: [0], active: true }, '2026-11-01'), true);
+  assert.equal(daysLabel([1, 2, 3, 4, 5]), 'Du lundi au vendredi');
+  assert.equal(daysLabel([0, 1, 2, 3, 4, 5, 6]), 'Chaque jour');
+  assert.equal(daysLabel([5, 1, 3]), 'lun, mer, ven');
 });

@@ -194,3 +194,9 @@ h3{font-size:17px;color:var(--amber)}
 
 .undo-btn{right:104px;color:var(--amber)}
 .center{text-align:center}
+
+/* Séries */
+.dows{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px}
+.dow{padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--bg3);font-size:13px;color:var(--fg2)}
+.dow.on{border-color:var(--amber);color:var(--fg);background:rgba(242,178,61,.12)}
+.rep-ic{color:var(--amber);margin-right:6px}

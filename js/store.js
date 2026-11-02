@@ -18,6 +18,8 @@ export const defaultState = () => ({
   list: [],     // { id, text, cat?, due?, done, at, doneAt }
   ideas: [],    // { id, text, at, status: 'inbox' | 'kept' | 'done' }
   goals: [],    // { id, title, cat, due?, horizon, milestones: [{ text, done }], status, reviews: { week: 'avance'|'stable'|'revoir' } }
+  series: [],   // { id, title, cat, est, slot, days: [0..6], start, active }
+  seriesMade: {}, // 'serieId|YYYY-MM-DD' -> 1 (déjà placée ce jour-là)
   weeks: {},    // 'YYYY-Www' -> { reviewedAt, note }
   garden: { plants: [], objects: [] }, // plants : { id, cat, day, seed, kind }
   cards: { seen: {}, feuilleton: 0, lastLong: null, log: [] }, // log : [{ id, at, ctx }]
@@ -38,7 +40,7 @@ export function hydrate(s) {
     ...d, ...s,
     settings: { ...d.settings, ...(isObj(s.settings) ? s.settings : {}), minimums: { ...d.settings.minimums, ...((s.settings || {}).minimums || {}) } },
     days: isObj(s.days) ? s.days : {},
-    list: Array.isArray(s.list) ? s.list : [], ideas: Array.isArray(s.ideas) ? s.ideas : [], goals: Array.isArray(s.goals) ? s.goals : [],
+    list: Array.isArray(s.list) ? s.list : [], series: Array.isArray(s.series) ? s.series : [], seriesMade: isObj(s.seriesMade) ? s.seriesMade : {}, ideas: Array.isArray(s.ideas) ? s.ideas : [], goals: Array.isArray(s.goals) ? s.goals : [],
     weeks: isObj(s.weeks) ? s.weeks : {},
     garden: { plants: [], objects: [], ...(isObj(s.garden) ? s.garden : {}) },
     cards: { ...d.cards, ...(isObj(s.cards) ? s.cards : {}) },
