@@ -64,6 +64,48 @@ const M = {
   chain: new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 0.6, metalness: 0.7 }),
 };
 
+// ---------- Textures procédurales (canvas) : grain, rouille, terre, gravier, crasse des vitres ----------
+const TX = (() => {
+  if (typeof document === 'undefined') return null;
+  const r = rngOf(808);
+  const mk = (w, h, draw, rx = 1, ry = 1) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); draw(x, w, h); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.anisotropy = 4; return t; };
+  const g = (v, a = 1) => `rgba(${v},${v},${v},${a})`;
+  const speck = (x, w, h, n, lo, hi, rmin, rmax, a = 0.7) => { for (let i = 0; i < n; i++) { x.fillStyle = g(lo + Math.floor(r() * (hi - lo)), a); x.beginPath(); x.arc(r() * w, r() * h, rmin + r() * (rmax - rmin), 0, 6.29); x.fill(); } };
+  const grain = (base, dark, light) => (x, w, h) => { x.fillStyle = base; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) { const px = r() * w; x.strokeStyle = r() < 0.5 ? dark : light; x.globalAlpha = 0.25 + r() * 0.5; x.lineWidth = 0.5 + r() * 2.2; x.beginPath(); x.moveTo(px, 0); for (let y = 0; y <= h; y += 12) x.lineTo(px + Math.sin(y * 0.04 + i) * 4 * r(), y); x.stroke(); }
+    x.globalAlpha = 0.7; for (let i = 0; i < 5; i++) { x.strokeStyle = dark; x.lineWidth = 1.2; const cx = r() * w, cy = r() * h; for (let k = 1; k < 4; k++) { x.beginPath(); x.ellipse(cx, cy, 2 * k, 6 * k, 0, 0, 6.29); x.stroke(); } } x.globalAlpha = 1; };
+  const T = {
+    wood: mk(128, 256, grain('#d9cbb8', '#6b5440', '#f2e6d4'), 1, 1),
+    woodB: mk(128, 256, grain('#9a9a9a', '#3a3a3a', '#d0d0d0'), 1, 1),
+    terra: mk(128, 128, (x, w, h) => { x.fillStyle = '#e8d2c0'; x.fillRect(0, 0, w, h); speck(x, w, h, 900, 150, 255, 0.5, 2.2, 0.5); for (let i = 0; i < 14; i++) { x.fillStyle = 'rgba(245,245,235,.35)'; x.beginPath(); x.ellipse(r() * w, r() * h, 6 + r() * 14, 3 + r() * 6, r() * 3, 0, 6.29); x.fill(); } }, 2, 1),
+    terraB: mk(128, 128, (x, w, h) => { x.fillStyle = '#888'; x.fillRect(0, 0, w, h); speck(x, w, h, 1100, 40, 220, 0.5, 2, 0.6); }, 2, 1),
+    soil: mk(128, 128, (x, w, h) => { x.fillStyle = '#9a8e80'; x.fillRect(0, 0, w, h); speck(x, w, h, 1400, 40, 255, 0.6, 2.6, 0.6); }, 3, 3),
+    gravel: mk(256, 256, (x, w, h) => { x.fillStyle = '#6a6458'; x.fillRect(0, 0, w, h); for (let i = 0; i < 2600; i++) { const v = 90 + Math.floor(r() * 150); x.fillStyle = `rgb(${v},${v - 4},${v - 12})`; x.beginPath(); x.ellipse(r() * w, r() * h, 1.2 + r() * 3, 1 + r() * 2.4, r() * 3, 0, 6.29); x.fill(); } }, 4, 7),
+    stone: mk(128, 128, (x, w, h) => { x.fillStyle = '#c8c4b8'; x.fillRect(0, 0, w, h); speck(x, w, h, 800, 80, 255, 0.5, 2.4, 0.5); for (let i = 0; i < 10; i++) { x.fillStyle = `rgba(${150 + r() * 40},${170 + r() * 40},${90 + r() * 30},.35)`; x.beginPath(); x.arc(r() * w, r() * h, 4 + r() * 12, 0, 6.29); x.fill(); } }, 2, 2),
+    stoneB: mk(128, 128, (x, w, h) => { x.fillStyle = '#888'; x.fillRect(0, 0, w, h); speck(x, w, h, 1200, 30, 230, 0.5, 2.6, 0.6); }, 2, 2),
+    metal: mk(64, 256, (x, w, h) => { x.fillStyle = '#c8d0c8'; x.fillRect(0, 0, w, h); for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${120 + r() * 60},${70 + r() * 30},${30 + r() * 20},${0.3 + r() * 0.4})`; x.beginPath(); x.ellipse(r() * w, r() * h, 2 + r() * 8, 3 + r() * 16, 0, 0, 6.29); x.fill(); } speck(x, w, h, 300, 140, 255, 0.4, 1.4, 0.4); }, 1, 2),
+    glassA: mk(128, 128, (x, w, h) => { const gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, g(40)); gr.addColorStop(0.65, g(60)); gr.addColorStop(1, g(170)); x.fillStyle = gr; x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 26; i++) { const px = r() * w, py = r() * h * 0.6; x.strokeStyle = g(110, 0.6); x.lineWidth = 0.6 + r(); x.beginPath(); x.moveTo(px, py); x.lineTo(px + (r() - 0.5) * 3, py + 20 + r() * 50); x.stroke(); } speck(x, w, h, 200, 90, 200, 0.4, 1.6, 0.5); x.strokeStyle = g(150); x.lineWidth = 3; x.strokeRect(1.5, 1.5, w - 3, h - 3); }),
+    leaf: mk(64, 64, (x, w, h) => { x.fillStyle = '#e6e6e6'; x.fillRect(0, 0, w, h); x.strokeStyle = 'rgba(255,255,240,.9)'; x.lineWidth = 2; x.beginPath(); x.moveTo(w / 2, 0); x.lineTo(w / 2, h); x.stroke(); x.lineWidth = 1; for (let y = 6; y < h; y += 9) { x.beginPath(); x.moveTo(w / 2, y); x.lineTo(4, y - 8); x.moveTo(w / 2, y); x.lineTo(w - 4, y - 8); x.stroke(); } speck(x, w, h, 120, 170, 230, 0.4, 1.2, 0.5); }),
+  };
+  return T;
+})();
+if (TX) {
+  const set = (m, o) => { Object.assign(m, o); m.needsUpdate = true; };
+  set(M.wood, { map: TX.wood, bumpMap: TX.woodB, bumpScale: 4 });
+  set(M.woodDark, { map: TX.wood, bumpMap: TX.woodB, bumpScale: 4 });
+  set(M.bark, { map: TX.wood, bumpMap: TX.woodB, bumpScale: 6 });
+  set(M.terra, { map: TX.terra, bumpMap: TX.terraB, bumpScale: 3 });
+  set(M.terraDark, { map: TX.terra, bumpMap: TX.terraB, bumpScale: 3 });
+  set(M.soil, { map: TX.soil, bumpMap: TX.soil, bumpScale: 5 });
+  set(M.gravel, { color: new THREE.Color(0x9a9282), map: TX.gravel, bumpMap: TX.gravel, bumpScale: 6 });
+  set(M.stone, { map: TX.stone, bumpMap: TX.stoneB, bumpScale: 4 });
+  set(M.frame, { map: TX.metal, bumpMap: TX.metal, bumpScale: 2, roughness: 0.7 });
+  set(M.glass, { alphaMap: TX.glassA, opacity: 0.38 });
+  set(M.leaf, { map: TX.leaf, bumpMap: TX.leaf, bumpScale: 1.5 });
+  set(M.leafFlat, { bumpMap: TX.leaf, bumpScale: 1.5 });
+}
+
 // ---------- La serre ----------
 const GW = 3.6, GD = 6.6, GH = 2.6, GR = 4.3; // demi-largeur, demi-profondeur, hauteur des murs, faîtage
 const greenhouse = new THREE.Group(); scene.add(greenhouse);

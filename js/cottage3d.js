@@ -30,14 +30,14 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   // ---------- Matériaux ----------
   const MAT = {
     wash: std({ color: 0xffffff, vertexColors: true, roughness: 0.97 }),
-    thatch: withTex(std({ color: 0xffffff, vertexColors: true, roughness: 1 }), strawTex(14, 3), 5, strawTex(14, 3)),
-    straw: withTex(std({ color: 0xffffff, roughness: 1 }), strawTex(1, 1), 3, strawTex(1, 1)),
-    stone: withTex(std({ color: 0xffffff, roughness: 0.95 }), pitTex(2, 2), 3),
-    paint: withTex(std({ color: 0xa3301f, roughness: 0.62 }), grainTex(3, 1), 2),
+    thatch: withTex(std({ color: 0xffffff, vertexColors: true, roughness: 1 }), strawTex(18, 4), 10, strawTex(18, 4)),
+    straw: withTex(std({ color: 0xffffff, roughness: 1 }), strawTex(1, 1), 6, strawTex(1, 1)),
+    stone: withTex(std({ color: 0xffffff, roughness: 0.95 }), pitTex(2, 2), 7, canTex(128, 128, (x, w, h) => { x.fillStyle = '#e8e4da'; x.fillRect(0, 0, w, h); for (let i = 0; i < 600; i++) { const v = 120 + Math.floor(rng() * 135); x.fillStyle = `rgba(${v},${v},${v - 6},.6)`; x.beginPath(); x.arc(rng() * w, rng() * h, 0.5 + rng() * 2.2, 0, 6.29); x.fill(); } for (let i = 0; i < 9; i++) { x.fillStyle = `rgba(${170 + rng() * 40},${185 + rng() * 40},${100 + rng() * 40},.5)`; x.beginPath(); x.arc(rng() * w, rng() * h, 3 + rng() * 10, 0, 6.29); x.fill(); } }, 2, 2)),
+    paint: withTex(std({ color: 0xa3301f, roughness: 0.62 }), grainTex(3, 1), 5, grainTex(3, 1)),
     trim: std({ color: 0x2f5b3f, roughness: 0.7 }),
-    wood: withTex(std({ color: 0xffffff, roughness: 0.88 }), grainTex(1, 1), 3),
-    woodDark: withTex((M.woodDark ? M.woodDark.clone() : std({ color: 0x5a3a1a, roughness: 0.9 })), grainTex(1, 1), 3),
-    bark: withTex((M.bark ? M.bark.clone() : std({ color: 0x5b3f26, roughness: 0.95 })), grainTex(2, 1), 5),
+    wood: withTex(std({ color: 0xffffff, roughness: 0.88 }), grainTex(1, 1), 6, grainTex(1, 1)),
+    woodDark: withTex((M.woodDark ? M.woodDark.clone() : std({ color: 0x5a3a1a, roughness: 0.9 })), grainTex(1, 1), 6, grainTex(1, 1)),
+    bark: withTex((M.bark ? M.bark.clone() : std({ color: 0x5b3f26, roughness: 0.95 })), grainTex(2, 1), 8, grainTex(2, 1)),
     endgrain: std({ color: 0xc8a26a, roughness: 0.9 }),
     iron: std({ color: 0x26241f, roughness: 0.5, metalness: 0.75 }),
     leaf: std({ color: 0xffffff, roughness: 0.75, side: THREE.DoubleSide }),
@@ -118,7 +118,14 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     if (typeof document !== 'undefined') { const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d'); x.fillStyle = '#808080'; x.fillRect(0, 0, 256, 256);
       for (let i = 0; i < 2600; i++) { const v = 100 + Math.floor(rng() * 70); x.fillStyle = `rgba(${v},${v},${v},0.5)`; const r = 1 + rng() * 3.5; x.beginPath(); x.arc(rng() * 256, rng() * 256, r, 0, 6.29); x.fill(); }
       x.strokeStyle = 'rgba(40,40,40,0.55)'; x.lineWidth = 1; for (let i = 0; i < 9; i++) { let px = rng() * 256, py = rng() * 256; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 6; k++) { px += (rng() - 0.5) * 22; py += rng() * 14; x.lineTo(px, py); } x.stroke(); }
-      const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(6, 2); MAT.wash.bumpMap = tx; MAT.wash.bumpScale = 4; MAT.wash.needsUpdate = true; }
+      const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(6, 2); MAT.wash.bumpMap = tx; MAT.wash.bumpScale = 7;
+      // salissures : coulures sous l'avant-toit, taches d'humidité, chaux écaillée
+      MAT.wash.map = canTex(256, 256, (x, w, h) => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h);
+        for (let i = 0; i < 40; i++) { const px = rng() * w, L = 30 + rng() * 120; const gr = x.createLinearGradient(0, 0, 0, L); gr.addColorStop(0, 'rgba(120,105,80,.35)'); gr.addColorStop(1, 'rgba(120,105,80,0)'); x.fillStyle = gr; x.fillRect(px, 0, 1.5 + rng() * 5, L); }
+        for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${150 + rng() * 40},${140 + rng() * 40},${110 + rng() * 30},${0.12 + rng() * 0.2})`; x.beginPath(); x.ellipse(rng() * w, rng() * h, 8 + rng() * 26, 6 + rng() * 18, rng() * 3, 0, 6.29); x.fill(); }
+        for (let i = 0; i < 12; i++) { x.fillStyle = 'rgba(140,130,115,.55)'; x.beginPath(); const cx = rng() * w, cy = h * 0.3 + rng() * h * 0.7; for (let k = 0; k < 7; k++) { const a = k / 7 * 6.28, rr = 3 + rng() * 9; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.7); } x.fill(); }
+        for (let i = 0; i < 1500; i++) { const v = 200 + Math.floor(rng() * 55); x.fillStyle = `rgba(${v},${v - 4},${v - 12},.35)`; x.fillRect(rng() * w, rng() * h, 1.5, 1.5); } }, 6, 2);
+      MAT.wash.needsUpdate = true; }
     const walls = new THREE.Mesh(g, MAT.wash); walls.castShadow = walls.receiveShadow = true; group.add(walls);
   }
 
