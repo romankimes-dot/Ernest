@@ -263,3 +263,9 @@ details.more[open] summary{margin-bottom:6px}
 body.running .fab{bottom:calc(136px + var(--sab))}
 .thing .go{min-width:44px;min-height:44px;display:grid;place-items:center}
 .thing .go.on{color:var(--fg)}
+.ernest-props{border-color:rgba(242,178,61,.35)}
+.ernest-props .prop{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.ernest-props .prop:first-of-type{border-top:0;padding-top:0}
+.ernest-props{border-color:rgba(242,178,61,.35)}
+.ernest-props .prop{display:flex;flex-direction:column;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.ernest-props .prop:first-of-type{border-top:0;padding-top:0}

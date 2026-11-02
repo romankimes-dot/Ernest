@@ -107,3 +107,21 @@ test('moments adaptatifs : une chose de pont dont le moment est passé glisse au
   assert.equal(reslot(s, 'd', 19), 1);
   assert.equal(s.days.d.things[0].slot, 'soir');
 });
+
+import { organize, observe } from '../js/model.js';
+test('Ernest organisateur : habitude du jour, série proposée, charge, moment', () => {
+  const st = { days: {}, list: [], ideas: [], goals: [], series: [], settings: { minimums: {}, minimumsFrom: '2099-01-01' } };
+  // « Courir » fait les mardis 13, 20, 27 oct. au matin
+  for (const k of ['2026-10-13', '2026-10-20', '2026-10-27']) st.days[k] = { things: [{ id: k, title: 'Courir', cat: 'corps', done: true, doneAt: k + 'T07:30:00', real: 30 }] };
+  const k = '2026-11-03'; // un mardi
+  st.days[k] = { things: [] };
+  const r = organize(st, k, { max: 9 });
+  assert.ok(r.some((x) => x.kind === 'habit' && x.title === 'Courir' && x.slot === 'matin'), 'habitude du mardi matin');
+  assert.ok(r.some((x) => x.kind === 'series' && x.days.includes(2)), 'série proposée sur le mardi');
+  st.days[k].things = Array.from({ length: 6 }, (_, i) => ({ id: 'x' + i, title: 'T' + i, cat: 'perso', done: false }));
+  assert.ok(organize(st, k, { max: 9 }).some((x) => x.kind === 'load'), 'charge signalée au-delà de 5');
+  st.days[k].things = [{ id: 'c', title: 'Gainage', cat: 'corps', done: false }];
+  assert.ok(organize(st, k, { max: 9 }).some((x) => x.kind === 'slot' && x.slot === 'matin'), 'moment habituel de la catégorie');
+  assert.equal(organize(st, k, { max: 9, dismissed: { [`hab:courir:${k}`]: 1 } }).some((x) => x.kind === 'habit' && x.title === 'Courir'), false, 'une proposition refusée ne revient pas');
+  assert.equal(observe(st, k)[0].n, 3);
+});

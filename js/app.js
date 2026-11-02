@@ -1,6 +1,6 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot, organize } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
@@ -367,6 +367,9 @@ function viewToday() {
   h += moodBar(d);
   if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
   // après une absence : ce qui est resté en suspens ces trois derniers jours, proposé ici plutôt que caché dans l'historique
+  // Ernest propose : ce qu'il a observé ces trois dernières semaines (habitudes, séries, moments, charge, durées)
+  const props = organize(S, today, { max: 3, dismissed: S.ernest.propNo || {} });
+  if (props.length) h += `<div class="card stack ernest-props"><div class="eyebrow">Ernest propose</div>${props.map((p, i) => `<div class="prop"><div class="small">${esc(p.text)}</div><div class="row" style="gap:8px">${p.kind === 'info' ? '' : `<button class="chip on" data-act="propYes" data-i="${i}">${esc(p.yes)}</button>`}<button class="chip" data-act="propNo" data-i="${i}">${p.kind === 'info' ? 'Noté' : 'Non merci'}</button></div></div>`).join('')}</div>`;
   const susp = suspended();
   if (susp.length && S.ernest.suspLater !== today) h += `<div class="card stack"><div><b>Resté en suspens</b><div class="muted small">${susp.map((x) => esc(x.t.title)).slice(0, 4).join(' · ')}${susp.length > 4 ? ' …' : ''}</div></div><div class="btns"><button class="btn" data-act="resumeSusp">${icon('sun', 'sm')} Reprendre aujourd'hui</button><button class="btn quiet" data-act="suspLater">Plus tard</button></div></div>`;
   if (!d.things.length) {
@@ -451,6 +454,19 @@ function action(act, ds, el, v) {
   const thing = ds.id ? d.things.find((t) => t.id === ds.id) : null;
   label({ mood: "l'humeur", jListToggle: 'la coche', jListDel: 'la suppression', toggle: 'la coche', listToggle: 'la coche', listToday: "le passage dans la journée", start: 'le démarrage', pause: 'la pause', jToggle: 'la coche', jToday: "la remise à aujourd'hui", jDel: 'la suppression', ideaAct: "le tri de l'idée", goalMs: "l'étape", acceptSug: 'les choses posées' }[act] || null);
   switch (act) {
+    case 'propYes': case 'propNo': {
+      const p = organize(S, today, { max: 3, dismissed: S.ernest.propNo || {} })[Number(ds.i)]; if (!p) return;
+      S.ernest.propNo = S.ernest.propNo || {}; S.ernest.propNo[p.id] = today;
+      if (act === 'propYes') {
+        label("la proposition d'Ernest");
+        if (p.kind === 'habit') { d.things.push({ id: uid(), title: p.title, cat: p.cat, slot: p.slot, est: estimate(S, p.cat), done: false, real: 0 }); d.planned = true; toast('Posé.'); }
+        else if (p.kind === 'series') { const t = d.things.find((x) => x.title.trim().toLowerCase() === p.title.trim().toLowerCase() && !x.done) || { id: uid(), title: p.title, cat: p.cat, slot: p.slot, est: estimate(S, p.cat), done: false, real: 0 }; if (!d.things.includes(t) && p.days.includes(dow(today))) d.things.push(t); saveSeries(t, p.days); toast(`Série créée : ${daysLabel(p.days).toLowerCase()}.`); }
+        else if (p.kind === 'slot') { const t = d.things.find((x) => x.id === p.thing); if (t) t.slot = p.slot; toast('Rangé.'); }
+        else if (p.kind === 'load') { const open = d.things.filter((x) => !x.done && !x.prep), moved = open.slice(p.keep); const dt = ensureDay(S, addDays(today, 1)); for (const t of moved) { d.things = d.things.filter((x) => x !== t); dt.things.push({ ...t, startedAt: null }); } toast(`${moved.length} chose${moved.length > 1 ? 's' : ''} pour demain.`); }
+      }
+      for (const [k2, v] of Object.entries(S.ernest.propNo)) if (v < addDays(today, -60)) delete S.ernest.propNo[k2]; // mémoire des refus : 60 jours
+      save(); render(); break;
+    }
     case 'resumeSusp': { label('la reprise'); const n = suspended(); for (const { t } of n) { t.moved = true; d.things.push({ ...t, id: uid(), done: false, startedAt: null, spent: 0, moved: false }); } d.planned = true; save(); render(); toast(`${n.length} chose${n.length > 1 ? 's' : ''} reprise${n.length > 1 ? 's' : ''}.`); break; }
     case 'suspLater': S.ernest.suspLater = today; save(); render(); break;
     case 'installOk': S.ernest.installHint = true; save(); render(); break;
