@@ -27,7 +27,7 @@ let renderer = null, controls = null;
 const hemi = new THREE.HemisphereLight(0xbfe3f0, 0x3a3020, 1.0); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
 sun.position.set(6, 10, 5); sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -8; sun.shadow.camera.right = 8; sun.shadow.camera.top = 9; sun.shadow.camera.bottom = -9; sun.shadow.camera.far = 30; sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
+sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -8; sun.shadow.camera.right = 8; sun.shadow.camera.top = 9; sun.shadow.camera.bottom = -9; sun.shadow.camera.far = 30; sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02; sun.shadow.radius = 7;
 scene.add(sun);
 
 // ---------- Ciel, étoiles, sol extérieur ----------
@@ -158,7 +158,7 @@ const zoneU = { value: new Array(ZONES.length).fill(0) };
     colors.push(c.r, c.g, c.b);
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); g.computeVertexNormals();
-  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true })); m.receiveShadow = true; outdoor.add(m);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); m.receiveShadow = true; outdoor.add(m);
 }
 // Prairie : des milliers de brins qui ondulent (vent calculé dans le shader)
 const windU = { value: 0 };
@@ -166,7 +166,7 @@ const ext = { beds: [], serre2: null };
 {
   const blade = new THREE.BufferGeometry();
   blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.03, 0, 0, 0.03, 0, 0, -0.02, 0.35, 0, 0.02, 0.35, 0, 0, 0.7, 0], 3));
-  blade.setIndex([0, 1, 2, 2, 1, 3, 2, 3, 4]); blade.computeVertexNormals();
+  blade.setIndex([0, 1, 2, 2, 1, 3, 2, 3, 4]); blade.setAttribute('normal', new THREE.Float32BufferAttribute(new Array(15).fill(0).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3)); // normales vers le ciel : brins fondus dans le pré
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = windU; sh.uniforms.uZone = zoneU;
@@ -182,8 +182,8 @@ const ext = { beds: [], serre2: null };
     const a = r() * Math.PI * 2, d = 4.5 + Math.pow(r(), 0.7) * 34, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.15;
     if (Math.abs(x) < GW + 0.4 && Math.abs(z) < GD + 0.4) continue;
     if (z > GD && Math.abs(x - pathX(z)) < 0.85) continue;
-    dummy.position.set(x, heightAt(x, z) - 0.03, z); dummy.rotation.set((r() - 0.5) * 0.3, r() * 6.28, 0); const s = 0.45 + r() * 0.55; dummy.scale.set(1.2, s * (0.6 + r() * 0.6), 1.2); dummy.updateMatrix();
-    aZone[k] = zoneAt(x, z); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.08, (r() - 0.5) * 0.08)); k++;
+    dummy.position.set(x, heightAt(x, z) - 0.03, z); dummy.rotation.set((r() - 0.5) * 0.3, r() * 6.28, 0); const s = 0.45 + r() * 0.5; dummy.scale.set(0.9, s * (0.55 + r() * 0.45), 0.9); dummy.updateMatrix();
+    aZone[k] = zoneAt(x, z); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.04, (r() - 0.5) * 0.035 + 0.02)); k++;
   }
   blade.setAttribute('aZone', new THREE.InstancedBufferAttribute(aZone, 1)); im.count = k; im.receiveShadow = true; outdoor.add(im);
   // fleurs sauvages
@@ -210,7 +210,7 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
     const x = Math.cos(a) * R, z = Math.sin(a) * R * 1.2; if (z > 8 && Math.abs(x - pathX(z)) < 1.3) continue;
     for (let l = 0; l < 3; l++) stones.push([x + (r() - 0.5) * 0.2, heightAt(x, z) + 0.12 + l * 0.17, z + (r() - 0.5) * 0.2, 0.17 + r() * 0.08 - l * 0.02]);
   }
-  const m = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), stones.length);
+  const m = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }), stones.length);
   stones.forEach(([x, y, z, s], i) => { dummy.position.set(x, y, z); dummy.rotation.set(r() * 3, r() * 3, r() * 3); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#8a8474'), r, 0.12)); });
   m.castShadow = m.receiveShadow = true; outdoor.add(m);
 }
@@ -267,15 +267,15 @@ BEDS.forEach((b, bi) => {
     else for (let b = 0; b < 5; b++) blobs.push([x + (r() - 0.5) * H * 0.4, y + H * (0.6 + r() * 0.3), z + (r() - 0.5) * H * 0.4, H * (0.22 + r() * 0.12), r()]);
   }
   for (let i = 0; i < 60; i++) { const a = r() * 6.28, x = Math.cos(a) * (11 + r() * 3), z = Math.sin(a) * (11 + r() * 3) * 1.2; if (z > 8 && Math.abs(x - pathX(z)) < 2) continue; bushes.push([x, heightAt(x, z) + 0.25, z, 0.35 + r() * 0.35, r()]); }
-  const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.7, 1, 1, 6), M.bark, trunks.length);
+  const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.7, 1, 1, 10), M.bark, trunks.length);
   trunks.forEach(([x, y, z, rad, h], i) => { dummy.position.set(x, y + h / 2, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(rad, h, rad); dummy.updateMatrix(); tm.setMatrixAt(i, dummy.matrix); });
-  const cm = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), cones.length);
+  const cm = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), cones.length);
   cones.forEach(([x, y, z, rad, h, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, v * 6, 0); dummy.scale.set(rad, h, rad); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); cm.setColorAt(i, col(['#2f5a3a', '#3a6a40', '#28503a'][Math.floor(v * 3)])); });
   const leafy = PAL.leaves || ['#6b5a4a'];
-  const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, flatShading: true }), blobs.length);
+  const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), blobs.length);
   blobs.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(v * 3, v * 5, 0); dummy.scale.set(s * 1.1, s * 0.85, s * 1.1); dummy.updateMatrix(); bm.setMatrixAt(i, dummy.matrix); bm.setColorAt(i, col(leafy[Math.floor(v * leafy.length)])); });
   bm.visible = !!PAL.leaves;
-  const um = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), bushes.length);
+  const um = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), bushes.length);
   bushes.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(v, v * 4, 0); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, vary(col(SEASON === 'automne' ? '#7a6a3a' : '#3f6a3a'), rngOf(i), 0.15)); });
   for (const m of [tm, cm, bm, um]) { m.castShadow = true; m.receiveShadow = true; outdoor.add(m); }
 }
@@ -681,9 +681,9 @@ function updateAmbience(dt, t) {
   for (const key of Object.keys(b)) { if (typeof b[key] === 'number') a[key] = lerp(a[key], b[key], k); else if (Array.isArray(b[key])) a[key] = a[key].map((v, i) => lerp(v, b[key][i], k)); else a[key] = '#' + col(a[key]).lerp(col(b[key]), k).getHexString(); }
   const mood = model.mood, m = 0.75 + mood * 0.09;
   skyMat.uniforms.top.value.set(a.top); skyMat.uniforms.bottom.value.set(a.bottom); scene.fog.color.set(a.fog);
-  hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m;
+  hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m * 1.2;
   const sd = sunDirAt(hourSun); skyLife.sunDir.copy(sd);
-  sun.color.set(a.sun); sun.intensity = a.sunI * m;
+  sun.color.set(a.sun); sun.intensity = a.sunI * m * 0.9;
   if (sd.y > 0.02) sun.position.copy(sd).multiplyScalar(16); else sun.position.set(...a.sunPos);
   skyMat.uniforms.sunDir.value.copy(sd); skyMat.uniforms.glowK.value = Math.max(0, Math.min(1, (sd.y + 0.12) * 4)); skyMat.uniforms.glow.value.set(sd.y < 0.18 ? '#ff9a5a' : '#ffe2b0');
   for (const l of lanterns) l.light.intensity = a.lantern * (0.8 + mood * 0.08) * (0.95 + Math.sin(t * 7 + l.g.position.z) * 0.03);
@@ -720,7 +720,7 @@ function updateGrowth(dt, t) {
 // ---------- Rendu ----------
 const clock = new THREE.Clock();
 let mode = 'band', running = false, visible = true, last = 0, onFps = null, frames = 0, fpsT = 0;
-const BAND = { pos: new THREE.Vector3(0.0, 2.05, 6.15), target: new THREE.Vector3(0, 1.1, -1.0) };
+const BAND = { pos: new THREE.Vector3(1.2, 6.6, 11.8), target: new THREE.Vector3(0, 0.6, 0.8) }; // vue plongeante : toutes les tables visibles
 function frame(now) {
   if (!running) return;
   requestAnimationFrame(frame);
@@ -749,7 +749,7 @@ export function webglOk() { try { const c = document.createElement('canvas'); re
 export function mount(canvas, opts = {}) {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false; controls.minDistance = 2.2; controls.maxDistance = 19;
