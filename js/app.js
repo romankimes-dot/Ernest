@@ -45,12 +45,15 @@ function bindRepeat(root, init) {
   dw.querySelectorAll('[data-dow]').forEach((b) => b.addEventListener('click', () => { const v = Number(b.dataset.dow); days = days.includes(v) ? days.filter((x) => x !== v) : [...days, v]; b.classList.toggle('on', days.includes(v)); }));
   return () => days;
 }
+function syncSeries(se) {
+  for (const k of [today, addDays(today, 1)]) for (const t of dayOf(S, k).things) if (t.seriesId === se.id && !t.done) Object.assign(t, { title: se.title, cat: se.cat, slot: se.slot });
+}
 function saveSeries(t, days) {
   // crée ou met à jour la série d'une chose ; days vide = arrêter la série
   let se = t.seriesId ? S.series.find((x) => x.id === t.seriesId) : null;
   if (!days.length) { if (se) se.active = false; t.seriesId = null; return; }
   if (!se) { se = { id: uid(), start: today, active: true }; S.series.push(se); t.seriesId = se.id; S.seriesMade[`${se.id}|${today}`] = 1; }
-  Object.assign(se, { title: t.title, cat: t.cat, est: t.est, slot: t.slot, days: [...days], active: true });
+  Object.assign(se, { title: t.title, cat: t.cat, est: t.est, slot: t.slot, days: [...days], active: true }); syncSeries(se);
 }
 const MOMENTS = [['matin', 'Matin'], ['midi', 'Midi'], ['aprem', 'Après-midi'], ['soir', 'Soir'], [null, 'Dans la journée']];
 const slotOrder = (s) => (!s ? 9 : BLOCKS[s] ? ['matin', 'midi', 'aprem', 'soir'].indexOf(s) * 100 + 50 : (parseInt(s, 10) || 0) * 10);
@@ -443,11 +446,11 @@ function captureSheet(preset = 'today') {
   const opts = () => {
     const o = $('#capOpts');
     if (dest === 'today') o.innerHTML = `${chips(null)}<div class="row" style="gap:16px;flex-wrap:wrap"><label class="row" style="gap:8px"><input type="checkbox" id="capDone" style="width:auto"> Déjà fait</label>${tracking() ? '<label class="row" style="gap:8px">Temps passé <input id="capMin" type="number" inputmode="numeric" min="0" placeholder="0" style="width:80px"> min</label>' : ''}</div><div class="kv"><label>Quand dans la journée (facultatif)</label>${blocksHtml(slot)}</div>${repeatHtml(repInit)}`;
-    else if (dest === 'list') o.innerHTML = `${chips(null)}${repeatHtml([])}<div class="kv list-date"><label>Pour quand (facultatif)</label><div class="chips"><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Dans la semaine</button><input type="date" id="capDate" class="chip-date"></div></div>`;
+    else if (dest === 'list') o.innerHTML = `${chips(null)}${repeatHtml([])}<div class="kv list-slot" hidden><label>Quand dans la journée</label>${blocksHtml(slot)}</div><div class="kv list-date"><label>Pour quand (facultatif)</label><div class="chips"><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Dans la semaine</button><input type="date" id="capDate" class="chip-date"></div></div>`;
     else if (dest === 'goal') o.innerHTML = `${chips(null)}<div class="kv"><label>Échéance (facultative)</label><input type="date" id="capGoalDue"></div><div class="kv"><label>Étapes, une par ligne (facultatif)</label><textarea id="capGoalMs" placeholder="Première étape&#10;Deuxième étape"></textarea></div>`;
     else o.innerHTML = `<div class="muted small">Elle ira dans Liste › Idées. Tu la trieras quand tu voudras.</div>`;
     bindChips(o); repGet = o.querySelector('.rep') ? bindRepeat(o, dest === 'today' ? repInit : []) : () => [];
-    const ld = o.querySelector('.list-date'); if (ld) o.querySelectorAll('[data-rep]').forEach((b) => b.addEventListener('click', () => { ld.hidden = b.dataset.rep !== 'none'; }));
+    const ld = o.querySelector('.list-date'), ls = o.querySelector('.list-slot'); if (ld) o.querySelectorAll('[data-rep]').forEach((b) => b.addEventListener('click', () => { ld.hidden = b.dataset.rep !== 'none'; ls.hidden = !ld.hidden; }));
     o.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; o.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
     o.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { const was = b.classList.contains('on'); o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); due = was ? null : addDays(today, Number(b.dataset.d)); if (!was) b.classList.add('on'); const cd = $('#capDate'); if (cd) cd.value = due || ''; }));
     const cd = $('#capDate'); if (cd) cd.addEventListener('change', () => { due = cd.value || null; o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); });
@@ -468,7 +471,7 @@ function captureSheet(preset = 'today') {
       save(); closeSheet(); toast(rd.length ? `Série posée : ${daysLabel(rd).toLowerCase()}.${due ? '' : " Pas aujourd'hui."}` : 'Placée dans ta journée.'); switchTab('today');
     }
     else if (dest === 'list' && repGet().length) {
-      const rd = repGet(), t = { id: uid(), title: text, cat: cat || 'perso', slot: null, done: false, real: 0 }; saveSeries(t, rd);
+      const rd = repGet(), t = { id: uid(), title: text, cat: cat || 'perso', slot, done: false, real: 0 }; saveSeries(t, rd);
       const dueNow = rd.includes(dow(today)); if (dueNow) { const d = ensureDay(S, today); d.things.push(t); d.planned = true; }
       save(); closeSheet(); toast(`Série posée : ${daysLabel(rd).toLowerCase()}.${dueNow ? " Dès aujourd'hui." : ''}`); listeFilter = 'series'; switchTab('liste');
     }
@@ -604,7 +607,7 @@ function seriesSheet(se) {
   openSheet(`<div class="eyebrow">Série</div><h2>${esc(se.title)}</h2><input id="seTitle" value="${esc(se.title)}" autocomplete="off">${chips(se.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(se.slot)}</div>${repeatHtml(se.days)}<button class="btn" id="seSave">Enregistrer</button><button class="btn danger" id="seStop">${icon('trash', 'sm')} Arrêter la série</button><div class="muted small">Arrêter ne touche pas ce qui est déjà dans tes journées.</div>`);
   const sh = $('#sheet'); bindChips(sh); let slot = se.slot; const get = bindRepeat(sh, se.days);
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
-  $('#seSave').addEventListener('click', () => { label('la série'); const days = get(); if (!days.length) { se.active = false; } else Object.assign(se, { title: $('#seTitle').value.trim() || se.title, cat: chipValue(sh, 'cat') || se.cat, slot, days }); save(); closeSheet(); render(); toast(days.length ? 'Série mise à jour.' : 'Série arrêtée.'); });
+  $('#seSave').addEventListener('click', () => { label('la série'); const days = get(); if (!days.length) { se.active = false; } else { Object.assign(se, { title: $('#seTitle').value.trim() || se.title, cat: chipValue(sh, 'cat') || se.cat, slot, days }); syncSeries(se); } save(); closeSheet(); render(); toast(days.length ? 'Série mise à jour.' : 'Série arrêtée.'); });
   $('#seStop').addEventListener('click', () => { label("l'arrêt de la série"); se.active = false; save(); closeSheet(); render(); toast('Série arrêtée.', 5000, () => { se.active = true; }); });
 }
 function goalSheet(g) {
