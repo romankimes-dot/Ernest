@@ -116,7 +116,8 @@ async function runSync({ manual = false } = {}) {
     if (nb) toast(`${nb} chose${nb > 1 ? 's' : ''} reçue${nb > 1 ? 's' : ''} de tes révisions.`, 3500);
     else if (r.conflict && r.first) toast('Ernest repris depuis le serveur. Ce qu’il y avait sur cet appareil est gardé dans Réglages.', 5000);
     else if (r.conflict) toast('Modifié sur les deux appareils : la version la plus récente est gardée. L’autre est dans Réglages.', 5000);
-    else if (manual) toast(r.adopted ? 'Synchronisé : repris de l’autre appareil.' : 'Synchronisé.');
+    else if (manual && !r.ponts) toast('Synchronisé. Deonto n’a encore envoyé aucun plan : mets Deonto à jour (tirer vers le bas), puis reviens.', 5000);
+    else if (manual) toast(r.adopted ? 'Synchronisé : repris de l’autre appareil.' : 'Synchronisé. Rien de nouveau dans le plan de Deonto.');
   } catch (e) {
     SY.setMeta({ error: e.message });
     if (e.status === 412) scheduleSync(5000); else if (manual) toast(`Synchronisation impossible : ${e.message}.`, 4000);
