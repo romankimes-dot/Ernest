@@ -63,7 +63,8 @@ export function ensureDay(state, k) {
 // Choses faites un jour (3 du jour + entrées de liste cochées ce jour).
 export function doneOn(state, k) {
   const things = dayOf(state, k).things.filter((t) => t.done);
-  const list = state.list.filter((l) => l.done && l.doneAt && l.doneAt.slice(0, 10) === k);
+  const fromList = new Set(things.map((t) => t.fromList).filter(Boolean)); // une entrée de liste cochée via sa chose ne compte qu'une fois
+  const list = state.list.filter((l) => l.done && l.doneAt && l.doneAt.slice(0, 10) === k && !fromList.has(l.id));
   return { things, list, n: things.length + list.length };
 }
 export const isActive = (state, k) => doneOn(state, k).n > 0;
@@ -196,7 +197,8 @@ export function chooseLine(lines, ctx, env, said = {}) {
 
 export function fillLine(text, vars) {
   const out = text.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null && vars[k] !== '' ? vars[k] : m));
-  return out.replace(/(^|[.!?…]\s+)([a-zà-ÿ])/g, (m, a, c) => a + c.toUpperCase()); // majuscule en début de phrase (« Coché. Le cactus »)
+  const el = out.replace(/\b([Dd])e le\b/g, '$1u').replace(/\b([Dd])e les\b/g, '$1es').replace(/(^|[\s«(])([Àà]) le\b/g, (m, p, x) => p + (x === 'À' ? 'Au' : 'au')).replace(/(^|[\s«(])([Àà]) les\b/g, (m, p, x) => p + (x === 'À' ? 'Aux' : 'aux')); // « de le thym » → « du thym »
+  return el.replace(/(^|[.!?…]\s+)([a-zà-ÿ])/g, (m, a, c) => a + c.toUpperCase()); // majuscule en début de phrase (« Coché. Le cactus »)
 }
 
 // Cartes : une carte jamais vue de la rareté voulue, familles pondérées ; null si tout est vu.
@@ -281,7 +283,7 @@ export function observe(state, k, days = 21) {
       const key = norm(t.title); let o = seen.get(key);
       if (!o) { o = { title: t.title, cat: t.cat, n: 0, dows: {}, slots: {}, mins: [], last: dk, series: !!t.seriesId }; seen.set(key, o); }
       o.n++; o.dows[dow(dk)] = (o.dows[dow(dk)] || 0) + 1;
-      const h = t.doneAt && t.doneAt.length > 13 ? parseInt(t.doneAt.slice(11, 13), 10) : null;
+      const h = t.doneAt && t.doneAt.length > 13 ? new Date(t.doneAt).getHours() : null; // heure locale (doneAt est en UTC)
       const sl = t.slot || (h !== null && !Number.isNaN(h) ? slotOfHour(h) : null); if (sl) o.slots[sl] = (o.slots[sl] || 0) + 1;
       const m = t.spent ? Math.round(t.spent / 60000) : t.real || 0; if (m >= 5) o.mins.push(m);
       if (t.seriesId) o.series = true;
@@ -322,5 +324,7 @@ export function organize(state, k, { max = 3, dismissed = {} } = {}) {
     if (!min) continue; let last = null; for (let i = 0; i < 6 && !last; i++) if (doneOn(state, addDays(k, -i)).things.some((t) => t.cat === cat)) last = i;
     if (last === null && !d.things.some((t) => t.cat === cat)) { const o = obs.filter((x) => x.cat === cat).sort((a, b) => b.n - a.n)[0]; out.push({ id: `bal:${cat}:${k}`, kind: 'habit', title: o ? o.title : (cat === 'bienetre' ? 'Marche de 20 minutes' : 'Vingt minutes pour toi'), cat, slot: o ? (top(o.slots) || [null])[0] : null, text: `Rien en ${catOf(cat).nom} depuis six jours. ${o ? `« ${o.title} », comme d'habitude ?` : 'Une petite chose ?'}`, yes: 'Le poser' }); }
   }
-  return out.filter((x) => !dismissed[x.id]).slice(0, max);
+  // un refus vaut pour le titre entier pendant 14 jours (habitude, série…), et l'allègement passe en premier
+  const tOff = (x) => x.title && dismissed['t:' + norm(x.title)] && dismissed['t:' + norm(x.title)] >= addDays(k, -14);
+  return out.filter((x) => !dismissed[x.id] && !tOff(x)).sort((a, b) => (b.kind === 'load') - (a.kind === 'load')).slice(0, max);
 }
