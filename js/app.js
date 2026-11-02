@@ -7,7 +7,7 @@ import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpiso
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 let S, today, tab = 'today', garden, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,6 +41,7 @@ async function init() {
   window.addEventListener('hashchange', handleImport);
   setInterval(() => { if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  pullToRefresh();
 }
 
 function onReturn() {
@@ -50,6 +51,45 @@ function onReturn() {
   if (running && Date.now() - running.startedAt > 3 * 60000 && !running._asked) { running._asked = true; const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'retour', e) || 'Te revoilà.'); save(); doneSheet(running); }
   else greet();
   render();
+}
+
+// ---------- Glisser vers le bas pour recharger ----------
+// En haut de page, tirer vers le bas au-delà du seuil recharge l'app et va chercher une nouvelle version.
+function pullToRefresh() {
+  const ind = document.createElement('div'); ind.className = 'ptr'; ind.innerHTML = icon('refresh'); document.body.appendChild(ind);
+  const TH = 70; let y0 = null, d = 0, busy = false;
+  const reset = () => { ind.style.transition = 'transform .25s, opacity .25s'; ind.style.transform = 'translate(-50%, -48px)'; ind.style.opacity = '0'; ind.classList.remove('ready'); d = 0; };
+  window.addEventListener('touchstart', (e) => {
+    y0 = (busy || window.scrollY > 0 || !$('#sheet').hidden || e.touches.length > 1) ? null : e.touches[0].clientY;
+    ind.style.transition = 'none';
+  }, { passive: true });
+  window.addEventListener('touchmove', (e) => {
+    if (y0 === null) return;
+    if (window.scrollY > 0) { y0 = null; reset(); return; }
+    d = Math.max(0, Math.min((e.touches[0].clientY - y0) * 0.5, 110));
+    ind.style.transform = `translate(-50%, ${d - 48}px) rotate(${d * 3}deg)`;
+    ind.style.opacity = String(Math.min(1, d / 50));
+    ind.classList.toggle('ready', d >= TH);
+  }, { passive: true });
+  window.addEventListener('touchend', () => {
+    if (y0 === null) return; y0 = null;
+    if (d < TH) { reset(); return; }
+    busy = true; ind.classList.add('spin'); ind.style.transition = 'transform .2s'; ind.style.transform = `translate(-50%, ${TH - 40}px)`;
+    refreshApp();
+  }, { passive: true });
+  window.addEventListener('touchcancel', () => { y0 = null; reset(); }, { passive: true });
+}
+async function refreshApp() {
+  save();
+  try {
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg) {
+      await reg.update();
+      const sw = reg.installing || reg.waiting;
+      if (sw) await new Promise((res) => { const t = setTimeout(res, 3000); sw.addEventListener('statechange', () => { if (sw.state === 'activated') { clearTimeout(t); res(); } }); });
+    }
+  } catch { /* hors ligne : on recharge quand même */ }
+  setTimeout(() => location.reload(), 300);
 }
 
 // ---------- Ernest ----------

@@ -12,6 +12,7 @@ const P = {
   arrow: '<path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/>',
   bulb: '<path d="M9 17.5h6M10 20.5h4"/><path d="M8.5 14.5a6 6 0 1 1 7 0c-.7.5-1 1.2-1 2v1h-5v-1c0-.8-.3-1.5-1-2z"/>',
   flag: '<path d="M6 21V4"/><path d="M6 4.5c4-2 7 2 12 0v8c-5 2-8-2-12 0"/>',
+  refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
   leaf: '<path d="M5 19c.5-8.5 5.5-13.5 14-14-.5 8.5-5.5 13.5-14 14z"/><path d="M5 19l7.5-7.5"/>',
   // Humeur : cinq visages du même dessin
   m0: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 10.2h2M13.5 10.2h2M9 16q3-2.2 6 0"/>',
