@@ -105,6 +105,18 @@ const TX = (() => {
     soil: mk(128, 128, (x, w, h) => { x.fillStyle = '#9a8e80'; x.fillRect(0, 0, w, h); speck(x, w, h, 1400, 40, 255, 0.6, 2.6, 0.6); }, 3, 3),
     gravel: mk(256, 256, (x, w, h) => { x.fillStyle = '#6a6458'; x.fillRect(0, 0, w, h); for (let i = 0; i < 2600; i++) { const v = 90 + Math.floor(r() * 150); x.fillStyle = `rgb(${v},${v - 4},${v - 12})`; x.beginPath(); x.ellipse(r() * w, r() * h, 1.2 + r() * 3, 1 + r() * 2.4, r() * 3, 0, 6.29); x.fill(); } }, 4, 7),
     stone: mk(128, 128, (x, w, h) => { x.fillStyle = '#c8c4b8'; x.fillRect(0, 0, w, h); speck(x, w, h, 800, 80, 255, 0.5, 2.4, 0.5); for (let i = 0; i < 10; i++) { x.fillStyle = `rgba(${150 + r() * 40},${170 + r() * 40},${90 + r() * 30},.35)`; x.beginPath(); x.arc(r() * w, r() * h, 4 + r() * 12, 0, 6.29); x.fill(); } }, 2, 2),
+    // pierre du muret : grain, taches de teinte, fissures, lichens (jaune pâle, gris clair, vert)
+    wallStone: mk(256, 256, (x, w, h) => {
+      x.fillStyle = '#cfc8b8'; x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 40; i++) { const v = 170 + Math.floor(r() * 70); x.fillStyle = `rgba(${v},${v - 6},${v - 18},.35)`; x.beginPath(); x.ellipse(r() * w, r() * h, 10 + r() * 40, 6 + r() * 26, r() * 3, 0, 6.29); x.fill(); }
+      speck(x, w, h, 4200, 60, 255, 0.4, 1.6, 0.5);
+      x.strokeStyle = 'rgba(40,36,30,.7)'; for (let i = 0; i < 7; i++) { x.lineWidth = 0.8 + r() * 1.2; x.beginPath(); let px = r() * w, py = r() * h; x.moveTo(px, py); for (let k = 0; k < 6; k++) { px += (r() - 0.5) * 40; py += (r() - 0.3) * 30; x.lineTo(px, py); } x.stroke(); }
+      const lich = ['rgba(222,214,140,.85)', 'rgba(236,234,222,.8)', 'rgba(150,170,96,.75)', 'rgba(200,170,90,.7)'];
+      for (let i = 0; i < 26; i++) { const cx = r() * w, cy = r() * h, rad = 3 + r() * 11; x.fillStyle = lich[Math.floor(r() * lich.length)]; for (let k = 0; k < 9; k++) { x.beginPath(); x.arc(cx + (r() - 0.5) * rad * 1.6, cy + (r() - 0.5) * rad * 1.6, rad * (0.25 + r() * 0.45), 0, 6.29); x.fill(); } }
+    }, 1, 1),
+    wallStoneB: mk(256, 256, (x, w, h) => { x.fillStyle = '#808080'; x.fillRect(0, 0, w, h); speck(x, w, h, 5000, 20, 240, 0.4, 2.2, 0.6); x.strokeStyle = 'rgba(0,0,0,.9)'; for (let i = 0; i < 8; i++) { x.lineWidth = 1 + r() * 1.5; x.beginPath(); let px = r() * w, py = r() * h; x.moveTo(px, py); for (let k = 0; k < 6; k++) { px += (r() - 0.5) * 40; py += (r() - 0.3) * 30; x.lineTo(px, py); } x.stroke(); } }, 1, 1),
+    // feuille de buisson : nervure, bord plus sombre
+    bushLeaf: mk(64, 64, (x, w, h) => { const g = x.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#b8b8b8'); g.addColorStop(0.5, '#f4f4f4'); g.addColorStop(1, '#b8b8b8'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.strokeStyle = 'rgba(255,255,230,.95)'; x.lineWidth = 2; x.beginPath(); x.moveTo(w / 2, 0); x.lineTo(w / 2, h); x.stroke(); x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,230,.6)'; for (let y = 8; y < h; y += 10) { x.beginPath(); x.moveTo(w / 2, y); x.lineTo(6, y - 9); x.moveTo(w / 2, y); x.lineTo(w - 6, y - 9); x.stroke(); } speck(x, w, h, 90, 150, 230, 0.4, 1.2, 0.4); }),
     stoneB: mk(128, 128, (x, w, h) => { x.fillStyle = '#888'; x.fillRect(0, 0, w, h); speck(x, w, h, 1200, 30, 230, 0.5, 2.6, 0.6); }, 2, 2),
     metal: mk(64, 256, (x, w, h) => { x.fillStyle = '#c8d0c8'; x.fillRect(0, 0, w, h); for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${120 + r() * 60},${70 + r() * 30},${30 + r() * 20},${0.3 + r() * 0.4})`; x.beginPath(); x.ellipse(r() * w, r() * h, 2 + r() * 8, 3 + r() * 16, 0, 0, 6.29); x.fill(); } speck(x, w, h, 300, 140, 255, 0.4, 1.4, 0.4); }, 1, 2),
     glassA: mk(128, 128, (x, w, h) => { const gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, g(40)); gr.addColorStop(0.65, g(60)); gr.addColorStop(1, g(170)); x.fillStyle = gr; x.fillRect(0, 0, w, h);
@@ -388,7 +400,7 @@ const zoneU = { value: new Array(ZONES.length).fill(0) };
 // Prairie : des milliers de brins qui ondulent (vent calculé dans le shader)
 const windU = { value: 0 };
 const ext = { beds: [] };
-let wallStones = []; const treeSpots = []; // pour les ombres portées douces (plus bas)
+let wallStones = [], bushLeafMat = null; const treeSpots = []; // pour les ombres portées douces (plus bas)
 {
   const blade = new THREE.BufferGeometry();
   blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.03, 0, 0, 0.03, 0, 0, -0.02, 0.35, 0, 0.02, 0.35, 0, 0, 0.7, 0], 3));
@@ -449,8 +461,8 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
     const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, nr = g.attributes.normal, n = new THREE.Vector3(), c = new THREE.Vector3(), rr = rngOf(300 + seed), ph = [rr() * 6, rr() * 6, rr() * 6], col3 = [];
     for (let i = 0; i < p.count; i++) {
       n.fromBufferAttribute(p, i).normalize(); const m = Math.max(Math.abs(n.x), Math.abs(n.y), Math.abs(n.z));
-      c.copy(n).divideScalar(m); const v = n.clone().lerp(c, 0.62);
-      const k = 1 + 0.06 * Math.sin(n.x * 6.3 + ph[0]) * Math.sin(n.y * 5.1 + ph[1]) + 0.04 * Math.sin(n.z * 8.7 + n.x * 3 + ph[2]);
+      c.copy(n).divideScalar(m); const v = n.clone().lerp(c, 0.8);
+      const k = 1 + 0.09 * Math.sin(n.x * 6.3 + ph[0]) * Math.sin(n.y * 5.1 + ph[1]) + 0.06 * Math.sin(n.z * 8.7 + n.x * 3 + ph[2]) + Math.sin(n.x * 41.3 + n.y * 27.1 + n.z * 13.7 + ph[0]) * 0.03;
       p.setXYZ(i, v.x * k * 0.5, v.y * k * 0.5, v.z * k * 0.5);
       const ax = Math.abs(n.x) === m ? new THREE.Vector3(Math.sign(n.x), 0, 0) : Math.abs(n.y) === m ? new THREE.Vector3(0, Math.sign(n.y), 0) : new THREE.Vector3(0, 0, Math.sign(n.z));
       const nn = n.clone().lerp(ax, 0.45).normalize(); nr.setXYZ(i, nn.x, nn.y, nn.z);
@@ -458,7 +470,7 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(col3, 3)); return g;
   };
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, vertexColors: true, ...(TX ? { map: TX.stone, bumpMap: TX.stoneB, bumpScale: 3 } : {}) });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.97, vertexColors: true, flatShading: true, ...(TX ? { map: TX.wallStone, bumpMap: TX.wallStoneB, bumpScale: 5 } : {}) }); // pierres taillées : facettes nettes
   const VAR = 3, lists = Array.from({ length: VAR }, () => []);
   const at = (a) => [Math.cos(a) * R, Math.sin(a) * R * RZ];
   const open = (a) => { const [x, z] = at(a); return z > 8 && Math.abs(x - pathX(z)) < 1.3; };
@@ -499,6 +511,15 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
   const mm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), Math.max(1, mossTop.length * 5)); let mk = 0;
   for (const [x, y, z, ry] of mossTop) for (let j = 0, n = 3 + Math.floor(r() * 3); j < n; j++) { const ox = (r() - 0.5) * 0.1, oz = (r() - 0.5) * 0.26; dummy.position.set(x + Math.cos(ry) * ox + Math.sin(ry) * oz, y - 0.015 - Math.abs(oz) * 0.25, z - Math.sin(ry) * ox + Math.cos(ry) * oz); dummy.rotation.set(r(), r() * 6.28, r()); dummy.scale.set(0.03 + r() * 0.03, 0.02 + r() * 0.012, 0.03 + r() * 0.035); dummy.updateMatrix(); mm.setMatrixAt(mk, dummy.matrix); mm.setColorAt(mk++, vary(col(r() < 0.5 ? '#4f6a30' : '#66803c'), r, 0.14)); }
   mm.count = mk; mm.receiveShadow = true; outdoor.add(mm);
+  // touffes d'herbe haute et de fougère au pied du muret, des deux côtés : le mur sort du pré au lieu d'être posé dessus
+  const tuft = (() => { const P = [], rt = rngOf(77); for (let b = 0; b < 7; b++) { const a = (b / 7) * 6.28 + rt() * 0.6, lean = 0.25 + rt() * 0.35, h = 0.55 + rt() * 0.5, w = 0.035; const cx = Math.cos(a), cz = Math.sin(a);
+    P.push(-cz * w, 0, cx * w, cz * w, 0, -cx * w, cx * lean, h, cz * lean); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals(); return g; })();
+  const tufts = [];
+  for (const side of [-1, 1]) for (let a = 0; a < Math.PI * 2;) { const da = (0.18 + r() * 0.35) / dsda(a); a += da; if (open(a) || r() < 0.25) continue;
+    const [x0, z0] = at(a), tx = -R * Math.sin(a), tz = R * RZ * Math.cos(a), tl = Math.hypot(tx, tz), off = 0.3 + r() * 0.12; tufts.push([x0 + (tz / tl) * off * side, z0 - (tx / tl) * off * side]); }
+  const tm2 = new THREE.InstancedMesh(tuft, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide }), tufts.length);
+  tufts.forEach(([x, z], i) => { dummy.position.set(x, heightAt(x, z) - 0.02, z); dummy.rotation.set(0, r() * 6.28, 0); dummy.scale.setScalar(0.35 + r() * 0.35); dummy.updateMatrix(); tm2.setMatrixAt(i, dummy.matrix); tm2.setColorAt(i, vary(col(PAL.grass ? PAL.grass[Math.floor(r() * PAL.grass.length)] : '#5f8a3a'), r, 0.1).multiplyScalar(0.9)); });
+  tm2.receiveShadow = true; outdoor.add(tm2);
   wallStones = stones;
 }
 // Potager : un carré en bois par catégorie, qui sort de terre quand la catégorie a assez servi, puis se remplit.
@@ -574,8 +595,24 @@ BEDS.forEach((b, bi) => {
     if (SEASON !== 'hiver' && rr() < 0.45) { const dc = SEASON === 'automne' ? ['#b8322a', '#d0502e'] : ['#f4efe6', '#e8a0b8', '#f2d24a']; const pick = col(dc[Math.floor(rr() * dc.length)]);
       for (let j = 0; j < 9; j++) { const a = rr() * 6.28, el = 0.2 + rr() * 1.0, R0 = s * 0.98; dots.push([x + Math.cos(a) * Math.cos(el) * R0 * 1.05, y + s * 0.5 + Math.sin(el) * R0 * 0.8, z + Math.sin(a) * Math.cos(el) * R0 * 1.05, pick]); } }
   });
+  // feuilles posées sur chaque boule (couverture dense, plus claires en haut) : c'est elles qu'on voit
+  const leafShape = (() => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -0.42, 0.45, 0.06, 0.42, 0.45, 0.06, 0, 1, 0.12], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0.5, 0, 0, 0.45, 1, 0.45, 0.5, 1], 2)); g.setIndex([0, 2, 1, 1, 2, 3]); g.computeVertexNormals(); return g; })();
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, side: THREE.DoubleSide, ...(TX ? { map: TX.bushLeaf } : {}) });
+  const leaves = [], up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), dir = new THREE.Vector3();
+  lumps.forEach(([x, y, z, sxz, sy, c], li) => {
+    const rr = rngOf(9000 + li), nL = Math.round(70 + 110 * sxz);
+    for (let j = 0; j < nL; j++) {
+      const th = rr() * 6.28, cy = Math.min(1, Math.max(-0.35, rr() * 1.45 - 0.35)), sr = Math.sqrt(1 - cy * cy); dir.set(Math.cos(th) * sr, cy, Math.sin(th) * sr);
+      const px = x + dir.x * sxz * 0.97, py = y + dir.y * sy * 0.97, pz = z + dir.z * sxz * 0.97;
+      q.setFromUnitVectors(up, dir.clone().lerp(up, 0.35).normalize()); dummy.quaternion.copy(q); dummy.rotateY(rr() * 6.28); dummy.rotateX(-0.5 - rr() * 0.6);
+      dummy.position.set(px, py, pz); const ls = 0.07 + rr() * 0.05; dummy.scale.set(ls * 0.8, ls, ls); dummy.updateMatrix();
+      const shade = 0.78 + 0.32 * (cy * 0.5 + 0.5); leaves.push([dummy.matrix.clone(), vary(c, rr, 0.16).multiplyScalar(shade)]);
+    }
+  });
+  const lm = new THREE.InstancedMesh(leafShape, leafMat, leaves.length); leaves.forEach(([mx, c], i) => { lm.setMatrixAt(i, mx); lm.setColorAt(i, c); }); lm.castShadow = lm.receiveShadow = true; outdoor.add(lm);
+  bushLeafMat = leafMat;
   const um = new THREE.InstancedMesh(leafyGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, vertexColors: true }), lumps.length);
-  lumps.forEach(([x, y, z, sxz, sy, c], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, i * 1.7, 0); dummy.scale.set(sxz, sy, sxz); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, c); });
+  lumps.forEach(([x, y, z, sxz, sy, c], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, i * 1.7, 0); dummy.scale.set(sxz * 0.95, sy * 0.95, sxz * 0.95); c = c.clone().multiplyScalar(0.7); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, c); });
   if (dots.length) { const dm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), dots.length); dots.forEach(([x, y, z, c], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.028); dummy.updateMatrix(); dm.setMatrixAt(i, dummy.matrix); dm.setColorAt(i, c); }); outdoor.add(dm); }
   // vent dans les houppiers : le haut bouge plus que le bas, chaque arbre à son rythme (position de l'instance)
   const sway = (mat, amp, key) => {
@@ -589,7 +626,7 @@ BEDS.forEach((b, bi) => {
     };
     mat.customProgramCacheKey = () => key;
   };
-  sway(cm.material, 0.035, 'swayCone'); sway(bm.material, 0.05, 'swayBlob'); sway(um.material, 0.06, 'swayBush');
+  sway(cm.material, 0.035, 'swayCone'); sway(bm.material, 0.05, 'swayBlob'); sway(um.material, 0.02, 'swayBush'); if (bushLeafMat) sway(bushLeafMat, 0.35, 'swayBushLeaf'); // les feuilles frémissent
   for (const m of [tm, cm, bm, um]) { m.castShadow = true; m.receiveShadow = true; outdoor.add(m); }
 }
 

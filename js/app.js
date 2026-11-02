@@ -91,6 +91,10 @@ async function init() {
   if (SY.config()) runSync();
   window.addEventListener('online', () => { if (SY.config()) runSync(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && syncTimer) runSync(); });
+  // Écran resté ouvert (ordinateur) : on relit le serveur toutes les 2 minutes et au retour sur la fenêtre, pour voir
+  // arriver ce qui a été fait dans Deonto ou sur l'autre appareil sans recharger. Lecture seule si rien n'a changé ici.
+  setInterval(() => { if (SY.config() && document.visibilityState === 'visible' && Date.now() - (SY.meta().at || 0) > 110000) runSync(); }, 30000);
+  window.addEventListener('focus', () => { if (SY.config() && Date.now() - (SY.meta().at || 0) > 30000) runSync(); });
 }
 
 // ---------- Synchronisation en ligne (js/sync.js) ----------
