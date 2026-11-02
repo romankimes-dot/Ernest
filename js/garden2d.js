@@ -1,8 +1,15 @@
-// La serre en 2D (canvas) : rangs par catégorie, plantes procédurales par graine, croissance par jours actifs,
-// cycle jour/nuit sur l'heure réelle, lumière réglée par l'humeur. Repli et base de la version 3D.
-import { CATS, growth } from './model.js';
+// Les serres en 2D (canvas) : trois serres côte à côte, comme en 3D (Travail, Bien-être, Vie perso), plantes
+// procédurales par graine, croissance par jours actifs, cycle jour/nuit sur l'heure réelle, lumière réglée par
+// l'humeur. Repli quand la 3D est coupée.
+import { growth } from './model.js';
 
 const ROWS = { revision: 0, corps: 1, esprit: 2, cuisine: 3, boulot: 4, perso: 5 };
+export const HOUSES2D = [
+  { id: 'travail', name: 'Travail', cats: ['revision', 'boulot'] },
+  { id: 'bienetre', name: 'Bien-être', cats: ['corps', 'esprit', 'cuisine'] },
+  { id: 'perso', name: 'Vie perso', cats: ['perso'] },
+];
+const houseOf = (cat) => (HOUSES2D.find((h) => h.cats.includes(cat)) || HOUSES2D[2]).id;
 const rnd = (seed) => { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 
 // ---- Générateurs : (ctx, x, y, taille 0..1, rng, t) ----
@@ -69,11 +76,12 @@ function bonsai(ctx, x, y, g, r, t, col, branches = 0) {
   }
   ctx.fillStyle = col.leaf; ctx.beginPath(); ctx.ellipse(x + 3, y - H - 3, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
 }
-const GEN = { esprit: fougere, corps: succulente, revision: herbacee, cuisine: aromatique, boulot: herbacee, perso: aromatique };
+// Révision : lavande ; Boulot : grandes feuilles ; Corps : succulentes ; Esprit : fougères ; Cuisine : aromatiques ; Perso : fleurs des champs.
+const GEN = { esprit: fougere, corps: succulente, revision: herbacee, cuisine: aromatique, boulot: fougere, perso: herbacee };
 const COLS = {
-  revision: { leaf: '#7aa35e', dark: '#4c7a45', flower: '#e9c6e0' }, corps: { leaf: '#8fc98f', dark: '#3f8a5c', flower: '#f2b23d' },
+  revision: { leaf: '#7a9a7a', dark: '#4c6a55', flower: '#9d7cc8' }, corps: { leaf: '#8fc98f', dark: '#3f8a5c', flower: '#f2b23d' },
   esprit: { leaf: '#5fae6d', dark: '#2f6b48', flower: '#6fb3c9' }, cuisine: { leaf: '#9cc46a', dark: '#5c8a3a', flower: '#f2b23d' },
-  boulot: { leaf: '#b8c48a', dark: '#6c7a4a', flower: '#efe6d2' }, perso: { leaf: '#a9b5a3', dark: '#6b7a66', flower: '#f0a0a0' },
+  boulot: { leaf: '#3f7a46', dark: '#2a5e44', flower: '#efe6d2' }, perso: { leaf: '#9cc46a', dark: '#6b7a66', flower: '#e86f8a' },
 };
 
 export class Garden {
@@ -99,43 +107,47 @@ export class Garden {
     // Lune ou soleil
     if (day < .5) { ctx.fillStyle = `rgba(239,230,210,${.9 - day})`; ctx.beginPath(); ctx.arc(W * .82, H * .2, 12, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = lerp('#0a1a24', '#8fc3d9', day * mood); ctx.beginPath(); ctx.arc(W * .82 + 6, H * .2 - 4, 11, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.fillStyle = `rgba(255,236,170,${(day - .5) * 1.6})`; ctx.beginPath(); ctx.arc(W * .82, H * .2, 14, 0, Math.PI * 2); ctx.fill(); }
-    // Armature
-    ctx.strokeStyle = `rgba(239,230,210,${.12 + day * .15})`; ctx.lineWidth = 1.5;
-    const top = H * .12, floor = H * .74;
-    ctx.beginPath(); ctx.moveTo(10, floor); ctx.lineTo(10, H * .35); ctx.lineTo(W / 2, top); ctx.lineTo(W - 10, H * .35); ctx.lineTo(W - 10, floor); ctx.stroke();
-    for (let i = 1; i < 6; i++) { const x = 10 + i * (W - 20) / 6; const y = x < W / 2 ? H * .35 - (x - 10) / (W / 2 - 10) * (H * .35 - top) : H * .35 - (W - 10 - x) / (W / 2 - 10) * (H * .35 - top); ctx.beginPath(); ctx.moveTo(x, floor); ctx.lineTo(x, y); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(10, H * .5); ctx.lineTo(W - 10, H * .5); ctx.stroke();
-    // Lanterne la nuit
-    if (day < .7) {
-      const fl = (0.85 + Math.sin(t / 300) * 0.05) * (1 - day) * (this.light === 'low' ? .7 : 1);
-      const lg = ctx.createRadialGradient(W / 2, H * .3, 2, W / 2, H * .3, W * .45); lg.addColorStop(0, `rgba(242,178,61,${.5 * fl})`); lg.addColorStop(1, 'rgba(242,178,61,0)');
-      ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(239,230,210,.4)'; ctx.beginPath(); ctx.moveTo(W / 2, top); ctx.lineTo(W / 2, H * .28); ctx.stroke();
-      ctx.fillStyle = '#f2b23d'; ctx.beginPath(); ctx.arc(W / 2, H * .3, 5, 0, Math.PI * 2); ctx.fill();
-    }
-    // Sol, bacs : 2 étagères × 3 rangs
+    // Trois serres côte à côte, chacune avec son panneau
+    const st = this.state, plants = st ? st.garden.plants : [], goals = st && Array.isArray(st.goals) ? st.goals : null;
+    const pulse = this.pulse ? Math.max(0, 1 - (t - this.pulse) / 900) : 0, last = plants[plants.length - 1];
+    const gap = 6, sw = (W - gap * 4) / 3, top = H * .14, eave = H * .36, floor = H * .78, table = H * .56;
     ctx.fillStyle = lerp('#1c2a1e', '#6f7f5a', day * .6); ctx.fillRect(0, floor, W, H - floor);
-    const rows = [H * .52, floor + 2];
-    for (const ry of rows) { ctx.fillStyle = lerp('#8a5a2b', '#b07a3f', day * .5); ctx.fillRect(16, ry - 2, W - 32, 9); ctx.fillStyle = '#4a2f14'; ctx.fillRect(16, ry + 7, W - 32, 4); }
-    // Plantes
-    const st = this.state; if (!st) return;
-    const plants = st.garden.plants;
-    const byRow = {}; for (const p of plants) (byRow[ROWS[p.cat] ?? 5] = byRow[ROWS[p.cat] ?? 5] || []).push(p);
-    const pulse = this.pulse ? Math.max(0, 1 - (t - this.pulse) / 900) : 0;
-    for (let row = 0; row < 6; row++) {
-      const list = byRow[row] || []; if (!list.length) continue;
-      const usable = row < 3 ? W - 48 : W - 140, ry = rows[row < 3 ? 0 : 1] - 2, x0 = 24 + (row % 3) * usable / 3, span = usable / 3 - 8;
-      const n = Math.min(list.length, 14);
-      for (let i = 0; i < n; i++) {
-        const p = list[list.length - n + i], r = rnd(p.seed), x = x0 + 6 + (i + .5) * span / n + (r() - .5) * 6;
-        const gr = (0.35 + 0.65 * growth(p, st, this.today)) * (p === plants[plants.length - 1] && pulse ? 1 + pulse * .15 : 1);
-        const col = COLS[p.cat] || COLS.perso;
-        if (p.kind === 'moss') mousse(this.ctx, x, ry, gr, r, t, col);
-        else if (p.kind === 'bonsai') bonsai(this.ctx, x, ry, gr, r, t, col, p.branches || 0);
-        else (GEN[p.cat] || herbacee)(this.ctx, x, ry, gr, r, t, col);
+    HOUSES2D.forEach((hs, hi) => {
+      const x0 = gap + hi * (sw + gap), x1 = x0 + sw, xm = (x0 + x1) / 2;
+      // vitrage et armature
+      ctx.fillStyle = `rgba(200,230,220,${.05 + day * .05})`; ctx.beginPath(); ctx.moveTo(x0, floor); ctx.lineTo(x0, eave); ctx.lineTo(xm, top); ctx.lineTo(x1, eave); ctx.lineTo(x1, floor); ctx.fill();
+      ctx.strokeStyle = `rgba(239,230,210,${.25 + day * .2})`; ctx.lineWidth = 1.5; ctx.stroke();
+      for (let i = 1; i < 4; i++) { const x = x0 + i * sw / 4, y = eave - (1 - Math.abs(x - xm) / (sw / 2)) * (eave - top); ctx.beginPath(); ctx.moveTo(x, floor); ctx.lineTo(x, y); ctx.stroke(); }
+      // lanterne la nuit
+      if (day < .7) {
+        const fl = (0.85 + Math.sin(t / 300 + hi) * 0.05) * (1 - day) * (this.light === 'low' ? .7 : 1), ly = top + (eave - top) * .55;
+        const lg = ctx.createRadialGradient(xm, ly, 2, xm, ly, sw * .6); lg.addColorStop(0, `rgba(242,178,61,${.45 * fl})`); lg.addColorStop(1, 'rgba(242,178,61,0)');
+        ctx.fillStyle = lg; ctx.fillRect(x0, top, sw, floor - top);
+        ctx.strokeStyle = 'rgba(239,230,210,.4)'; ctx.beginPath(); ctx.moveTo(xm, top); ctx.lineTo(xm, ly - 4); ctx.stroke();
+        ctx.fillStyle = '#f2b23d'; ctx.beginPath(); ctx.arc(xm, ly, 4, 0, Math.PI * 2); ctx.fill();
       }
-      if (list.length > n) { ctx.fillStyle = 'rgba(239,230,210,.5)'; ctx.font = '10px system-ui'; ctx.fillText(`+${list.length - n}`, x0 + span - 14, ry - 4); }
-    }
+      // table
+      ctx.fillStyle = lerp('#8a5a2b', '#b07a3f', day * .5); ctx.fillRect(x0 + 4, table, sw - 8, 6); ctx.fillStyle = '#4a2f14'; ctx.fillRect(x0 + 6, table + 6, 3, floor - table - 6); ctx.fillRect(x1 - 9, table + 6, 3, floor - table - 6);
+      // plantes de la serre : les plus récentes sur la table, puis au sol ; bonsaïs des objectifs actifs au sol ; mousse au pied
+      const mine = plants.filter((p) => houseOf(p.cat) === hs.id);
+      const pl = mine.filter((p) => p.kind !== 'moss' && p.kind !== 'bonsai'), moss = mine.filter((p) => p.kind === 'moss');
+      const bons = mine.filter((p) => p.kind === 'bonsai' && (!goals || !p.goal || (goals.find((g) => g.id === p.goal) || {}).status === 'active')).sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, 2);
+      const per = Math.max(2, Math.floor((sw - 16) / 15)), onTable = pl.slice(-per), nFloor = Math.max(0, per - bons.length * 2), onFloor = nFloor ? pl.slice(-per * 2, -per).slice(-nFloor) : [];
+      const draw = (p, x, y, kind) => { const r = rnd(p.seed), gr = (0.35 + 0.65 * growth(p, st, this.today)) * (p === last && pulse ? 1 + pulse * .15 : 1), c = COLS[p.cat] || COLS.perso;
+        if (kind === 'moss') mousse(ctx, x, y, gr, r, t, c); else if (kind === 'bonsai') bonsai(ctx, x, y, gr, r, t, c, p.branches || 0); else (GEN[p.cat] || herbacee)(ctx, x, y, gr * .8, r, t, c); };
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, top, sw, H - top); ctx.clip();
+      for (let i = 0; i < Math.min(moss.length, 4); i++) draw(moss[moss.length - 1 - i], x0 + 10 + i * (sw - 20) / 4, floor, 'moss');
+      onTable.forEach((p, i) => draw(p, x0 + 10 + (i + .5) * (sw - 20) / per, table - 1, 'plant'));
+      onFloor.forEach((p, i) => draw(p, x0 + 10 + (i + .5) * (sw - 20) / Math.max(1, onFloor.length), floor, 'plant'));
+      bons.forEach((p, i) => draw(p, xm + (i ? -1 : 1) * (bons.length > 1 ? sw * .2 : 0), floor, 'bonsai'));
+      ctx.restore();
+      if (pl.length > per * 2) { ctx.fillStyle = 'rgba(239,230,210,.6)'; ctx.font = '10px system-ui'; ctx.textAlign = 'right'; ctx.fillText(`+${pl.length - per * 2}`, x1 - 4, table - 4); }
+      // panneau
+      ctx.font = 'italic 600 12px Georgia, "Times New Roman", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(hs.name).width + 14, py = floor + (H - floor) * .5;
+      ctx.fillStyle = '#4a2f14'; ctx.fillRect(xm - 1.5, py, 3, H - py); ctx.fillStyle = '#6e4526'; ctx.fillRect(xm - tw / 2, py - 9, tw, 18);
+      ctx.fillStyle = '#f1e8d2'; ctx.fillText(hs.name, xm, py + 1); ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+    });
     // Arrosage
     if (pulse) { ctx.fillStyle = `rgba(143,211,244,${pulse * .8})`; for (let i = 0; i < 8; i++) ctx.fillRect(W * .5 + (i - 4) * 9 + Math.sin(i) * 3, H * .4 + (1 - pulse) * H * .35 + i * 3, 2, 5); }
     // Lucioles la nuit, brume le matin

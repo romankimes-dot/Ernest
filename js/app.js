@@ -177,7 +177,8 @@ async function setupGarden3d() {
 function openSerre() {
   if (!g3d) return;
   const n = totalDone(S), pl = S.garden.plants.filter((p) => p.kind === 'plant').length;
-  $('#sfCap').innerHTML = `<b>${pl} plante${pl > 1 ? 's' : ''}</b> · ${n} chose${n > 1 ? 's' : ''} faite${n > 1 ? 's' : ''}<br><span>Glisse pour tourner, pince pour approcher.</span>`;
+  const hs = g3d.modelFromState ? g3d.modelFromState(S, today).houses : null, hn = (k) => (hs && hs[k] ? hs[k].n : 0);
+  $('#sfCap').innerHTML = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher, deux doigts pour passer d'une serre à l'autre.</span>`;
   const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
   g3d.setMode('full');
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
