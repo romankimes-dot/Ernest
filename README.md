@@ -22,7 +22,7 @@ Format unique, transporté par lien profond `https://romankimes-dot.github.io/Er
   "goals": [{ "title": "…", "due": "2026-11-10", "milestones": [{ "text": "…", "due": "…", "done": false }] }],
   "history": [{ "day": "2026-10-30", "n": 2 }] }
 ```
-- **Dec-Deonto** : bouton « 🌱 Envoyer à Ernest » sous le plan du jour (choses du jour, objectif Épreuve 1 avec examens blancs en jalons, historique des jours travaillés pour peupler la serre).
+- **Dec-Deonto** : par la synchronisation, tout seul (choses du jour, objectif Épreuve 1 avec examens blancs en jalons, historique des jours travaillés pour peupler la serre).
 - **dec-revision** : même bouton sous la journée du parcours (la journée en une chose, objectif Épreuve 2 avec les annales en jalons).
 - **dec-memoire** : `python3 -I scripts/export-ernest.py --lien` (lancé par `/fin-de-session`) : objectif Mémoire avec les échéances en jalons. Titres et dates seulement.
 Ernest montre ce qui va être ajouté et demande confirmation ; rien n'est ajouté deux fois.
