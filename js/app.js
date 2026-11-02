@@ -73,6 +73,7 @@ async function init() {
   $('#btnSettings').addEventListener('click', settingsSheet);
   $('#btnUndo').addEventListener('click', undoLast); updateUndoBtn();
   $('#sheetBg').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('#sheet').hidden) closeSheet(); else if (!$('#serreFull').hidden) closeSerre(); }); // ordinateur : Échap ferme
   $('#bulle').addEventListener('click', hideBubble);
   $('#ernestWrap').addEventListener('click', () => { const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'manies', e) || '…'); save(); });
   await Promise.all([loadLines(), loadCards()]);
@@ -368,7 +369,7 @@ function viewToday() {
   const all = d.things.length > 0 && d.things.every((t) => t.done);
   let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(dl.label)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
   h += moodBar(d);
-  if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
+  if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest${/iPhone|iPad|iPod/.test(navigator.userAgent) ? " sur l'écran d'accueil" : ''}</b>${/iPhone|iPad|iPod/.test(navigator.userAgent) ? `<ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol>` : `<ol><li>Icône d'installation à droite de la barre d'adresse (ou menu ⋮ › « Installer Ernest »)</li><li>Ouvrir Ernest depuis sa fenêtre à lui</li></ol>`}<button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
   // Une seule carte d'Ernest en tête, selon le moment : soirée libre, préparer demain, suspens, une proposition, ou l'explication du soir.
   const props = organize(S, today, { max: 3, dismissed: S.ernest.propNo || {} });
   const susp = suspended(), showSusp = susp.length && S.ernest.suspLater !== today;
