@@ -115,8 +115,9 @@ async function runSync({ manual = false } = {}) {
     let rev = r.rev; const pushSeq = editSeq;
     if (r.needPush) rev = await SY.push(cfg, S, r.rev);
     SY.setMeta({ rev, dirty: editSeq !== pushSeq, at: Date.now(), error: null });
-    const nb = r.bridged.reduce((a, b) => a + b.things, 0);
-    if (nb) toast(`${nb} chose${nb > 1 ? 's' : ''} reçue${nb > 1 ? 's' : ''} de tes révisions.`, 3500);
+    const nb = r.bridged.reduce((a, b) => a + b.things, 0), nd = r.bridged.reduce((a, b) => a + (b.done || 0), 0);
+    if (nd) { gardenWater(); toast(`${nd} chose${nd > 1 ? 's' : ''} cochée${nd > 1 ? 's' : ''} depuis tes révisions.`, 3500); }
+    else if (nb) toast(`${nb} chose${nb > 1 ? 's' : ''} reçue${nb > 1 ? 's' : ''} de tes révisions.`, 3500);
     else if (r.conflict && r.first) toast('Ernest repris depuis le serveur. Ce qu’il y avait sur cet appareil est gardé dans Réglages.', 5000);
     else if (r.conflict) toast('Modifié sur les deux appareils : la version la plus récente est gardée. L’autre est dans Réglages.', 5000);
     else if (manual && !r.ponts) toast('Synchronisé. Deonto n’a encore envoyé aucun plan : mets Deonto à jour (tirer vers le bas), puis reviens.', 5000);
