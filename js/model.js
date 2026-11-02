@@ -106,6 +106,27 @@ export function sortList(list) {
   });
 }
 
+// Prochaine échéance affichée : l'examen tant qu'il n'est pas passé, puis l'objectif daté le plus proche.
+export function nextDeadline(state, today) {
+  const ex = state.settings.exam && state.settings.exam.slice(0, 10);
+  if (ex && ex >= today) return { date: ex, label: state.settings.examLabel || 'Examen' };
+  const g = (state.goals || []).filter((x) => x.status === 'active' && x.due && x.due >= today).sort((a, b) => (a.due < b.due ? -1 : 1))[0];
+  return g ? { date: g.due, label: g.title } : null;
+}
+// Veille et jour J de l'examen : des choses posées d'avance (une seule fois par jour).
+export function examPrep(state, k) {
+  const ex = state.settings.exam && state.settings.exam.slice(0, 10);
+  if (!ex || (k !== ex && k !== addDays(ex, -1))) return false;
+  const key = 'prep-' + k; state.milestones = state.milestones || {};
+  if (state.milestones[key]) return false;
+  const bed = (state.settings.bedtime || '22:30').replace(':', ' h '), L = state.settings.examLabel || "l'examen";
+  const items = k === ex
+    ? [[`${L} : partir tôt, convocation, pièce d'identité, eau, montre`, 'revision', 'matin'], ['Midi au calme, manger léger, ne pas refaire les sujets', 'corps', 'midi'], ['Soirée libre, sans bilan', 'perso', 'soir']]
+    : [['Vérifier convocation, trajet et horaires', 'perso', 'matin'], ['Relecture légère, rien de nouveau', 'revision', 'aprem'], [`Écrans posés, coucher à ${bed}`, 'corps', 'soir']];
+  const d = ensureDay(state, k);
+  for (const [title, cat, slot] of items) if (!d.things.some((t) => t.title === title)) d.things.push({ id: uid(), title, cat, slot, est: 0, done: false, real: 0, prep: true });
+  state.milestones[key] = true; return true;
+}
 // Suggestions pour « les 3 de demain » : liste datée pour demain ou passée, minimums non atteints, idées marquées.
 export function suggestions(state, tomorrow) {
   const out = [];
@@ -117,10 +138,14 @@ export function suggestions(state, tomorrow) {
   }
   const days = weekDays(tomorrow);
   const minsOn = !state.settings.minimumsFrom || tomorrow >= state.settings.minimumsFrom;
+  // l'étape suivante de chaque objectif actif, l'échéance la plus proche d'abord
+  const goals = (state.goals || []).filter((g) => g.status === 'active').sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
+  for (const g of goals) { const m = (g.milestones || []).find((x) => !x.done); if (m) out.push({ kind: 'goal', title: m.text, cat: g.cat || 'revision', why: g.title }); }
   for (const m of minsOn ? minimums(state, days) : []) {
     if (m.done < m.min) out.push({ kind: 'min', title: catOf(m.cat).nom, cat: m.cat, why: `${m.done} / ${m.min} cette semaine` });
   }
-  return out.slice(0, 6);
+  if (!minsOn) out.push({ kind: 'walk', title: 'Marche de 20 minutes', cat: 'corps', why: 'facultatif, pour souffler' });
+  return out.slice(0, 7);
 }
 
 // ---------- Ernest : choix d'une réplique ----------

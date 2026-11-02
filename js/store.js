@@ -11,7 +11,7 @@ const BACKUP_EVERY_MS = 3 * 60 * 60 * 1000;
 export const defaultState = () => ({
   version: 1,
   settings: {
-    ritualHour: 21, minimums: { corps: 4, esprit: 3 },
+    ritualHour: 18, bedtime: '22:30', minimums: { corps: 4, esprit: 3 },
     exam: '2026-11-10', examLabel: 'Épreuve 1', prenom: 'Roman', garden3d: true, trackTime: true, minimumsFrom: '2026-11-11',
   },
   days: {},     // 'YYYY-MM-DD' -> { things: [...], journal, mood, planned }

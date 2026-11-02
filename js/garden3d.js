@@ -228,7 +228,7 @@ const ext = { beds: [], serre2: null };
     dummy.position.set(x, heightAt(x, z) - 0.03, z); dummy.rotation.set((r() - 0.5) * 0.3, r() * 6.28, 0); const s = 0.45 + r() * 0.5; dummy.scale.set(0.9, s * (0.55 + r() * 0.45), 0.9); dummy.updateMatrix();
     aZone[k] = zoneAt(x, z); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.04, (r() - 0.5) * 0.035 + 0.02)); k++;
   }
-  blade.setAttribute('aZone', new THREE.InstancedBufferAttribute(aZone, 1)); im.count = k; im.receiveShadow = true; outdoor.add(im);
+  blade.setAttribute('aZone', new THREE.InstancedBufferAttribute(aZone, 1)); im.count = k; im.receiveShadow = true; outdoor.add(im); ext.grass = { im, n: k };
   // fleurs sauvages
   const F = SEASON === 'hiver' ? 0 : 900, fm = new THREE.InstancedMesh(GEO_BALL_SMALL(), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), Math.max(1, F)); let f = 0;
   for (let i = 0; i < F * 3 && f < F; i++) { const a = r() * 6.28, d = 6 + r() * 24, x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(x) < GW + 0.5 && Math.abs(z) < GD + 0.5) continue; if (z > GD && Math.abs(x - pathX(z)) < 1) continue; if (zoneAt(x, z, 0.3) >= 0) continue; if (fbm(x * 0.2, z * 0.2) < 0.5) continue;
@@ -656,7 +656,7 @@ export function modelFromState(S, today) {
 let model = { plants: [], moss: 0, vine: 0, hanging: 0, bonsai: null, shrooms: false, mood: 3, path: 0, beds: [], flowers: 0.5, serre2: false };
 let pop = null;
 function applyModel(m) {
-  model = m;
+  model = m; poke();
   const keep = new Set();
   m.plants.forEach((p, i) => {
     keep.add(p.id);
@@ -749,13 +749,15 @@ function updateGrowth(dt, t) {
 
 // ---------- Rendu ----------
 const clock = new THREE.Clock();
+let animUntil = 0; const poke = (ms = 3000) => { animUntil = performance.now() + ms; };
 let mode = 'band', running = false, visible = true, last = 0, onFps = null, frames = 0, fpsT = 0;
 const BAND = { pos: new THREE.Vector3(1.2, 6.6, 11.8), target: new THREE.Vector3(0, 0.6, 0.8) }; // vue plongeante : toutes les tables visibles
 function frame(now) {
   if (!running) return;
   requestAnimationFrame(frame);
   if (!visible) return;
-  if (mode === 'band' && now - last < 31) return; // ~30 i/s dans la bande
+  // Bandeau : rendu à la demande. 30 i/s pendant 3 s après un changement (croissance, humeur, heure), puis une image toutes les 4 s.
+  if (mode === 'band') { const active = now < animUntil; if (now - last < (active ? 33 : 4000)) return; if (!active) clock.getDelta(); }
   last = now;
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
   if (mode === 'band') {
@@ -770,7 +772,7 @@ function frame(now) {
 }
 function resize() {
   if (!renderer) return; const c = renderer.domElement, w = c.clientWidth || c.parentElement.clientWidth, h = c.clientHeight || c.parentElement.clientHeight;
-  if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); poke();
 }
 
 // ---------- API ----------
@@ -796,7 +798,9 @@ export function setMode(m) {
   mode = m;
   if (!renderer) return;
   controls.enabled = m === 'full';
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, m === 'full' ? 2 : 1.5));
+  renderer.setPixelRatio(m === 'full' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+  if (ext.grass) ext.grass.im.count = m === 'full' ? ext.grass.n : Math.round(ext.grass.n * 0.3); // moins de brins dans le bandeau
+  poke();
   ernestSprite.visible = ernestSprite.userData.shadow.visible = m === 'full';
   if (m === 'full') { camera.position.set(1.15, 1.75, 6.3); controls.target.set(0, 1.0, -1.2); camera.fov = 52; }
   else camera.fov = 46;
@@ -806,8 +810,8 @@ export const api = {
   mount, setMode, resize, webglOk, modelFromState,
   update(S, today) { applyModel(modelFromState(S, today)); },
   setModel: applyModel,
-  setTime(k) { amb.fixed = k; },
-  water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; },
+  setTime(k) { amb.fixed = k; poke(); },
+  water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
   stop() { running = false; }, start() { if (!running && renderer) { running = true; clock.getDelta(); requestAnimationFrame(frame); } },
   get camera() { return camera; }, get controls() { return controls; },
 };

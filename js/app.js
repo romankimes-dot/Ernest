@@ -1,6 +1,6 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
@@ -257,12 +257,13 @@ const chipValue = (root, name) => { const on = root.querySelector(`[data-chips="
 
 // ---------- Aujourd'hui ----------
 function viewToday() {
-  const d = ensureDay(S, today), tomorrow = addDays(today, 1), j = jMinus(S.settings.exam, today);
+  examPrep(S, today); examPrep(S, addDays(today, 1));
+  const d = ensureDay(S, today), tomorrow = addDays(today, 1), dl = nextDeadline(S, today), j = dl ? jMinus(dl.date, today) : null;
   const ordered = [...d.things].sort((a, b) => slotOrder(a.slot) - slotOrder(b.slot));
   const firstUndone = ordered.find((t) => !t.done);
   const dueToday = sortList(S.list).filter((l) => !l.done && l.due && l.due <= today);
   const all = d.things.length > 0 && d.things.every((t) => t.done);
-  let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(S.settings.examLabel)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
+  let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(dl.label)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
   h += moodBar(d);
   if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
   if (!d.things.length) {
@@ -271,7 +272,7 @@ function viewToday() {
   }
   let pending = 0; for (let i = 1; i <= 7; i++) pending += dayOf(S, addDays(today, -i)).things.filter((t) => !t.done).length;
   if (pending) h += `<button class="card row spread" data-act="history" style="width:100%;text-align:left"><span class="row">${icon('history')}<span><b>${pending} chose${pending > 1 ? 's' : ''} en suspens ces derniers jours</b><br><span class="muted small">Les remettre à aujourd'hui ou les supprimer</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
-  if (nowHour() >= 18 && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span class="row">${icon('moon')}<span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
+  if (nowHour() >= RITUAL_HOUR && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span class="row">${icon('moon')}<span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
   for (const [k, label] of MOMENTS) {
     const items = ordered.filter((t) => (BLOCKS[t.slot] ? t.slot : null) === k).sort((a, b) => a.done - b.done);
     if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => swipeWrap('thing', t.id, thingRow(t, t === firstUndone))).join('')}</div></div>`;
@@ -517,6 +518,7 @@ function listSheet(l) {
 }
 
 // ---------- Rituel du soir ----------
+const RITUAL_HOUR = 18; // le rituel du soir s'affiche dès 18 h, toujours
 function ritualSheet() {
   materialize(S, addDays(today, 1));
   const tomorrow = addDays(today, 1), d = ensureDay(S, today), dt = ensureDay(S, tomorrow), e = ernestEnv(S, today, plantNames());
@@ -530,6 +532,7 @@ function ritualSheet() {
   ${undone.length ? `<div class="kv"><label>Pas fait aujourd'hui</label><div class="stack" id="rUndone">${undone.map((t) => `<div class="list-item" data-u="${t.id}"><div class="t">${esc(t.title)}</div><button class="chip" data-uact="tomorrow">demain</button><button class="chip" data-uact="idea">idée</button><button class="chip" data-uact="drop">laisser</button></div>`).join('')}</div></div>` : ''}
   <div class="kv"><label>Les 3 de demain, ${esc(fmtDay(tomorrow))}</label>${sug.length ? `<div class="chips" id="rSug">${sug.map((s, i) => `<button class="chip" data-s="${i}"><span class="dot" style="background:${catOf(s.cat).couleur}"></span>${esc(s.title)} <span class="muted">· ${esc(s.why)}</span></button>`).join('')}</div>` : ''}
   <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}${r.src ? `<span class="muted small">${esc(r.src)}</span>` : ''}</div>`).join('')}</div></div>
+  <div class="muted small">${icon('moon', 'sm')} Coucher visé : ${esc((S.settings.bedtime || '22:30').replace(':', ' h '))}. Écrans posés une demi-heure avant.</div>
   <button class="btn" id="rSave">Bonne nuit</button>`);
   const sh = $('#sheet'); bindChips(sh);
   sh.querySelectorAll('[data-mood]').forEach((b) => b.addEventListener('click', () => { setMood(d, Number(b.dataset.mood)); sh.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('on', x === b)); }));
@@ -665,12 +668,12 @@ function cardSheet(c, fresh = false) {
 function settingsSheet() {
   const s = S.settings;
   openSheet(`<h2>Réglages</h2>
-  <div class="grid2"><div class="kv"><label>Prénom</label><input id="sName" value="${esc(s.prenom)}"></div><div class="kv"><label>Rituel du soir dès (heure)</label><input id="sHour" type="number" min="17" max="23" value="${s.ritualHour}"></div></div>
+  <div class="grid2"><div class="kv"><label>Prénom</label><input id="sName" value="${esc(s.prenom)}"></div><div class="kv"><label>Coucher visé</label><input id="sBed" type="time" value="${esc(s.bedtime || '22:30')}"></div></div>
   <div class="grid2"><div class="kv"><label>Prochain examen</label><input id="sExam" type="date" value="${s.exam || ''}"></div><div class="kv"><label>Son nom</label><input id="sExamL" value="${esc(s.examLabel)}"></div></div>
   <div class="kv"><label>Minimums doux par semaine (0 = aucun), actifs à partir du</label><input id="sMinFrom" type="date" value="${s.minimumsFrom || ''}"><div class="mins">${CATS.map((c) => `<span class="chip"><span class="nm"><span class="dot" style="background:${c.couleur}"></span>${c.nom}</span><input data-min="${c.id}" type="number" min="0" max="14" value="${s.minimums[c.id] || 0}" inputmode="numeric"></span>`).join('')}</div></div>
   <label class="toggle"><input type="checkbox" id="sTrack" ${s.trackTime !== false ? 'checked' : ''}><span>Mesurer le temps passé<small>Démarrer, Pause, bilan de la semaine</small></span></label>
   <label class="toggle"><input type="checkbox" id="s3d" ${s.garden3d !== false ? 'checked' : ''}><span>Serre en 3D<small>Sinon la serre dessinée, plus légère</small></span></label>
-  <div class="muted small">Rappel du soir : iOS ne permet pas à Ernest d'envoyer une notification seul. Une alarme « ${s.ritualHour} h, Ernest » dans Horloge fait le travail.</div>
+  <div class="muted small">Rappel du soir : iOS ne permet pas à Ernest d'envoyer une notification seul. Le rituel s'affiche dès 18 h ; une alarme « 21 h, Ernest » dans Horloge fait le rappel.</div>
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
   <div class="kv"><label>Pont : dans Deonto ou dec-revision, « Copier pour Ernest », puis colle ici</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
@@ -678,7 +681,7 @@ function settingsSheet() {
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
-  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
+  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.bedtime = $('#sBed').value || '22:30'; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });
   $('#sBridgeGo').addEventListener('click', () => { const p = decode($('#sBridge').value); if (!p) { toast('Pont illisible.'); return; } importSheet(p); });
