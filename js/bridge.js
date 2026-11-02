@@ -1,5 +1,5 @@
 // Ponts avec les apps de révision et le dépôt du mémoire.
-// Format unique : { v: 1, src, things: [{ title, cat, est, link, day, note }], goals: [{ title, cat, due, milestones: [text|{text,done}] }] }
+// Format unique : { v: 1, src, things: [{ title, cat, est, link, day, note, slot, done }], goals: [{ title, cat, due, milestones: [text|{text,done}] }] }
 // transporté dans l'adresse (#import=<base64url(JSON UTF-8)>) ou collé dans Réglages.
 import { uid, ensureDay, catId } from './model.js';
 
@@ -21,9 +21,10 @@ function valid(p) {
 }
 export const linkFor = (payload, base = 'https://romankimes-dot.github.io/Ernest/') => `${base}#import=${encode(payload)}`;
 
-// Fusion sans doublon. Retourne { things: n, goals: n, milestones: n }.
+// Fusion sans doublon. Retourne { things: n, done: n, goals: n, milestones: n }.
+// Une chose faite dans l'app de révision (done: true) est cochée ici aussi, avec sa plante ; jamais décochée d'ici.
 export function merge(state, payload, today) {
-  const r = { things: 0, goals: 0, milestones: 0 };
+  const r = { things: 0, done: 0, goals: 0, milestones: 0 };
   const br = state.bridges[payload.src] || (state.bridges[payload.src] = { last: null, days: {} });
   br.last = new Date().toISOString();
   for (const t of payload.things) {
@@ -32,11 +33,17 @@ export function merge(state, payload, today) {
     const d = ensureDay(state, day);
     // déjà là : le moment proposé est repris si aucun n'est choisi ; déjà reçue pour ce jour (même supprimée) : jamais remise
     const ex = d.things.find((x) => x.title === t.title && x.src === payload.src);
-    if (ex) { if (!ex.slot && t.slot && !ex.done) { ex.slot = t.slot; ex.slotAuto = true; } continue; }
+    if (ex) {
+      if (!ex.slot && t.slot && !ex.done) { ex.slot = t.slot; ex.slotAuto = true; }
+      if (t.done === true && !ex.done) { markDone(state, ex, day, today); r.done++; }
+      continue;
+    }
     if ((br.days[day] || []).includes(t.title)) continue;
-    d.things.push({ id: uid(), title: String(t.title).slice(0, 120), cat: catId(t.cat || 'travail'), est: Number(t.est) || 30, slot: t.slot || null, ...(t.slot ? { slotAuto: true } : {}), src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 });
+    const nt = { id: uid(), title: String(t.title).slice(0, 120), cat: catId(t.cat || 'travail'), est: Number(t.est) || 30, slot: t.slot || null, ...(t.slot ? { slotAuto: true } : {}), src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 };
+    d.things.push(nt);
     (br.days[day] = br.days[day] || []).push(t.title);
     r.things++;
+    if (t.done === true) { markDone(state, nt, day, today); r.done++; }
   }
   for (const g of payload.goals) {
     if (!g || !g.title) continue;
@@ -53,6 +60,12 @@ export function merge(state, payload, today) {
     }
   }
   return r;
+}
+
+function markDone(state, t, day, today) {
+  t.done = true; t.real = t.real || 0; t.startedAt = null;
+  t.doneAt = day === today ? new Date().toISOString() : `${day}T20:00:00`;
+  state.garden.plants.push({ id: uid(), cat: t.cat, day, seed: Math.floor(Math.random() * 1e9), kind: 'plant', src: t.src });
 }
 
 export const SRC_NAMES = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
