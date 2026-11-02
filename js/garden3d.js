@@ -1,15 +1,17 @@
-// La serre en 3D, branchée sur les données d'Ernest.
-// three.js 0.160 (embarqué dans vendor/), tout est généré par code. Une seule serre par page.
-// Correspondance : une chose faite = une plante dans le rang de sa catégorie (Révision : fleurs et lavande,
-// Corps : succulentes, Esprit : fougères, Cuisine : aromatiques, Boulot : grandes feuilles, Perso : graminées) ;
-// la croissance suit les jours actifs ; les entrées de liste font la mousse ; un objectif = le bonsaï du fond,
-// une branche par étape ; le total fait monter les grimpantes et descendre les suspensions ; l'humeur règle la
-// lumière et trois jours gris font sortir des champignons. L'heure réelle fait le jour, le soir et la nuit.
+// Les trois serres en 3D, branchées sur les données d'Ernest.
+// three.js 0.160 (embarqué dans vendor/), tout est généré par code. Trois petites serres en arc devant la chaumière :
+// « Travail » (Révision : lavande et fleurs violettes, Boulot : ficus et grandes feuilles), « Bien-être » (Corps :
+// succulentes et cactus, Esprit : fougères et mousse, Cuisine : thym, basilic, romarin) et « Vie perso » (fleurs
+// des champs et hautes herbes). Une chose faite = une plante dans la serre de sa catégorie ; la croissance suit les
+// jours actifs ; dans chaque serre, les entrées de liste font la mousse et le nombre de choses faites fait monter
+// les grimpantes et descendre les suspensions ; un objectif actif = un bonsaï au fond de la serre de sa catégorie,
+// une branche par étape. L'humeur règle la lumière et trois jours gris font sortir des champignons. L'heure réelle
+// fait le jour, le soir et la nuit.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { svg as ernestSvg } from './ernest.js';
 import { buildCottage } from './cottage3d.js';
-import { growth, totalDone, moodAvg, catCounts, activeDays } from './model.js';
+import { growth, totalDone, moodAvg, catCounts } from './model.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -32,7 +34,7 @@ let renderer = null, controls = null;
 const hemi = new THREE.HemisphereLight(0xbfe3f0, 0x3a3020, 1.0); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.4);
 sun.position.set(6, 10, 5); sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -8; sun.shadow.camera.right = 8; sun.shadow.camera.top = 9; sun.shadow.camera.bottom = -9; sun.shadow.camera.far = 30; sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02; sun.shadow.radius = 7;
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.camera.left = -13; sun.shadow.camera.right = 13; sun.shadow.camera.top = 13; sun.shadow.camera.bottom = -13; sun.shadow.camera.far = 40; sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02; sun.shadow.radius = 7;
 scene.add(sun);
 
 // ---------- Ciel, étoiles, sol extérieur ----------
@@ -66,6 +68,7 @@ const M = {
   bark: new THREE.MeshStandardMaterial({ color: 0x5b3f26, roughness: 0.95 }),
   bulb: new THREE.MeshStandardMaterial({ color: 0xffd38a, emissive: 0xf2b23d, emissiveIntensity: 2.2 }),
   chain: new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 0.6, metalness: 0.7 }),
+  cactus: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }),
 };
 
 // ---------- Textures procédurales (canvas) : grain, rouille, terre, gravier, crasse des vitres ----------
@@ -102,6 +105,7 @@ if (TX) {
   set(M.terra, { map: TX.terra, bumpMap: TX.terraB, bumpScale: 3 });
   set(M.terraDark, { map: TX.terra, bumpMap: TX.terraB, bumpScale: 3 });
   set(M.soil, { map: TX.soil, bumpMap: TX.soil, bumpScale: 5 });
+  TX.gravel.repeat.set(2.9, 4.6); // sol des petites serres
   set(M.gravel, { color: new THREE.Color(0x9a9282), map: TX.gravel, bumpMap: TX.gravel, bumpScale: 6 });
   set(M.stone, { map: TX.stone, bumpMap: TX.stoneB, bumpScale: 4 });
   set(M.frame, { map: TX.metal, bumpMap: TX.metal, bumpScale: 2, roughness: 0.7 });
@@ -120,7 +124,7 @@ M.glass.onBeforeCompile = (sh) => {
     outgoingLight += uGlassTint * frG * 0.28 * uGlassK; diffuseColor.a = min( 1.0, diffuseColor.a + frG * 0.3 + 0.02 );
     #include <opaque_fragment>`);
 };
-for (const m of [M.leaf, M.leafFlat, M.stem]) {
+for (const m of [M.leaf, M.leafFlat, M.stem, M.cactus]) {
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, rimU);
     sh.fragmentShader = 'uniform float uRimK;\nuniform vec3 uRimCol;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
@@ -132,56 +136,151 @@ for (const m of [M.leaf, M.leafFlat, M.stem]) {
 }
 M.glass.customProgramCacheKey = () => 'glassFresnel';
 
-// ---------- La serre ----------
-const GW = 3.6, GD = 6.6, GH = 2.6, GR = 4.3; // demi-largeur, demi-profondeur, hauteur des murs, faîtage
-const greenhouse = new THREE.Group(); scene.add(greenhouse);
-const beam = (a, b, t = 0.06, mat = M.frame) => {
-  const d = new THREE.Vector3().subVectors(b, a), len = d.length();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(t, len, t), mat);
-  m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); m.castShadow = true; greenhouse.add(m); return m;
-};
+// ---------- Les trois serres ----------
+// Trois petites serres (chacune ≈ 46 % de l'ancienne grande) en arc devant la chaumière, portes tournées vers le
+// chemin. Coordonnées locales d'une serre : porte vers +z, origine au centre du sol.
+const HW = 2.6, HD = 4.2, HH = 2.2, HR = 3.35; // demi-largeur, demi-profondeur, hauteur des murs, faîtage
+const HOUSES = [
+  { id: 'travail', name: 'Travail', cats: ['revision', 'boulot'], x: 0, z: -2.6, ry: 0 },
+  { id: 'bienetre', name: 'Bien-être', cats: ['corps', 'esprit', 'cuisine'], x: 7.1, z: -0.3, ry: -0.32 },
+  { id: 'perso', name: 'Vie perso', cats: ['perso'], x: -7.1, z: -0.3, ry: 0.32 },
+];
+export const HOUSE_IDS = HOUSES.map((h) => h.id);
+export const HOUSE_OF = { revision: 'travail', boulot: 'travail', corps: 'bienetre', esprit: 'bienetre', cuisine: 'bienetre', perso: 'perso' };
+const houseOf = (cat) => HOUSE_OF[cat] || 'perso'; // sans catégorie : la vie perso, comme catOf()
+const HB = {};
+for (const h of HOUSES) { const g = new THREE.Group(); g.position.set(h.x, 0, h.z); g.rotation.y = h.ry; g.updateMatrixWorld(true); scene.add(g); HB[h.id] = Object.assign(h, { g, cos: Math.cos(h.ry), sin: Math.sin(h.ry) }); }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-// sol intérieur, allée de dalles
-{ const f = new THREE.Mesh(new THREE.PlaneGeometry(GW * 2, GD * 2), M.gravel); f.rotation.x = -Math.PI / 2; f.receiveShadow = true; greenhouse.add(f);
-  const r = rngOf(3), g = new THREE.BoxGeometry(1, 0.04, 1), n = 34, m = new THREE.InstancedMesh(g, M.stone, n);
-  for (let i = 0; i < n; i++) { const z = GD - 0.35 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; dummy.position.set(x, 0.015, z); dummy.rotation.set(0, (r() - 0.5) * 0.2, 0); dummy.scale.set(0.52 + r() * 0.1, 1, 0.34 + r() * 0.04); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#8c8676'), r, 0.1)); }
-  m.receiveShadow = true; greenhouse.add(m); }
-// soubassement de briques
-{ const base = new THREE.MeshStandardMaterial({ color: 0x6b3f2a, roughness: 1 });
-  for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.5, GD * 2), base); w.position.set(s * GW, 0.25, 0); w.receiveShadow = w.castShadow = true; greenhouse.add(w); }
-  const b = new THREE.Mesh(new THREE.BoxGeometry(GW * 2, 0.5, 0.16), base); b.position.set(0, 0.25, -GD); greenhouse.add(b); }
-// structure : poteaux, chevrons, faîtage, lisses
-const bays = 9;
-for (let i = 0; i <= bays; i++) {
-  const z = -GD + (i * 2 * GD) / bays;
-  for (const s of [-1, 1]) { beam(V(s * GW, 0.5, z), V(s * GW, GH, z)); beam(V(s * GW, GH, z), V(0, GR, z)); }
-}
-for (const s of [-1, 1]) { beam(V(s * GW, GH, -GD), V(s * GW, GH, GD)); beam(V(s * GW, 1.4, -GD), V(s * GW, 1.4, GD), 0.035); beam(V(s * GW * 0.5, (GH + GR) / 2, -GD), V(s * GW * 0.5, (GH + GR) / 2, GD), 0.035); }
-beam(V(0, GR, -GD), V(0, GR, GD), 0.09);
-for (const z of [-GD, GD]) { for (const x of [-GW / 2, 0, GW / 2]) beam(V(x, 0.5, z), V(x, GH + (GR - GH) * (1 - Math.abs(x) / GW), z), 0.05); beam(V(-GW, 1.4, z), V(GW, 1.4, z), 0.035); }
-// vitrages
-{ const add = (g, pos) => { const m = new THREE.Mesh(g, M.glass); m.position.copy(pos); m.renderOrder = 2; greenhouse.add(m); return m; };
-  const slope = Math.hypot(GW, GR - GH), ang = Math.atan2(GR - GH, GW);
-  for (const s of [-1, 1]) {
-    add(new THREE.PlaneGeometry(GD * 2, GH - 0.5), V(s * GW, 0.5 + (GH - 0.5) / 2, 0)).rotation.y = Math.PI / 2;
-    const rg = new THREE.PlaneGeometry(slope, GD * 2); rg.rotateX(-Math.PI / 2);
-    add(rg, V(s * GW / 2, (GH + GR) / 2, 0)).rotation.z = -s * ang;
+const toWorld = (h, x, y, z) => V(h.x + x * h.cos + z * h.sin, y, h.z - x * h.sin + z * h.cos);
+const toLocal = (h, x, z) => { const dx = x - h.x, dz = z - h.z; return [dx * h.cos - dz * h.sin, dx * h.sin + dz * h.cos]; };
+const inHouse = (x, z, m = 0) => HOUSES.some((h) => { const [lx, lz] = toLocal(h, x, z); return Math.abs(lx) < HW + m && Math.abs(lz) < HD + m; });
+const roofY = (x) => HH + (HR - HH) * (1 - Math.abs(x) / HW);
+// Fusion de géométries (une seule passe de dessin pour des tiges, des chaînes, des vitrages…)
+function mergeGeos(parts) {
+  const P = [], N = [], U = [];
+  for (const [geo, mat] of parts) {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone(); if (mat) g.applyMatrix4(mat);
+    const p = g.attributes.position.array, n = g.attributes.normal && g.attributes.normal.array, u = g.attributes.uv && g.attributes.uv.array;
+    for (let i = 0; i < p.length; i++) { P.push(p[i]); N.push(n ? n[i] : 0); }
+    for (let i = 0; i < p.length / 3 * 2; i++) U.push(u ? u[i] : 0);
+    g.dispose();
   }
-  const gable = new THREE.Shape([new THREE.Vector2(-GW, 0.5), new THREE.Vector2(GW, 0.5), new THREE.Vector2(GW, GH), new THREE.Vector2(0, GR), new THREE.Vector2(-GW, GH)]);
-  add(new THREE.ShapeGeometry(gable), V(0, 0, -GD)); add(new THREE.ShapeGeometry(gable), V(0, 0, GD)); }
-
-// tables le long des murs
-const TABLE_Y = 0.82, TABLE_X = 2.45;
-for (const s of [-1, 1]) {
-  const top = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.06, GD * 2 - 1.6), M.wood); top.position.set(s * TABLE_X, TABLE_Y, -0.3); top.castShadow = top.receiveShadow = true; greenhouse.add(top);
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, GD * 2 - 1.6), M.woodDark); lip.position.set(s * (TABLE_X - 0.57), TABLE_Y + 0.03, -0.3); greenhouse.add(lip);
-  for (let z = -GD + 1.1; z <= GD - 1.6; z += 1.6) for (const dx of [-0.5, 0.5]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, TABLE_Y, 0.06), M.woodDark); l.position.set(s * TABLE_X + dx, TABLE_Y / 2, z); l.castShadow = true; greenhouse.add(l); }
-  const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, GD * 2 - 1.8), M.woodDark); shelf.position.set(s * TABLE_X, 0.22, -0.3); shelf.receiveShadow = true; greenhouse.add(shelf);
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  return out;
 }
-// arrosoir et outils, pour la vie
+// Regroupe les meshes simples d'un groupe qui partagent un matériau (tiges, branches) : moins d'appels de dessin.
+function compact(g) {
+  g.updateMatrixWorld(true); const inv = g.matrixWorld.clone().invert(), by = new Map();
+  for (const o of g.children) if (o.isMesh && !o.isInstancedMesh && !Array.isArray(o.material)) { if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(o); }
+  for (const [mat, list] of by) {
+    if (list.length < 2) continue;
+    const m = new THREE.Mesh(mergeGeos(list.map((o) => [o.geometry, inv.clone().multiply(o.matrixWorld)])), mat);
+    m.castShadow = list.some((o) => o.castShadow); m.receiveShadow = list.some((o) => o.receiveShadow); m.userData.own = true;
+    for (const o of list) { g.remove(o); o.geometry.dispose(); }
+    g.add(m);
+  }
+  return g;
+}
+function disposeObj(o) { o.traverse((c) => { if (c.isInstancedMesh) c.dispose(); else if (c.isMesh && c.userData.own) c.geometry.dispose(); }); }
+// Pièces répétées des trois serres (armature, briques, tables, dalles, portes, panneaux) : un InstancedMesh par matériau.
+const IB = new Map(), m4 = new THREE.Matrix4(), Q0 = new THREE.Quaternion(), WHITE = col('#ffffff');
+const ibDef = (k, geo, mat, cast = true, receive = true) => IB.set(k, { geo, mat, cast, receive, items: [] });
+const ibPut = (k, base, pos, quat, scl, color) => { m4.compose(pos, quat, scl); IB.get(k).items.push([base ? base.clone().multiply(m4) : m4.clone(), color]); };
+const qY = (a) => (a ? new THREE.Quaternion().setFromAxisAngle(UP, a) : Q0);
+const boxAt = (k, base, x, y, z, sx, sy, sz, ry = 0, color) => ibPut(k, base, V(x, y, z), qY(ry), V(sx, sy, sz), color);
+const beam = (base, a, b, t = 0.06) => { const d = new THREE.Vector3().subVectors(b, a); ibPut('frame', base, a.clone().addScaledVector(d, 0.5), new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(t, d.length(), t)); };
+function ibFlush(parent) {
+  for (const b of IB.values()) {
+    const im = new THREE.InstancedMesh(b.geo, b.mat, b.items.length), hasCol = b.items.some(([, c]) => c);
+    b.items.forEach(([mm, c], i) => { im.setMatrixAt(i, mm); if (hasCol) im.setColorAt(i, c || WHITE); });
+    im.castShadow = b.cast; im.receiveShadow = b.receive; parent.add(im);
+  }
+  IB.clear();
+}
+{
+  const box1 = new THREE.BoxGeometry(1, 1, 1), floorGeo = new THREE.PlaneGeometry(HW * 2, HD * 2); floorGeo.rotateX(-Math.PI / 2);
+  ibDef('frame', box1, M.frame); ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0x6b3f2a, roughness: 1 }));
+  ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0x8fa58a, roughness: 0.65, metalness: 0 })); // portes vert sauge
+  ibDef('tile', box1, M.stone, false, true); ibDef('floor', floorGeo, M.gravel, false, true);
+}
+// Vitrages d'une serre, fusionnés : murs, toit, pignon arrière plein, pignon avant ouvert sur la porte.
+const glassGeo = (() => {
+  const parts = [], mk = (g, x, y, z, rx = 0, ry = 0, rz = 0) => parts.push([g, new THREE.Matrix4().compose(V(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), V(1, 1, 1))]);
+  const slope = Math.hypot(HW, HR - HH), ang = Math.atan2(HR - HH, HW);
+  for (const s of [-1, 1]) {
+    mk(new THREE.PlaneGeometry(HD * 2, HH - 0.5), s * HW, 0.5 + (HH - 0.5) / 2, 0, 0, Math.PI / 2, 0);
+    const rg = new THREE.PlaneGeometry(slope, HD * 2); rg.rotateX(-Math.PI / 2); mk(rg, s * HW / 2, (HH + HR) / 2, 0, 0, 0, -s * ang);
+  }
+  const v2 = (x, y) => new THREE.Vector2(x, y);
+  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), v2(HW, 0.5), v2(HW, HH), v2(0, HR), v2(-HW, HH)])), 0, 0, -HD);
+  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), v2(-0.6, 0.5), v2(-0.6, 2.1), v2(0.6, 2.1), v2(0.6, 0.5), v2(HW, 0.5), v2(HW, HH), v2(0, HR), v2(-HW, HH)])), 0, 0, HD);
+  return mergeGeos(parts);
+})();
+// Panneau peint : planche de bois, nom en lettres crème (empattements, un peu penchées comme à la main).
+function signTex(text) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 200; const x = c.getContext('2d'), r = rngOf(text.length * 97);
+  x.fillStyle = '#6e4526'; x.fillRect(0, 0, 512, 200);
+  for (let i = 0; i < 40; i++) { const y = r() * 200; x.strokeStyle = r() < 0.5 ? 'rgba(40,22,10,.35)' : 'rgba(150,100,60,.3)'; x.lineWidth = 1 + r() * 3; x.beginPath(); x.moveTo(0, y); for (let px = 0; px <= 512; px += 32) x.lineTo(px, y + Math.sin(px * 0.02 + i) * 3); x.stroke(); }
+  x.strokeStyle = 'rgba(241,232,210,.75)'; x.lineWidth = 4; x.strokeRect(14, 14, 484, 172);
+  x.fillStyle = '#f1e8d2'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  let fs = 104; do { x.font = `italic 700 ${fs}px "Bradley Hand", Georgia, "Times New Roman", serif`; fs -= 4; } while (x.measureText(text).width > 440 && fs > 40);
+  x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 4; x.shadowOffsetY = 2; x.fillText(text, 256, 106);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const BAYS = 6, TBX = 1.75, TY = 0.82, TZ0 = -HD + 1.5, TZ1 = HD - 1.0; // tables : axe, hauteur, début et fin
+const lanterns = [], signMats = [];
+for (const h of HOUSES) {
+  const g = h.g, W = g.matrixWorld, r = rngOf(3 + HOUSES.indexOf(h) * 31);
+  ibPut('floor', W, V(0, 0, 0), Q0, V(1, 1, 1));
+  for (let i = 0; i < 21; i++) { const z = HD - 0.3 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; boxAt('tile', W, x, 0.015, z, 0.52 + r() * 0.1, 0.04, 0.34 + r() * 0.04, (r() - 0.5) * 0.2, vary(col('#8c8676'), r, 0.1)); }
+  // soubassement de briques
+  for (const s of [-1, 1]) { boxAt('brick', W, s * HW, 0.25, 0, 0.16, 0.5, HD * 2); boxAt('brick', W, s * (HW + 0.62) / 2, 0.25, HD, HW - 0.62, 0.5, 0.16); }
+  boxAt('brick', W, 0, 0.25, -HD, HW * 2, 0.5, 0.16);
+  // armature : poteaux, chevrons, faîtage, lisses, pignons
+  for (let i = 0; i <= BAYS; i++) { const z = -HD + (i * 2 * HD) / BAYS; for (const s of [-1, 1]) { beam(W, V(s * HW, 0.5, z), V(s * HW, HH, z)); beam(W, V(s * HW, HH, z), V(0, HR, z)); } }
+  for (const s of [-1, 1]) { beam(W, V(s * HW, HH, -HD), V(s * HW, HH, HD)); beam(W, V(s * HW, 1.25, -HD), V(s * HW, 1.25, HD), 0.035); beam(W, V(s * HW * 0.5, (HH + HR) / 2, -HD), V(s * HW * 0.5, (HH + HR) / 2, HD), 0.035); }
+  beam(W, V(0, HR, -HD), V(0, HR, HD), 0.09);
+  for (const x of [-HW / 2, 0, HW / 2]) beam(W, V(x, 0.5, -HD), V(x, roofY(x), -HD), 0.05);
+  beam(W, V(-HW, 1.25, -HD), V(HW, 1.25, -HD), 0.035);
+  for (const x of [-HW / 2, HW / 2]) beam(W, V(x, 0.5, HD), V(x, roofY(x), HD), 0.05);
+  beam(W, V(0, 2.1, HD), V(0, HR, HD), 0.05);
+  for (const s of [-1, 1]) beam(W, V(s * HW, 1.25, HD), V(s * 0.6, 1.25, HD), 0.035);
+  const gl = new THREE.Mesh(glassGeo, M.glass); gl.renderOrder = 2; g.add(gl);
+  // porte et marche
+  for (const x of [-0.6, 0.6]) boxAt('door', W, x, 1.05, HD + 0.02, 0.07, 2.1, 0.07);
+  boxAt('door', W, 0, 2.1, HD + 0.02, 1.27, 0.07, 0.07);
+  boxAt('tile', W, 0, 0.06, HD + 0.3, 1.5, 0.12, 0.5, 0, col('#9a9484'));
+  // tables le long des murs, étagère dessous
+  for (const s of [-1, 1]) {
+    const L = TZ1 - TZ0, zc = (TZ0 + TZ1) / 2;
+    boxAt('wood', W, s * TBX, TY, zc, 0.95, 0.06, L);
+    boxAt('dark', W, s * (TBX - 0.47), TY + 0.03, zc, 0.05, 0.12, L);
+    for (let i = 0; i < 5; i++) for (const dx of [-0.4, 0.4]) boxAt('dark', W, s * TBX + dx, TY / 2, TZ0 + 0.2 + i * (L - 0.4) / 4, 0.06, TY, 0.06);
+    boxAt('dark', W, s * TBX, 0.22, zc, 0.85, 0.04, L - 0.2);
+  }
+  // panneau de bois peint, à gauche de la porte, un peu tourné vers le chemin
+  const sg = new THREE.Group(); sg.position.set(-1.45, 0, HD + 0.6); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true);
+  const SW = sg.matrixWorld;
+  for (const x of [-0.5, 0.5]) boxAt('dark', SW, x, 0.6, -0.03, 0.07, 1.2, 0.07);
+  boxAt('wood', SW, 0, 1.0, 0, 1.3, 0.52, 0.05);
+  const tex = signTex(h.name), sm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0 }); signMats.push(sm); // un peu de lueur la nuit, pour rester lisible
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.48), sm);
+  face.position.set(0, 1.0, 0.027); face.castShadow = true; sg.add(face);
+  // lanterne suspendue au faîtage
+  const lg = new THREE.Group(), ly = HH + 0.1;
+  lg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.22, 6, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2116, metalness: 0.6, roughness: 0.5, wireframe: true })));
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.08, 6), M.chain); cap.position.y = 0.15; lg.add(cap);
+  lg.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), M.bulb));
+  const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, HR - ly - 0.15, 4), M.chain); ch.position.y = (HR - ly - 0.15) / 2 + 0.15; lg.add(ch);
+  const light = new THREE.PointLight(0xffb85c, 9, 9, 1.5); lg.add(light);
+  lg.position.set(0, ly, 0.3); g.add(lg); lanterns.push({ g: lg, light, house: h });
+}
+// arrosoir, pour la vie (serre Travail, près de la porte)
 { const can = new THREE.Group(); const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x5f87a8, roughness: 0.4, metalness: 0.5 })); body.position.y = 0.11; can.add(body);
   const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.3, 8), body.material); spout.position.set(0.17, 0.2, 0); spout.rotation.z = -0.9; can.add(spout);
-  can.position.set(0.95, 0, 3.6); can.traverse((o) => { o.castShadow = true; }); greenhouse.add(can); }
+  can.position.set(0.75, 0, HD - 0.8); can.rotation.y = 0.6; can.traverse((o) => { o.castShadow = true; }); HB.travail.g.add(can); }
+ibFlush(scene);
 
 // ---------- Dehors : relief, prairie au vent, arbres, chemin, muret ----------
 // Bruit de valeur 2D (déterministe) et somme d'octaves.
@@ -190,13 +289,28 @@ const vnoise = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x 
   return lerp(lerp(hash2(xi, yi), hash2(xi + 1, yi), u), lerp(hash2(xi, yi + 1), hash2(xi + 1, yi + 1), u), v); };
 const fbm = (x, y) => vnoise(x, y) * 0.55 + vnoise(x * 2.1, y * 2.1) * 0.28 + vnoise(x * 4.3, y * 4.3) * 0.17;
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-// Plat autour de la serre et du chemin, des collines au-delà.
+// Plat autour des serres et du chemin, des collines au-delà.
 function heightAt(x, z) {
-  const r = Math.hypot(x, z * 0.8), pathD = Math.abs(x - pathX(z)) * (z > 6 ? 1 : 9);
-  const flat = smooth(9, 26, r) * smooth(1.2, 4, pathD + (z < 6 ? 99 : 0));
-  return flat * (fbm(x * 0.045 + 3.1, z * 0.045 + 7.7) * 9 - 1.2) + (fbm(x * 0.3, z * 0.3) - 0.5) * 0.12 * smooth(7, 10, r);
+  const r = Math.hypot(x, z * 0.8), pathD = Math.abs(x - pathX(z));
+  const flat = smooth(11, 27, r) * smooth(1.2, 4, pathD + (z < 6 ? 99 : 0));
+  return flat * (fbm(x * 0.045 + 3.1, z * 0.045 + 7.7) * 9 - 1.2) + (fbm(x * 0.3, z * 0.3) - 0.5) * 0.12 * smooth(9.5, 12.5, r);
 }
+// Chemin : de la porte de la serre Travail jusqu'au portail et au-delà ; à mi-chemin, deux branches vers les portes
+// des serres Bien-être et Vie perso.
+const DOOR_Z = HB.travail.z + HD + 0.3, FORK_Z = 6.2;
 const pathX = (z) => Math.sin((z - 6.6) * 0.16) * 1.6 * smooth(6.6, 12, z);
+const BRANCHES = ['bienetre', 'perso'].map((id) => {
+  const h = HB[id], door = toWorld(h, 0, 0, HD + 0.45), n = V(h.sin, 0, h.cos), c = door.clone().addScaledVector(n, 2.4);
+  const curve = new THREE.QuadraticBezierCurve3(V(pathX(FORK_Z), 0, FORK_Z), c, door), pts = curve.getSpacedPoints(48);
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+  return { id, curve, pts, len: curve.getLength(), box: [x0 - 1.5, x1 + 1.5, z0 - 1.5, z1 + 1.5] };
+});
+// Distance au chemin (allée principale et branches), pour l'herbe, les fleurs et la teinte du sol.
+function pathDist(x, z) {
+  let d = z > DOOR_Z - 0.3 ? Math.abs(x - pathX(z)) : 99;
+  for (const b of BRANCHES) { const [x0, x1, z0, z1] = b.box; if (x < x0 || x > x1 || z < z0 || z > z1) continue; for (const p of b.pts) d = Math.min(d, Math.hypot(x - p.x, z - p.z)); }
+  return d;
+}
 // Saison réelle : couleurs de l'herbe et des feuillages.
 const MONTH = new Date().getMonth() + 1;
 const SEASON = MONTH <= 2 || MONTH === 12 ? 'hiver' : MONTH <= 5 ? 'printemps' : MONTH <= 8 ? 'ete' : 'automne';
@@ -208,11 +322,11 @@ const PAL = {
 }[SEASON];
 
 const outdoor = new THREE.Group(); scene.add(outdoor);
-// Étape 4 : emplacements du potager (un carré par catégorie) et de la seconde serre. L'herbe s'efface sous eux quand ils apparaissent.
+// Étape 4 : le potager, un carré par catégorie, entre les serres et le portail (Travail au milieu, Bien-être à droite,
+// Vie perso et Cuisine à gauche, près de la chaumière). L'herbe s'efface sous eux quand ils apparaissent.
 const BED_CATS = ['revision', 'corps', 'esprit', 'cuisine', 'boulot', 'perso'];
-const BEDS = [[-5.6, 0.8], [-5.6, 3.6], [-5.6, 6.4], [5.6, 1.3], [5.6, 4.1], [5.6, 6.9]].map(([x, z]) => ({ x, z, hx: 0.6, hz: 1.15 }));
-const SERRE2 = { x: 8.6, z: 4.6, hx: 1.25, hz: 1.6 };
-const ZONES = [...BEDS, SERRE2];
+const BEDS = [[-3.4, 9.4], [5.4, 8.8], [7.4, 7.8], [-7.4, 7.8], [3.4, 9.4], [-5.4, 8.8]].map(([x, z]) => ({ x, z, hx: 0.6, hz: 1.15 }));
+const ZONES = BEDS;
 const zoneAt = (x, z, m = 0.12) => ZONES.findIndex((b) => Math.abs(x - b.x) < b.hx + m && Math.abs(z - b.z) < b.hz + m);
 const zoneU = { value: new Array(ZONES.length).fill(0) };
 // Terrain
@@ -220,10 +334,10 @@ const zoneU = { value: new Array(ZONES.length).fill(0) };
   const g = new THREE.PlaneGeometry(190, 190, 150, 150); g.rotateX(-Math.PI / 2);
   const p = g.attributes.position, colors = [], r = rngOf(21), base = PAL.grass.map(col);
   for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), z = p.getZ(i), y = Math.abs(x) < GW + 0.3 && Math.abs(z) < GD + 0.3 ? -0.02 : heightAt(x, z);
+    const x = p.getX(i), z = p.getZ(i), y = Math.abs(x) < 13 && Math.abs(z) < 13 && inHouse(x, z, 0.3) ? -0.02 : heightAt(x, z);
     p.setY(i, y - 0.03);
     const c = base[Math.floor(fbm(x * 0.12, z * 0.12) * base.length * 1.4) % base.length].clone().offsetHSL(0, 0, (r() - 0.5) * 0.04 + y * 0.004);
-    const dp = Math.abs(x - pathX(z)); if (z > GD && dp < 0.9) c.lerp(col('#8a7a5a'), 0.55 * (1 - dp / 0.9));
+    const dp = pathDist(x, z); if (dp < 0.9) c.lerp(col('#8a7a5a'), 0.55 * (1 - dp / 0.9));
     colors.push(c.r, c.g, c.b);
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); g.computeVertexNormals();
@@ -231,7 +345,7 @@ const zoneU = { value: new Array(ZONES.length).fill(0) };
 }
 // Prairie : des milliers de brins qui ondulent (vent calculé dans le shader)
 const windU = { value: 0 };
-const ext = { beds: [], serre2: null };
+const ext = { beds: [] };
 let wallStones = []; const treeSpots = []; // pour les ombres portées douces (plus bas)
 {
   const blade = new THREE.BufferGeometry();
@@ -257,28 +371,27 @@ let wallStones = []; const treeSpots = []; // pour les ombres portées douces (p
   const N = 24000, im = new THREE.InstancedMesh(blade, mat, N), r = rngOf(33), base = PAL.grass.map(col), aZone = new Float32Array(N); let k = 0;
   for (let i = 0; i < N * 3 && k < N; i++) {
     const a = r() * Math.PI * 2, d = 4.5 + Math.pow(r(), 0.7) * 34, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.15;
-    if (Math.abs(x) < GW + 0.4 && Math.abs(z) < GD + 0.4) continue;
-    if (z > GD && Math.abs(x - pathX(z)) < 0.85) continue;
+    if (inHouse(x, z, 0.4) || pathDist(x, z) < 0.85) continue;
     dummy.position.set(x, heightAt(x, z) - 0.03, z); dummy.rotation.set((r() - 0.5) * 0.3, r() * 6.28, 0); const s = 0.45 + r() * 0.5; dummy.scale.set(0.9, s * (0.55 + r() * 0.45), 0.9); dummy.updateMatrix();
     aZone[k] = zoneAt(x, z); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.04, (r() - 0.5) * 0.035 + 0.02)); k++;
   }
   blade.setAttribute('aZone', new THREE.InstancedBufferAttribute(aZone, 1)); im.count = k; im.receiveShadow = true; outdoor.add(im); ext.grass = { im, n: k };
   // fleurs sauvages
   const F = SEASON === 'hiver' ? 0 : 900, fm = new THREE.InstancedMesh(GEO_BALL_SMALL(), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), Math.max(1, F)); let f = 0;
-  for (let i = 0; i < F * 3 && f < F; i++) { const a = r() * 6.28, d = 6 + r() * 24, x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(x) < GW + 0.5 && Math.abs(z) < GD + 0.5) continue; if (z > GD && Math.abs(x - pathX(z)) < 1) continue; if (zoneAt(x, z, 0.3) >= 0) continue; if (fbm(x * 0.2, z * 0.2) < 0.5) continue;
+  for (let i = 0; i < F * 3 && f < F; i++) { const a = r() * 6.28, d = 6 + r() * 24, x = Math.cos(a) * d, z = Math.sin(a) * d; if (inHouse(x, z, 0.5) || pathDist(x, z) < 1) continue; if (zoneAt(x, z, 0.3) >= 0) continue; if (fbm(x * 0.2, z * 0.2) < 0.5) continue;
     dummy.position.set(x, heightAt(x, z) + 0.25 + r() * 0.2, z); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.035 + r() * 0.03); dummy.updateMatrix(); fm.setMatrixAt(f, dummy.matrix); fm.setColorAt(f++, col(PAL.flowers[Math.floor(r() * PAL.flowers.length)])); }
   fm.count = f; outdoor.add(fm); ext.flowers = { im: fm, n: f, cur: 0.5, target: 0.5 };
 }
 function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
-// Chemin de dalles jusqu'à la porte, et la porte
+// Chemin de dalles : il part des trois portes et s'allonge avec le total jusqu'au portail, puis au-delà.
 {
-  const r = rngOf(44), n = 46, m = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.06, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), n);
-  for (let i = 0; i < n; i++) { const z = GD + 0.5 + i * 0.55, x = pathX(z) + (i % 2 ? 0.22 : -0.22) + (r() - 0.5) * 0.12; dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.3 + r() * 0.08, 1, 0.24 + r() * 0.06); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#9a927e'), r, 0.1)); }
-  m.receiveShadow = true; outdoor.add(m); ext.stones = { im: m, n, cur: 8, target: 8 };
-  const doorM = new THREE.MeshStandardMaterial({ color: 0x8fa58a, roughness: 0.65, metalness: 0 }); // porte peinte vert sauge
-  for (const x of [-0.6, 0.6]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, 2.1, 0.07), doorM); post.position.set(x, 1.05, GD + 0.02); outdoor.add(post); }
-  const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.27, 0.07, 0.07), doorM); lintel.position.set(0, 2.1, GD + 0.02); outdoor.add(lintel);
-  const step = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.5), M.stone); step.position.set(0, 0.06, GD + 0.3); step.receiveShadow = true; outdoor.add(step);
+  const r = rngOf(44), st = [];
+  for (let i = 0; i < 54; i++) { const z = DOOR_Z + 0.25 + i * 0.55, x = pathX(z) + (i % 2 ? 0.22 : -0.22) + (r() - 0.5) * 0.12; st.push([x, z, i * 0.55]); }
+  for (const b of BRANCHES) { const n = Math.floor(b.len / 0.55); for (let i = 1; i <= n; i++) { const u = 1 - i / (n + 1), p = b.curve.getPointAt(u), tn = b.curve.getTangentAt(u), o = (i % 2 ? 0.22 : -0.22) + (r() - 0.5) * 0.12; st.push([p.x - tn.z * o, p.z + tn.x * o, (1 - u) * b.len]); } }
+  st.sort((a, b) => a[2] - b[2]); // dans l'ordre où elles apparaissent : depuis chaque porte, vers le portail
+  const n = st.length, m = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.06, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), n);
+  st.forEach(([x, z], i) => { dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.3 + r() * 0.08, 1, 0.24 + r() * 0.06); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#9a927e'), r, 0.1)); });
+  m.receiveShadow = true; outdoor.add(m); ext.stones = { im: m, n, cur: 9, target: 9 };
 }
 // Muret de pierres sèches autour du jardin, ouvert sur le chemin
 {
@@ -317,24 +430,6 @@ BEDS.forEach((b, bi) => {
   g.position.set(b.x, y - 0.32, b.z); g.visible = false; outdoor.add(g);
   ext.beds.push({ g, crops, y, rise: 0, riseT: 0, grow: 0, growT: 0 });
 });
-// Seconde serre : arrive après un an de jours actifs.
-{
-  const s = SERRE2, g = new THREE.Group(), H = 1.5, R = 2.1;
-  const bar = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.frame); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
-  for (const x of [-s.hx, s.hx]) for (const z of [-s.hz, s.hz]) bar(0.05, H, 0.05, x, H / 2, z);
-  for (const z of [-s.hz, 0, s.hz]) { bar(s.hx * 2, 0.05, 0.05, 0, H, z); bar(s.hx * 2, 0.05, 0.05, 0, 0.3, z); }
-  bar(0.05, 0.05, s.hz * 2, 0, R, 0);
-  const base = new THREE.Mesh(new THREE.BoxGeometry(s.hx * 2, 0.3, s.hz * 2), M.stone); base.position.y = 0.15; base.receiveShadow = true; g.add(base);
-  const pane = (w, h, x, y, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M.glass); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); };
-  pane(s.hx * 2, H - 0.3, 0, (H + 0.3) / 2, -s.hz, 0); pane(s.hx * 2, H - 0.3, 0, (H + 0.3) / 2, s.hz, 0); pane(s.hz * 2, H - 0.3, -s.hx, (H + 0.3) / 2, 0, Math.PI / 2); pane(s.hz * 2, H - 0.3, s.hx, (H + 0.3) / 2, 0, Math.PI / 2);
-  const slope = Math.hypot(s.hx, R - H), ang = Math.atan2(R - H, s.hx);
-  for (const side of [-1, 1]) { const gp = new THREE.Group(), m = new THREE.Mesh(new THREE.PlaneGeometry(slope, s.hz * 2), M.glass); m.rotation.x = -Math.PI / 2; gp.add(m); gp.rotation.z = -side * ang; gp.position.set(side * s.hx / 2, (H + R) / 2, 0); g.add(gp);
-    const e = bar(slope, 0.05, 0.05, side * s.hx / 2, (H + R) / 2, -s.hz); e.rotation.z = side * -ang; const f = bar(slope, 0.05, 0.05, side * s.hx / 2, (H + R) / 2, s.hz); f.rotation.z = side * -ang; }
-  const lamp = new THREE.PointLight(0xffc070, 0, 4, 1.8); lamp.position.set(0, 1.2, 0); g.add(lamp); g.userData.light = lamp;
-  const r = rngOf(4242); for (let i = 0; i < 6; i++) { const c = crop(BED_CATS[i], r); c.position.set((i % 2 ? 0.55 : -0.55), 0.3, -1.0 + Math.floor(i / 2) * 1.0); c.scale.setScalar(1.6); g.add(c); }
-  g.position.set(s.x, heightAt(s.x, s.z) - 0.05, s.z); g.scale.setScalar(0.001); g.visible = false; outdoor.add(g);
-  ext.serre2 = { g, cur: 0, target: 0 };
-}
 // Arbres : conifères et feuillus aux couleurs de la saison, buissons
 {
   const r = rngOf(66), trunks = [], cones = [], blobs = [], bushes = [];
@@ -350,7 +445,7 @@ BEDS.forEach((b, bi) => {
     }
     treeSpots.push([x, z, conifer ? H * 0.34 : H * 0.42]);
   }
-  for (let i = 0; i < 60; i++) { const a = r() * 6.28, x = Math.cos(a) * (11 + r() * 3), z = Math.sin(a) * (11 + r() * 3) * 1.2; if (z > 8 && Math.abs(x - pathX(z)) < 2) continue; bushes.push([x, heightAt(x, z) + 0.18, z, 0.35 + r() * 0.35, r()]); }
+  for (let i = 0; i < 60; i++) { const a = r() * 6.28, x = Math.cos(a) * (11 + r() * 3), z = Math.sin(a) * (11 + r() * 3) * 1.2; if ((z > 8 && Math.abs(x - pathX(z)) < 2) || inHouse(x, z, 1)) continue; bushes.push([x, heightAt(x, z) + 0.18, z, 0.35 + r() * 0.35, r()]); }
   // dégradé vertical dans la géométrie : dessous assombri de 35 %, sommet un peu éclairci (multiplié par la couleur d'instance)
   // boule bosselée (houppiers, buissons) : un bruit de position, normales gardées lisses
   const lumpy = (g, amt, seed) => { const p = g.attributes.position, nr = g.attributes.normal, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const k = 1 + amt * (Math.sin(v.x * 5.1 + seed) * Math.sin(v.y * 4.3 + seed * 2) + 0.6 * Math.sin(v.z * 7.7 - v.x * 3.1 + seed)); nr.setXYZ(i, v.x, v.y, v.z); p.setXYZ(i, v.x * k, v.y * k, v.z * k); } return g; };
@@ -387,7 +482,7 @@ const mist = [];
 // La maison d'Ernest : chaumière de conte (js/cottage3d.js), fenêtres qui s'allument le soir, cheminée qui fume
 const cottageB = buildCottage(THREE, { rng: rngOf(77), M });
 const cottage = cottageB.group; scene.add(cottage);
-{ const cx = -8.6, cz = -6.2; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.75; }
+{ const cx = -6.0, cz = -9.6; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.5; } // derrière les serres, porte vers le jardin
 const smoke = [];
 { const tex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(230,226,215,.7)'); g.addColorStop(1, 'rgba(230,226,215,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
   const base = cottageB.smokeOrigin.clone(); cottage.updateMatrixWorld(); base.applyMatrix4(cottage.matrixWorld);
@@ -395,7 +490,7 @@ const smoke = [];
 // La mare : eau, nénuphars, roseaux
 const pond = { water: null };
 {
-  const px = 7.6, pz = -3.8, py = heightAt(px, pz);
+  const px = 7.2, pz = -9.0, py = heightAt(px, pz); // derrière la serre Bien-être
   // eau non métallique, teinte du ciel (réglée par l'ambiance), et une rive de vase claire autour
   const water = new THREE.Mesh(new THREE.CircleGeometry(1.7, 32), new THREE.MeshStandardMaterial({ color: 0x4f7f84, roughness: 0.42, metalness: 0 })); water.rotation.x = -Math.PI / 2; water.scale.set(1, 0.7, 1); water.position.set(px, py + 0.02, pz); water.receiveShadow = true; scene.add(water); pond.water = water;
   const shore = new THREE.Mesh(new THREE.CircleGeometry(2.05, 32), new THREE.MeshStandardMaterial({ color: 0x9a8a68, roughness: 1, map: TX ? TX.soil : null })); shore.rotation.x = -Math.PI / 2; shore.scale.set(1, 0.72, 1); shore.position.set(px, py + 0.012, pz); shore.receiveShadow = true; scene.add(shore);
@@ -438,8 +533,9 @@ function updateLife(a, t, dt, sd, hour) {
   const { rise } = sunTimes(), mf = Math.max(0, 1 - Math.abs(hour - (rise + 1.2)) / 2.2) * 0.55;
   for (const m of mist) { m.material.opacity = mf; m.visible = mf > 0.01; m.material.color.set(a.fog); }
   // maison : fenêtre et fumée
-  const night = 1 - dayF; cottageB.update(clock.elapsedTime, night); ext.serre2.g.userData.light.intensity = night * 2.5 * ext.serre2.cur;
-  for (const h of halos.cottage) setHalo(h, night * 0.9); setHalo(halos.serre2, night * 0.8 * ext.serre2.cur);
+  const night = 1 - dayF; cottageB.update(clock.elapsedTime, night);
+  for (const h of halos.cottage) setHalo(h, night * 0.9);
+  for (const m of signMats) m.emissiveIntensity = night * 0.45;
   for (const s of smoke) { s.t = (s.t + dt * 0.08) % 1; const k = s.t; s.sp.position.set(s.base.x + Math.sin(k * 6 + t * 0.3) * 0.3 + k * 1.2, s.base.y + k * 4, s.base.z - k * 0.6); s.sp.scale.setScalar(0.4 + k * 1.8); s.sp.material.opacity = (1 - k) * 0.45 * (0.6 + night * 0.4); s.sp.material.color.set(night > 0.5 ? '#8a8a90' : '#e6e2d7'); }
   // oiseaux
   for (const b of birds) { b.g.visible = dayF > 0.4; if (!b.g.visible) continue; b.a += b.v * dt; b.g.position.set(Math.cos(b.a) * b.rad, b.h + Math.sin(t * 0.5 + b.ph) * 0.8, Math.sin(b.a) * b.rad); b.g.rotation.y = -b.a; const f = Math.sin(t * 9 + b.ph) * 0.6; b.L.rotation.z = f; b.R.rotation.z = -f; }
@@ -473,6 +569,10 @@ const GEO = {
   succ: (() => { const g = new THREE.SphereGeometry(0.5, 10, 8); g.translate(0, 0, 0.5); return g; })(),
   blob: new THREE.IcosahedronGeometry(1, 1),
   ball: new THREE.IcosahedronGeometry(1, 0),
+  needle: leafGeo(0.006, 0.055, 0.01, 0.2, 2),
+  // colonne de cactus à côtes, hauteur 1, rayon 0,5, sommet arrondi
+  cactus: (() => { const g = new THREE.LatheGeometry([[0, 0], [0.44, 0], [0.5, 0.08], [0.5, 0.78], [0.43, 0.93], [0.24, 0.99], [0, 1]].map(([x, y]) => new THREE.Vector2(x, y)), 16); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), k = 1 + 0.09 * Math.cos(Math.atan2(z, x) * 8); p.setX(i, x * k); p.setZ(i, z * k); } g.computeVertexNormals(); return g; })(),
 };
 const pot = (() => {
   const pts = [[0, 0], [0.08, 0], [0.1, 0.02], [0.125, 0.17], [0.15, 0.175], [0.15, 0.215], [0.128, 0.215], [0.12, 0.19]].map(([x, y]) => new THREE.Vector2(x, y));
@@ -515,17 +615,18 @@ function succulent(rng, size) {
   g.add(im); return g;
 }
 const FLOWERS = ['#e9c6e0', '#f4efe6', '#c7a6e8', '#f2b23d', '#f0907a', '#9ec8f0', '#e86f8a'];
-function flowering(rng, size) {
-  const g = new THREE.Group(), stems = 3 + Math.floor(rng() * 5), fc = col(FLOWERS[Math.floor(rng() * FLOWERS.length)]);
+const VIOLETS = ['#9d7cc8', '#b28fe0', '#7f5fb8', '#c7a6e8', '#8a6ac8'];
+function flowering(rng, size, o = {}) {
+  const pal = o.palette || FLOWERS, g = new THREE.Group(), stems = 3 + Math.floor(rng() * 5), fc = col(pal[Math.floor(rng() * pal.length)]);
   const leaves = inst(GEO.leafMid, M.leaf, stems * 6), petals = inst(GEO.petal, M.leaf, stems * 7), cores = inst(GEO.ball, M.leafFlat, stems); let kl = 0, kp = 0;
-  const lavender = rng() < 0.3; const spikes = lavender ? inst(GEO.ball, M.leafFlat, stems * 14) : null; let ks = 0;
+  const lavender = rng() < (o.lavender ?? 0.3); const spikes = lavender ? inst(GEO.ball, M.leafFlat, stems * 14) : null; let ks = 0;
   for (let s = 0; s < stems; s++) {
     const a = rng() * Math.PI * 2, r = rng() * 0.06, H = size * (0.35 + rng() * 0.3), lean = 0.05 + rng() * 0.12;
     const pts = [V(Math.cos(a) * r, 0, Math.sin(a) * r), V(Math.cos(a) * (r + lean * 0.4), H * 0.5, Math.sin(a) * (r + lean * 0.4)), V(Math.cos(a) * (r + lean), H, Math.sin(a) * (r + lean))];
     const { mesh, curve } = tube(pts, 0.0045, M.stem, 8); g.add(mesh);
     for (let i = 0; i < 3; i++) { const t = 0.15 + i * 0.22, p = curve.getPoint(t); for (const sd of [-1, 1]) { dummy.position.copy(p); dummy.rotation.set(0.9 * sd, a + i, 0.3); dummy.scale.setScalar(size * (1.1 - t)); dummy.updateMatrix(); leaves.setMatrixAt(kl, dummy.matrix); leaves.setColorAt(kl++, vary(col('#4f8a4a'), rng, 0.08)); } }
     const top = curve.getPoint(1);
-    if (lavender) { for (let i = 0; i < 14; i++) { dummy.position.copy(top).add(V((rng() - 0.5) * 0.02, -i * 0.012 * size * 2, (rng() - 0.5) * 0.02)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.011 * (1 - i / 20)); dummy.updateMatrix(); spikes.setMatrixAt(ks, dummy.matrix); spikes.setColorAt(ks++, col('#9d7cc8')); } }
+    if (lavender) { for (let i = 0; i < 14; i++) { dummy.position.copy(top).add(V((rng() - 0.5) * 0.02, -i * 0.012 * size * 2, (rng() - 0.5) * 0.02)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.011 * (1 - i / 20)); dummy.updateMatrix(); spikes.setMatrixAt(ks, dummy.matrix); spikes.setColorAt(ks++, vary(col('#9d7cc8'), rng, 0.08)); } }
     else {
       for (let i = 0; i < 7; i++) { dummy.position.copy(top); dummy.rotation.set(-1.2, (i / 7) * Math.PI * 2, 0, 'YXZ'); dummy.scale.setScalar(size * 1.5); dummy.updateMatrix(); petals.setMatrixAt(kp, dummy.matrix); petals.setColorAt(kp++, vary(fc, rng, 0.06)); }
       dummy.position.copy(top).add(V(0, 0.01, 0)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.014); dummy.updateMatrix(); cores.setMatrixAt(s, dummy.matrix); cores.setColorAt(s, col('#e8b440'));
@@ -546,15 +647,69 @@ function broadleaf(rng, size) {
   }
   g.add(im); return g;
 }
-function grass(rng, size) {
-  const g = new THREE.Group(), n = 36 + Math.floor(rng() * 30), im = inst(GEO.blade, M.leaf, n), base = col(['#7aa35e', '#9cc46a', '#5f8f4a', '#b8c48a'][Math.floor(rng() * 4)]);
-  for (let i = 0; i < n; i++) { const a = rng() * Math.PI * 2, r = rng() * 0.07; dummy.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); dummy.rotation.set((rng() - 0.5) * 0.3, a, 0, 'YXZ'); dummy.rotateX(-0.15 - rng() * 0.35); dummy.scale.set(1 + rng(), size * (0.35 + rng() * 0.45), 1); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(base, rng, 0.1)); }
+function grass(rng, size, tall = false) {
+  const g = new THREE.Group(), n = (tall ? 28 : 36) + Math.floor(rng() * 30), im = inst(GEO.blade, M.leaf, n), base = col(['#7aa35e', '#9cc46a', '#5f8f4a', '#b8c48a'][Math.floor(rng() * 4)]);
+  const plumes = tall ? inst(GEO.ball, M.leafFlat, 12) : null; let kp = 0;
+  for (let i = 0; i < n; i++) { const a = rng() * Math.PI * 2, r = rng() * 0.07, h = size * (0.35 + rng() * 0.45); dummy.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); dummy.rotation.set((rng() - 0.5) * 0.3, a, 0, 'YXZ'); dummy.rotateX(-0.15 - rng() * 0.35); dummy.scale.set(1 + rng(), h, 1); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(base, rng, 0.1));
+    if (plumes && kp < 12 && i % 3 === 0) { const tip = V(0, 1, -0.25).applyMatrix4(dummy.matrix); dummy.position.copy(tip); dummy.rotation.set(0, 0, 0); dummy.scale.set(0.012, 0.045, 0.012); dummy.updateMatrix(); plumes.setMatrixAt(kp, dummy.matrix); plumes.setColorAt(kp++, vary(col('#d8c890'), rng, 0.1)); } }
+  g.add(im); if (plumes) { plumes.count = kp; g.add(plumes); } return g;
+}
+// Vie perso : fleurs des champs (marguerites, coquelicots, bleuets) dans un pied d'herbes
+function wildflowers(rng, size) {
+  const g = grass(rng, size * 0.75), heads = 4 + Math.floor(rng() * 5), petals = inst(GEO.petal, M.leaf, heads * 8), cores = inst(GEO.ball, M.leafFlat, heads); let kp = 0;
+  const kinds = [['#f6f1e4', '#e8b440'], ['#d8402e', '#2a1a14'], ['#4f7fd8', '#2f3f80'], ['#f2d24a', '#c98a28'], ['#e9a6c8', '#e8b440']];
+  for (let s = 0; s < heads; s++) {
+    const a = rng() * 6.28, r = rng() * 0.07, H = size * (0.45 + rng() * 0.35), [pc, cc] = kinds[Math.floor(rng() * kinds.length)];
+    const { mesh, curve } = tube([V(Math.cos(a) * r, 0, Math.sin(a) * r), V(Math.cos(a) * (r + 0.02), H * 0.55, Math.sin(a) * (r + 0.02)), V(Math.cos(a) * (r + 0.05 + rng() * 0.05), H, Math.sin(a) * (r + 0.05))], 0.0035, M.stem, 6); g.add(mesh);
+    const top = curve.getPoint(1), np = pc === '#d8402e' ? 5 : 8;
+    for (let i = 0; i < np; i++) { dummy.position.copy(top); dummy.rotation.set(pc === '#d8402e' ? -0.6 : -1.35, (i / np) * Math.PI * 2, 0, 'YXZ'); dummy.scale.setScalar(size * (pc === '#d8402e' ? 1.9 : 1.3)); dummy.updateMatrix(); petals.setMatrixAt(kp, dummy.matrix); petals.setColorAt(kp++, vary(col(pc), rng, 0.05)); }
+    dummy.position.copy(top).add(V(0, 0.008, 0)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.012); dummy.updateMatrix(); cores.setMatrixAt(s, dummy.matrix); cores.setColorAt(s, col(cc));
+  }
+  petals.count = kp; g.add(petals, cores); return g;
+}
+// Boulot : ficus, un petit tronc et un houppier de feuilles vernies
+function ficus(rng, size) {
+  const g = new THREE.Group(), H = size * (0.7 + rng() * 0.25), lean = V((rng() - 0.5) * 0.08, 0, (rng() - 0.5) * 0.08);
+  const { mesh, curve } = tube([V(0, 0, 0), V(lean.x * 0.3, H * 0.45, lean.z * 0.3), V(lean.x, H, lean.z)], 0.01 * size + 0.006, M.bark, 8); g.add(mesh);
+  const tips = [curve.getPoint(1)];
+  for (let b = 0; b < 4; b++) { const a = b * 1.57 + rng() * 0.8, p0 = curve.getPoint(0.55 + b * 0.1), p1 = p0.clone().add(V(Math.cos(a) * 0.13 * size, (0.08 + rng() * 0.08) * size, Math.sin(a) * 0.13 * size)); g.add(tube([p0, p0.clone().lerp(p1, 0.5).add(V(0, 0.015, 0)), p1], 0.003 * size + 0.003, M.bark, 4).mesh); tips.push(p1); }
+  const n = 70 + Math.floor(rng() * 30), im = inst(GEO.leafMid, M.leaf, n), base = col(['#2f5a2e', '#3a6a32', '#2a4f2c'][Math.floor(rng() * 3)]);
+  for (let i = 0; i < n; i++) { const c = tips[i % tips.length], d = V(rng() - 0.5, rng() * 0.8 - 0.25, rng() - 0.5).normalize(); dummy.position.copy(c).addScaledVector(d, 0.16 * size * (0.35 + rng() * 0.65)); dummy.quaternion.setFromUnitVectors(UP, d.clone().add(V(0, 0.5, 0)).normalize()); dummy.rotateY(rng() * 6); dummy.scale.setScalar(size * (0.6 + rng() * 0.3)); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(base, rng, 0.08)); }
   g.add(im); return g;
+}
+// Corps : cactus colonnaire, un ou deux bras, parfois une fleur
+function cactus(rng, size) {
+  const g = new THREE.Group(), arms = Math.floor(rng() * 3), im = inst(GEO.cactus, M.cactus, 1 + arms * 2), base = col(['#4f8a5a', '#5f9a62', '#46805a'][Math.floor(rng() * 3)]), H = size * (0.4 + rng() * 0.25), R = size * 0.085;
+  let k = 0; const put = (x, y, z, sx, sy, rz = 0) => { dummy.position.set(x, y, z); dummy.rotation.set(0, 0, rz); dummy.scale.set(sx, sy, sx); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.06)); };
+  put(0, 0, 0, R * 2, H);
+  for (let a = 0; a < arms; a++) { const sd = a ? -1 : 1, y = H * (0.3 + rng() * 0.25), L = R * 1.6, ar = R * 1.3; put(sd * R * 0.5, y, 0, ar, L, -sd * Math.PI / 2); put(sd * (R * 0.5 + L), y - ar * 0.3, 0, ar, H * (0.3 + rng() * 0.2)); }
+  g.add(im);
+  if (rng() < 0.45) { const f = inst(GEO.petal, M.leaf, 6); for (let i = 0; i < 6; i++) { dummy.position.set(0, H * 0.98, 0); dummy.rotation.set(-0.9, (i / 6) * 6.28, 0, 'YXZ'); dummy.scale.setScalar(size * 1.4); dummy.updateMatrix(); f.setMatrixAt(i, dummy.matrix); f.setColorAt(i, col(['#e86f8a', '#f2b23d', '#f4efe6'][Math.floor(rng() * 3)])); } g.add(f); }
+  return g;
+}
+// Esprit : un coussin de mousse, des pointes de jeunes frondes
+function mossy(rng, size) {
+  const g = new THREE.Group(), n = 70 + Math.floor(rng() * 40), im = inst(GEO.blob, M.leafFlat, n);
+  for (let i = 0; i < n; i++) { const a = rng() * 6.28, d = Math.sqrt(rng()) * 0.12, y = Math.sqrt(Math.max(0, 1 - (d / 0.13) ** 2)) * 0.07 * size * 1.4; dummy.position.set(Math.cos(a) * d, y, Math.sin(a) * d); dummy.rotation.set(rng(), rng() * 6, 0); const s = 0.018 + rng() * 0.02; dummy.scale.set(s * 1.4, s, s * 1.4); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(col(rng() < 0.2 ? '#8fb04a' : rng() < 0.5 ? '#4f7a3a' : '#5f8a40'), rng, 0.12)); }
+  g.add(im); const f = fern(rng, size * 0.45); f.position.y = 0.04; g.add(f); return g;
 }
 function aromatic(rng, size) {
   const g = new THREE.Group(), n = 70 + Math.floor(rng() * 50), im = inst(GEO.ball, M.leafFlat, n), base = col(['#6c9a52', '#7f9f6a', '#5d8a4e'][Math.floor(rng() * 3)]);
   for (let i = 0; i < n; i++) { const u = rng(), v = rng(), th = u * Math.PI * 2, ph = Math.acos(v), R = size * 0.2; dummy.position.set(Math.sin(ph) * Math.cos(th) * R, Math.cos(ph) * R * 0.9 + R * 0.35, Math.sin(ph) * Math.sin(th) * R); dummy.rotation.set(rng() * 3, rng() * 3, 0); dummy.scale.setScalar(0.012 + rng() * 0.012); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(base, rng, 0.12)); }
   g.add(im); return g;
+}
+// Cuisine : basilic (grandes feuilles tendres par paires) et romarin (tiges dressées, aiguilles)
+function basil(rng, size) {
+  const g = new THREE.Group(), stems = 3 + Math.floor(rng() * 3), im = inst(GEO.leafMid, M.leaf, stems * 10), base = col(['#5fae3d', '#6cba44', '#4f9a36'][Math.floor(rng() * 3)]); let k = 0;
+  for (let s = 0; s < stems; s++) { const a = (s / stems) * 6.28 + rng() * 0.5, H = size * (0.22 + rng() * 0.15), top = V(Math.cos(a) * 0.04, H, Math.sin(a) * 0.04); const { mesh, curve } = tube([V(0, 0, 0), V(Math.cos(a) * 0.02, H * 0.5, Math.sin(a) * 0.02), top], 0.004, M.stem, 6); g.add(mesh);
+    for (let i = 0; i < 5; i++) { const t = 0.3 + i * 0.17, p = curve.getPoint(Math.min(1, t)); for (const sd of [-1, 1]) { dummy.position.copy(p); dummy.rotation.set(0.8 + (1 - t) * 0.5, a + sd * 1.57 + i * 1.57, 0, 'YXZ'); dummy.scale.setScalar(size * (1.6 - t * 0.7)); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.07)); } } }
+  im.count = k; g.add(im); return g;
+}
+function rosemary(rng, size) {
+  const g = new THREE.Group(), stems = 6 + Math.floor(rng() * 5), im = inst(GEO.needle, M.leaf, stems * 22), base = col('#5d7a5a'); let k = 0;
+  for (let s = 0; s < stems; s++) { const a = rng() * 6.28, r = rng() * 0.05, H = size * (0.35 + rng() * 0.3), tilt = 0.04 + rng() * 0.1; const { mesh, curve } = tube([V(Math.cos(a) * r, 0, Math.sin(a) * r), V(Math.cos(a) * (r + tilt * 0.5), H * 0.5, Math.sin(a) * (r + tilt * 0.5)), V(Math.cos(a) * (r + tilt), H, Math.sin(a) * (r + tilt))], 0.003, M.bark, 6); g.add(mesh);
+    for (let i = 0; i < 22; i++) { const t = 0.15 + (i / 22) * 0.85, p = curve.getPoint(t); dummy.position.copy(p); dummy.rotation.set(0.5 + rng() * 0.5, i * 2.4, 0, 'YXZ'); dummy.scale.setScalar(1.5 + rng() * 0.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.08)); } }
+  im.count = k; g.add(im); return g;
 }
 function bonsai(rng, size) {
   const g = new THREE.Group(), foliage = []; const base = col('#4f8a4a');
@@ -570,109 +725,129 @@ function bonsai(rng, size) {
   for (const f of foliage) for (let j = 0; j < 3; j++) { dummy.position.copy(f).add(V((rng() - 0.5) * 0.12, (rng() - 0.2) * 0.06, (rng() - 0.5) * 0.12).multiplyScalar(size * 1.5)); dummy.rotation.set(rng(), rng(), rng()); const s = size * (0.09 + rng() * 0.06); dummy.scale.set(s * 1.3, s * 0.7, s * 1.3); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.14)); }
   g.add(im); return g;
 }
-function mushrooms(rng) {
-  const g = new THREE.Group(), capM = new THREE.MeshStandardMaterial({ color: 0xc9783e, roughness: 0.7 }), stemM = new THREE.MeshStandardMaterial({ color: 0xefe6d2, roughness: 0.9 });
-  for (let i = 0; i < 4 + Math.floor(rng() * 4); i++) { const h = 0.04 + rng() * 0.05, x = (rng() - 0.5) * 0.25, z = (rng() - 0.5) * 0.25; const st = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.011, h, 6), stemM); st.position.set(x, h / 2, z); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.025 + rng() * 0.02, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM); cap.position.set(x, h, z); cap.scale.y = 0.7; g.add(st, cap); }
-  g.traverse((o) => { o.castShadow = true; }); return g;
-}
-const SPECIES = { fern, succulent, flowering, broadleaf, grass, aromatic };
+const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildflowers, aromatic, basil, rosemary, flowering,
+  lavender: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 1 }), violet: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 0.25 }),
+  thyme: aromatic, tallgrass: (r, s) => grass(r, s * 1.6, true) };
 
-// ---------- Emplacements ----------
-const SPECIES_BY_CAT = { revision: 'flowering', corps: 'succulent', esprit: 'fern', cuisine: 'aromatic', boulot: 'broadleaf', perso: 'grass' };
+// ---------- Emplacements (coordonnées locales, les mêmes dans chaque serre) ----------
+// Chaque catégorie a son allure : une espèce tirée parmi les siennes, à partir de la graine de la plante.
+const SPECIES_BY_CAT = {
+  revision: ['lavender', 'lavender', 'violet'], boulot: ['ficus', 'broadleaf'],
+  corps: ['succulent', 'cactus'], esprit: ['fern', 'fern', 'mossy'], cuisine: ['thyme', 'basil', 'rosemary'],
+  perso: ['wildflowers', 'tallgrass'],
+};
+const speciesOf = (p) => { const l = SPECIES_BY_CAT[p.cat] || SPECIES_BY_CAT.perso; return l[Math.floor(rngOf((p.seed ^ 0x5bd1e995) >>> 0)() * l.length)]; };
 const SLOTS = [];
 { const t = [];
-  for (const s of [1, -1]) for (let i = 0; i < 12; i++) for (const row of [0, 1]) t.push({ x: s * (TABLE_X - 0.25 + row * 0.45), z: GD - 2.1 - i * 0.82 + row * 0.35, y: TABLE_Y + 0.03, i, row, s, floor: false });
-  t.sort((a, b) => (a.i - b.i) || (a.row - b.row) || (a.s - b.s));
+  for (const s of [1, -1]) for (let i = 0; i < 6; i++) for (const row of [0, 1]) t.push({ x: s * (TBX - 0.2 + row * 0.42), z: TZ1 - 0.45 - i * 0.92 + row * 0.35, y: TY + 0.03, i, row, s, floor: false });
+  t.sort((a, b) => (a.i - b.i) || (a.row - b.row) || (a.s - b.s)); // d'abord près de la porte
   SLOTS.push(...t);
-  for (const [x, z] of [[1.35, 2.6], [-1.35, 1.2], [1.35, -0.8], [-1.35, -3.2], [1.35, -4.4], [-1.35, 3.9]]) SLOTS.push({ x, z, y: 0, floor: true });
+  for (const x of [1.55, -1.55]) SLOTS.push({ x, z: HD - 0.55, y: 0, floor: true }); // deux grands pots au sol, de part et d'autre de la porte
 }
-const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, sway, slot }
-function buildPlant(p, slotIdx) {
-  const sl = SLOTS[slotIdx], rng = rngOf(p.seed >>> 0), sp = SPECIES_BY_CAT[p.cat] || 'grass', g = new THREE.Group();
-  if (sl.floor) { g.add(makePot(2.1, M.terraDark)); const pl = SPECIES[sp](rng, sp === 'broadleaf' ? 0.95 : 1.2); pl.position.y = 0.42; g.add(pl); g.position.set(sl.x, 0, sl.z); g.rotation.y = rng() * 6; greenhouse.add(g); return { obj: g, plant: pl }; }
-  const big = sp === 'broadleaf' ? 1.25 : 1, ps = (0.85 + rng() * 0.35) * big;
+export const SLOTS_PER_HOUSE = SLOTS.length;
+const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, sway, slot, house }
+for (const h of HOUSES) h.used = new Array(SLOTS.length).fill(false);
+function buildPlant(p, h, slotIdx) {
+  const sl = SLOTS[slotIdx], rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(), tall = sp === 'broadleaf' || sp === 'ficus';
+  if (sl.floor) { g.add(makePot(2.1, M.terraDark)); const pl = compact(SPECIES[sp](rng, tall ? 0.95 : 1.2)); pl.position.y = 0.42; g.add(pl); g.position.set(sl.x, 0, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
+  const big = tall ? 1.2 : 1, ps = (0.85 + rng() * 0.35) * big;
   g.add(makePot(ps, rng() < 0.25 ? M.terraDark : M.terra));
-  const pl = SPECIES[sp](rng, 0.55 + rng() * 0.35); pl.position.y = 0.19 * ps; g.add(pl);
+  const pl = compact(SPECIES[sp](rng, 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; g.add(pl);
   g.position.set(sl.x + (rng() - 0.5) * 0.08, sl.y, sl.z + (rng() - 0.5) * 0.08); g.rotation.y = rng() * Math.PI * 2;
-  greenhouse.add(g); return { obj: g, plant: pl };
+  h.g.add(g); return { obj: g, plant: pl };
 }
-// bonsaï du fond : un objectif, une branche par étape franchie
-const pedestal = new THREE.Group(); greenhouse.add(pedestal);
-{ const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.42, 0.7, 20), M.stone); ped.position.set(0, 0.35, -GD + 0.9); ped.castShadow = ped.receiveShadow = true; pedestal.add(ped);
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.4), M.terraDark); tray.position.set(0, 0.74, -GD + 0.9); pedestal.add(tray); }
-let bonsaiObj = null, bonsaiKey = '';
-function setBonsai(b) {
-  const key = b ? `${b.seed}:${b.branches}` : '';
-  if (key === bonsaiKey) return; bonsaiKey = key;
-  if (bonsaiObj) { greenhouse.remove(bonsaiObj); bonsaiObj = null; }
-  if (!b) return;
-  bonsaiObj = bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches)); bonsaiObj.position.set(0, 0.78, -GD + 0.9); greenhouse.add(bonsaiObj);
+// Bonsaïs du fond : un par objectif actif de la catégorie (trois au plus), une branche par étape franchie ;
+// le plus fourni au centre, sur le grand socle.
+const BONSAI_SPOTS = [[0, -HD + 0.85, 1], [-1.15, -HD + 0.7, 0.78], [1.15, -HD + 0.7, 0.78]];
+const pedestals = (() => {
+  const n = HOUSES.length * BONSAI_SPOTS.length, ped = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.42, 0.7, 20), M.stone, n), tray = new THREE.InstancedMesh(new THREE.BoxGeometry(0.62, 0.08, 0.4), M.terraDark, n);
+  ped.castShadow = ped.receiveShadow = tray.castShadow = true; scene.add(ped, tray);
+  const set = (h, j, on) => { const [x, z, s] = BONSAI_SPOTS[j], i = HOUSES.indexOf(h) * BONSAI_SPOTS.length + j, k = on ? s : 0.0001, W = h.g.matrixWorld;
+    m4.compose(V(x, 0.35 * k, z), Q0, V(k, k, k)); ped.setMatrixAt(i, W.clone().multiply(m4));
+    m4.compose(V(x, 0.74 * k, z), Q0, V(k, k, k)); tray.setMatrixAt(i, W.clone().multiply(m4));
+    ped.instanceMatrix.needsUpdate = tray.instanceMatrix.needsUpdate = true; };
+  for (const h of HOUSES) for (let j = 0; j < BONSAI_SPOTS.length; j++) set(h, j, j === 0);
+  return { set };
+})();
+for (const h of HOUSES) h.bonsai = BONSAI_SPOTS.map(() => ({ obj: null, key: '' }));
+function setBonsai(h, list) {
+  BONSAI_SPOTS.forEach(([x, z, s], j) => {
+    const b = list[j], B = h.bonsai[j], key = b ? `${b.seed}:${b.branches}` : '';
+    if (key === B.key) return; B.key = key;
+    if (B.obj) { h.g.remove(B.obj); disposeObj(B.obj); B.obj = null; }
+    if (j > 0) pedestals.set(h, j, !!b);
+    if (!b) return;
+    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.78 * s, z); h.g.add(B.obj);
+  });
 }
-// suspensions
+// suspensions : trois par serre, elles descendent avec les choses faites de la serre
 const hanging = [];
-[[-1.0, -2.6], [1.0, -0.2], [-1.0, 2.2], [1.0, 4.2]].forEach(([x, z], i) => {
-  const rng = rngOf(900 + i), g = new THREE.Group(), topY = GR - Math.abs(x) * (GR - GH) / GW;
+for (const h of HOUSES) [[-0.8, 1.7], [0.8, -0.5], [-0.8, -2.5]].forEach(([x, z], i) => {
+  const rng = rngOf(900 + i + HOUSES.indexOf(h) * 10), g = new THREE.Group(), topY = roofY(x), y0 = 1.95;
   const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.terra); bowl.castShadow = true; g.add(bowl);
-  const y0 = 2.05; for (let c = 0; c < 3; c++) { const a = (c / 3) * Math.PI * 2; const p = V(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15), q = V(0, topY - y0, 0); const d = q.clone().sub(p); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, d.length(), 4), M.chain); m.position.copy(p).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); g.add(m); }
+  for (let c = 0; c < 3; c++) { const a = (c / 3) * Math.PI * 2; const p = V(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15), q = V(0, topY - y0, 0); const d = q.clone().sub(p); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, d.length(), 4), M.chain); m.position.copy(p).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); g.add(m); }
   const strands = 9, im = inst(GEO.heart, M.leaf, strands * 16); let k = 0;
   for (let s = 0; s < strands; s++) {
-    const a = (s / strands) * Math.PI * 2 + rng() * 0.3, L = 0.5 + rng() * 0.6;
+    const a = (s / strands) * Math.PI * 2 + rng() * 0.3, L = 0.4 + rng() * 0.5;
     const pts = [V(Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12), V(Math.cos(a) * 0.24, -L * 0.3, Math.sin(a) * 0.24), V(Math.cos(a) * 0.2, -L, Math.sin(a) * 0.2)];
     const { mesh, curve } = tube(pts, 0.003, M.stem, 10); g.add(mesh);
     for (let i = 0; i < 16; i++) { const t = i / 16, p = curve.getPoint(t); dummy.position.copy(p); dummy.rotation.set(Math.PI * (0.5 + rng() * 0.5), a + (i % 2 ? 1 : -1) * 0.9, 0, 'YXZ'); dummy.scale.setScalar(1 + rng() * 0.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(col('#5fae6d'), rng, 0.1)); }
   }
-  g.add(im); g.position.set(x, y0, z); greenhouse.add(g); g.visible = false; hanging.push({ g, phase: rng() * 10, cur: 0, target: 0 });
-});// grimpantes le long des poteaux puis sous le toit
-const vines = [];
-[[GW - 0.08, -GD + (2 * GD) / bays * 2], [-GW + 0.08, -GD + (2 * GD) / bays * 4], [GW - 0.08, -GD + (2 * GD) / bays * 6], [-GW + 0.08, -GD + (2 * GD) / bays * 8]].forEach(([x, z], i) => {
-  const rng = rngOf(300 + i), s = Math.sign(x), pts = [];
-  for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(V(x - s * 0.04 * Math.sin(t * 9), 0.5 + t * (GH - 0.5), z + 0.05 * Math.cos(t * 7))); }
-  for (let k = 1; k <= 10; k++) { const t = k / 10; pts.push(V(lerp(x, s * 0.4, t) - s * 0.05, lerp(GH, GR - (GR - GH) * 0.4 / GW, t) - 0.08 + 0.04 * Math.sin(t * 8), z + 0.06 * Math.sin(t * 6))); }
-  const curve = new THREE.CatmullRomCurve3(pts), geo = new THREE.TubeGeometry(curve, 120, 0.012, 5, false), mesh = new THREE.Mesh(geo, M.stem); mesh.castShadow = true;
-  const n = 140, im = inst(GEO.heart, M.leaf, n);
-  for (let k = 0; k < n; k++) { const t = k / n, p = curve.getPoint(t), tan = curve.getTangent(t); const side = new THREE.Vector3().crossVectors(tan, V(s, 0, 0)).normalize(); dummy.position.copy(p).addScaledVector(side, (k % 2 ? 1 : -1) * 0.02); dummy.quaternion.setFromUnitVectors(UP, V(-s, 0.6 + rng() * 0.4, (rng() - 0.5)).normalize()); dummy.rotateY((rng() - 0.5) * 1.2); dummy.scale.setScalar(1.6 + rng() * 1.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, vary(col('#4f8a4a'), rng, 0.12)); }
-  greenhouse.add(mesh, im); vines.push({ mesh, im, n, idx: geo.index.count, cur: 0, target: 0 });
+  g.add(im); compact(g); g.position.set(x, y0, z); h.g.add(g); g.visible = false; hanging.push({ g, house: h, i, phase: rng() * 10, cur: 0, target: 0 });
 });
-// mousses : sur la terre des pots, au pied des tables, entre les dalles
-const moss = (() => {
-  const r = rngOf(5), n = 1400, im = new THREE.InstancedMesh(GEO.blob, M.leafFlat, n); im.receiveShadow = true;
+// grimpantes : trois par serre, le long des poteaux puis sous le toit
+const vines = [];
+for (const h of HOUSES) [[HW - 0.08, 1], [-HW + 0.08, 3], [HW - 0.08, 5]].forEach(([x, bay], i) => {
+  const z = -HD + (2 * HD) / BAYS * bay, rng = rngOf(300 + i + HOUSES.indexOf(h) * 10), s = Math.sign(x), pts = [];
+  for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(V(x - s * 0.04 * Math.sin(t * 9), 0.5 + t * (HH - 0.5), z + 0.05 * Math.cos(t * 7))); }
+  for (let k = 1; k <= 10; k++) { const t = k / 10; pts.push(V(lerp(x, s * 0.4, t) - s * 0.05, lerp(HH, roofY(0.4), t) - 0.08 + 0.04 * Math.sin(t * 8), z + 0.06 * Math.sin(t * 6))); }
+  const curve = new THREE.CatmullRomCurve3(pts), geo = new THREE.TubeGeometry(curve, 100, 0.012, 5, false), mesh = new THREE.Mesh(geo, M.stem); mesh.castShadow = true;
+  const n = 110, im = inst(GEO.heart, M.leaf, n);
+  for (let k = 0; k < n; k++) { const t = k / n, p = curve.getPoint(t), tan = curve.getTangent(t); const side = new THREE.Vector3().crossVectors(tan, V(s, 0, 0)).normalize(); dummy.position.copy(p).addScaledVector(side, (k % 2 ? 1 : -1) * 0.02); dummy.quaternion.setFromUnitVectors(UP, V(-s, 0.6 + rng() * 0.4, (rng() - 0.5)).normalize()); dummy.rotateY((rng() - 0.5) * 1.2); dummy.scale.setScalar(1.6 + rng() * 1.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, vary(col('#4f8a4a'), rng, 0.12)); }
+  h.g.add(mesh, im); vines.push({ mesh, im, n, house: h, i, idx: geo.index.count, cur: 0, target: 0 });
+});
+// mousses : au pied des murs, au bord de l'allée, entre les dalles ; une nappe par serre
+const MOSS_MAX = 600;
+const mosses = {};
+for (const h of HOUSES) {
+  const r = rngOf(5 + HOUSES.indexOf(h)), n = MOSS_MAX, im = new THREE.InstancedMesh(GEO.blob, M.leafFlat, n); im.receiveShadow = true;
   for (let i = 0; i < n; i++) {
-    let x, y = 0, z;
-    if (i % 3 === 0) { const s = r() < 0.5 ? -1 : 1; x = s * (GW - 0.15 - r() * 0.5); z = (r() - 0.5) * GD * 1.9; }
-    else if (i % 3 === 1) { x = (r() < 0.5 ? -1 : 1) * (0.62 + r() * 0.35); z = (r() - 0.5) * GD * 1.9; }
-    else { x = (r() - 0.5) * 1.2; z = GD - 0.2 - Math.floor(r() * 34) * 0.39 + 0.18; }
-    dummy.position.set(x, y, z); dummy.rotation.set(0, r() * 6, 0); const s = 0.012 + r() * 0.03; dummy.scale.set(s * 1.5, s * 0.55, s * 1.5); dummy.updateMatrix();
+    let x, z;
+    if (i % 3 === 0) { const s = r() < 0.5 ? -1 : 1; x = s * (HW - 0.15 - r() * 0.4); z = (r() - 0.5) * HD * 1.9; }
+    else if (i % 3 === 1) { x = (r() < 0.5 ? -1 : 1) * (0.6 + r() * 0.32); z = (r() - 0.5) * HD * 1.9; }
+    else { x = (r() - 0.5) * 1.2; z = HD - 0.2 - Math.floor(r() * 21) * 0.39 + 0.18; }
+    dummy.position.set(x, 0, z); dummy.rotation.set(0, r() * 6, 0); const s = 0.012 + r() * 0.03; dummy.scale.set(s * 1.5, s * 0.55, s * 1.5); dummy.updateMatrix();
     im.setMatrixAt(i, dummy.matrix); im.setColorAt(i, vary(col(r() < 0.15 ? '#7f9a4a' : r() < 0.5 ? '#3f6a35' : '#4f7a3a'), r, 0.12));
   }
-  im.count = 0; greenhouse.add(im); return { im, n, cur: 0, target: 0 };
-})();
-const shrooms = []; [[-0.85, 3.9], [0.9, 1.0], [-0.95, -1.8], [0.8, -4.9]].forEach(([x, z], i) => { const m = mushrooms(rngOf(60 + i)); m.position.set(x, 0, z); m.visible = false; greenhouse.add(m); shrooms.push(m); });
-// ---------- Lanternes et lucioles ----------
-const lanterns = [];
-for (const z of [-3.6, 0, 3.6]) {
-  const g = new THREE.Group(); const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.22, 6, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2116, metalness: 0.6, roughness: 0.5, wireframe: true })); g.add(cage);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.08, 6), M.chain); cap.position.y = 0.15; g.add(cap);
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), M.bulb); g.add(bulb);
-  const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, GR - 2.75, 4), M.chain); ch.position.y = (GR - 2.75) / 2 + 0.15; g.add(ch);
-  const light = new THREE.PointLight(0xffb85c, 9, 10, 1.5); g.add(light);
-  g.position.set(0, 2.75, z); greenhouse.add(g); lanterns.push({ g, light });
+  im.count = 0; h.g.add(im); mosses[h.id] = { im, n, cur: 0, target: 0 };
 }
+// champignons des jours gris : deux InstancedMesh pour les trois serres
+const shrooms = (() => {
+  const st = [], capM = new THREE.MeshStandardMaterial({ color: 0xc9783e, roughness: 0.7 }), stemM = new THREE.MeshStandardMaterial({ color: 0xefe6d2, roughness: 0.9 });
+  HOUSES.forEach((h, hi) => [[-0.85, 2.9], [0.9, 0.4], [-0.9, -1.8]].forEach(([cx, cz], ci) => { const r = rngOf(60 + hi * 7 + ci); for (let i = 0, n = 4 + Math.floor(r() * 4); i < n; i++) st.push([toWorld(h, cx + (r() - 0.5) * 0.25, 0, cz + (r() - 0.5) * 0.25), 0.04 + r() * 0.05, 0.025 + r() * 0.02]); }));
+  const sm = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.011, 1, 6), stemM, st.length), cm = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM, st.length);
+  st.forEach(([p, hh, cr], i) => { dummy.rotation.set(0, 0, 0); dummy.position.set(p.x, hh / 2, p.z); dummy.scale.set(1, hh, 1); dummy.updateMatrix(); sm.setMatrixAt(i, dummy.matrix); dummy.position.set(p.x, hh, p.z); dummy.scale.set(cr, cr * 0.7, cr); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); });
+  for (const m of [sm, cm]) { m.castShadow = true; m.visible = false; scene.add(m); }
+  return { set(v) { sm.visible = cm.visible = !!v; } };
+})();
+// ---------- Lucioles des serres ----------
 const flies = (() => {
   const n = 90, geo = new THREE.BufferGeometry(), pos = new Float32Array(n * 3), seed = []; const r = rngOf(9);
-  for (let i = 0; i < n; i++) seed.push([(r() - 0.5) * GW * 1.6, 0.4 + r() * 2.2, (r() - 0.5) * GD * 1.8, r() * 10, 0.2 + r() * 0.5]);
+  for (let i = 0; i < n; i++) { const h = HOUSES[i % HOUSES.length], p = toWorld(h, (r() - 0.5) * HW * 1.6, 0, (r() - 0.5) * HD * 1.8); seed.push([p.x, 0.4 + r() * 1.8, p.z, r() * 10, 0.2 + r() * 0.5]); }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,230,160,1)'); gr.addColorStop(0.3, 'rgba(242,178,61,.6)'); gr.addColorStop(1, 'rgba(242,178,61,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
   const mat = new THREE.PointsMaterial({ size: 0.12, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   const pts = new THREE.Points(geo, mat); scene.add(pts); return { pts, seed, pos, mat, n };
 })();
-// ---------- Ernest ----------
+// ---------- Ernest, sur l'allée devant la serre Travail ----------
+const ERNEST = { x: 0.38, z: DOOR_Z + 0.75, y: 0 }; ERNEST.y = heightAt(ERNEST.x, ERNEST.z);
 const ernestSprite = (() => {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
-  sp.scale.set(0.74, 0.77, 1); sp.position.set(0.42, 0.4, 1.4); scene.add(sp);
+  sp.scale.set(0.74, 0.77, 1); sp.position.set(ERNEST.x, 0.4 + ERNEST.y, ERNEST.z); scene.add(sp);
   const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = 460; c.height = 480; c.getContext('2d').drawImage(img, 0, 0, 460, 480); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; sp.material.map = t; sp.material.needsUpdate = true; };
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ernestSvg('lanterne').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
   // ombre au sol
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.set(0.42, 0.02, 1.4); sh.scale.setScalar(0.9); scene.add(sh); sp.userData.shadow = sh;
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.set(ERNEST.x, ERNEST.y + 0.03, ERNEST.z); sh.scale.setScalar(0.9); scene.add(sh); sp.userData.shadow = sh;
   return sp;
 })();
 
@@ -680,7 +855,7 @@ const ernestSprite = (() => {
 const glowTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,220,160,.95)'); g.addColorStop(0.22, 'rgba(255,184,96,.55)'); g.addColorStop(0.6, 'rgba(255,150,60,.16)'); g.addColorStop(1, 'rgba(255,140,50,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
 const halo = (parent, pos, size) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 })); sp.position.copy(pos); sp.scale.setScalar(size); sp.visible = false; sp.userData.size = size; parent.add(sp); return sp; };
 const setHalo = (sp, k) => { sp.material.opacity = Math.min(1, k); sp.visible = k > 0.01; };
-const halos = { lanterns: lanterns.map((l) => halo(l.g, V(0, 0, 0), 2.4)), cottage: cottageB.glowPoints.map((g) => halo(cottage, g.p, g.s * 1.45)), serre2: halo(ext.serre2.g, V(0, 1.2, 0), 2.4) };
+const halos = { lanterns: lanterns.map((l) => halo(l.g, V(0, 0, 0), 2.1)), cottage: cottageB.glowPoints.map((g) => halo(cottage, g.p, g.s * 1.45)) };
 
 // ---------- Ombres douces au sol (« blob shadows ») : un disque radial instancié, un seul appel de dessin ----------
 const blobTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(0,0,0,.62)'); g.addColorStop(0.5, 'rgba(0,0,0,.38)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
@@ -694,7 +869,6 @@ const blobGeo = new THREE.PlaneGeometry(2, 2); blobGeo.rotateX(-Math.PI / 2);
     dummy.position.set(x, heightAt(x, z) - 0.01, z); dummy.quaternion.setFromUnitVectors(UP, n); dummy.scale.set(r * sx, 1, r); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix);
   });
   im.renderOrder = 1; outdoor.add(im);
-  const s2 = new THREE.Mesh(blobGeo, blobMat); s2.scale.set(SERRE2.hx * 1.6, 1, SERRE2.hz * 1.5); s2.position.y = 0.04; s2.renderOrder = 1; ext.serre2.g.add(s2);
 }
 
 // ---------- Vignette : un quad plein écran dans la scène (pas de passe de post-traitement) ----------
@@ -709,7 +883,7 @@ vignette.frustumCulled = false; vignette.renderOrder = 1e6; scene.add(vignette);
 // ---------- Petits effets demandés par l'app : lanterne de minuteur, graines du lendemain, feuille morte ----------
 const nowS = () => performance.now() / 1000;
 const ease = (k) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
-// Lanterne posée sur le gravier, près de la porte : allumée tant qu'une tâche est chronométrée.
+// Lanterne posée par terre à droite de la porte de la serre Travail : allumée tant qu'une tâche est chronométrée.
 const taskLamp = (() => {
   const g = new THREE.Group(), glassM = new THREE.MeshStandardMaterial({ color: 0xffe2a8, roughness: 0.3, emissive: 0xffa040, emissiveIntensity: 0 });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.15, 6), glassM); body.position.y = 0.1; g.add(body);
@@ -718,7 +892,7 @@ const taskLamp = (() => {
   for (const o of [body, cap, foot]) o.castShadow = true;
   const pool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012; pool.visible = false; g.add(pool);
   const h = halo(g, V(0, 0.11, 0), 0.9);
-  g.position.set(0.7, 0, 1.15); greenhouse.add(g);
+  { const p = toWorld(HB.travail, 0.98, 0, HD + 0.32); g.position.set(p.x, heightAt(p.x, p.z), p.z); } scene.add(g);
   return { g, glassM, pool, h, k: 0, from: 0, to: 0, t0: -99 };
 })();
 function setLantern(on) {
@@ -729,12 +903,12 @@ function setLantern(on) {
 const SEED_MAX = 12;
 const seeds = (() => {
   const pots = new THREE.InstancedMesh(pot, M.terra, SEED_MAX), soils = new THREE.InstancedMesh(soilGeo, M.soil, SEED_MAX), sprouts = new THREE.InstancedMesh(leafGeo(0.035, 0.09, 0.03, 0.4, 4), M.leaf, SEED_MAX * 2);
-  for (const m of [pots, soils, sprouts]) { m.count = 0; m.frustumCulled = false; greenhouse.add(m); }
+  for (const m of [pots, soils, sprouts]) { m.count = 0; m.frustumCulled = false; scene.add(m); }
   pots.castShadow = true;
   return { pots, soils, sprouts, n: 0, t0: -99, spots: [] };
 })();
-// Une rangée de godets au bord de l'allée, côté gauche puis côté droit : visibles depuis la porte et depuis l'allée.
-function seedSpots(n) { const out = []; for (let i = 0; i < n; i++) out.push({ x: i < 6 ? -0.76 : 0.76, z: 2.75 - (i % 6) * 0.42 - (i < 6 ? 0 : 0.21), y: 0 }); return out; }
+// Deux rangées de godets au bord de l'allée principale, entre la serre Travail et la fourche : à gauche, puis à droite.
+function seedSpots(n) { const out = []; for (let i = 0; i < n; i++) { const z = DOOR_Z + 1.0 + (i % 6) * 0.42 + (i < 6 ? 0 : 0.21), x = pathX(z) + (i < 6 ? -0.8 : 0.8); out.push({ x, z, y: heightAt(x, z) }); } return out; }
 function plantSeeds(n) {
   const S = seeds; S.n = Math.max(0, Math.min(SEED_MAX, Math.round(Number(n) || 0))); S.spots = seedSpots(S.n); S.t0 = nowS(); animate();
 }
@@ -750,12 +924,12 @@ function updateSeeds(now) {
 }
 // Feuille morte : tombe en virevoltant et se pose sur le gravier ; « annuler » la fait remonter et disparaître.
 const leafPool = (() => { const geo = leafGeo(0.11, 0.26, 0.08, 0.45, 5), out = [];
-  for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: ['#d9862e', '#e6a83a', '#c2602a'][i % 3], roughness: 0.85, side: THREE.DoubleSide, map: TX ? TX.leaf : null, transparent: true })); m.rotation.order = 'YXZ'; m.visible = false; m.castShadow = true; greenhouse.add(m); out.push({ m, state: 'off', t0: 0, x: 0, z: 0, h: 0 }); }
+  for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: ['#d9862e', '#e6a83a', '#c2602a'][i % 3], roughness: 0.85, side: THREE.DoubleSide, map: TX ? TX.leaf : null, transparent: true })); m.rotation.order = 'YXZ'; m.visible = false; m.castShadow = true; scene.add(m); out.push({ m, state: 'off', t0: 0, x: 0, y: 0, z: 0, h: 0 }); }
   return out; })();
 let leafSeq = 0;
 function dropLeaf() {
   const L = leafPool.find((l) => l.state === 'off') || leafPool.reduce((a, b) => (a.t0 < b.t0 ? a : b));
-  const i = leafSeq++; L.state = 'fall'; L.t0 = nowS(); L.h = hash2(i, 91); L.x = -0.15 - hash2(i, 17) * 0.5; L.z = 0.6 + hash2(i, 23) * 1.8; L.m.visible = true; animate(); // posée à gauche d'Ernest
+  const i = leafSeq++; L.state = 'fall'; L.t0 = nowS(); L.h = hash2(i, 91); L.z = DOOR_Z + 0.5 + hash2(i, 23) * 2.2; L.x = pathX(L.z) - 0.1 - hash2(i, 17) * 0.45; L.y = heightAt(L.x, L.z); L.m.visible = true; animate(); // sur l'allée, à gauche d'Ernest
 }
 function restoreLeaf() {
   const L = leafPool.filter((l) => l.state === 'fall' || l.state === 'rest').sort((a, b) => b.t0 - a.t0)[0]; if (!L) return;
@@ -767,10 +941,10 @@ function updateLeaves(now) {
     if (L.state === 'off') continue;
     const m = L.m, e = now - L.t0, ph = L.h * 6.28;
     if (L.state === 'fall' && e >= FALL) L.state = 'rest';
-    if (L.state === 'fall') { const k = e / FALL, y = lerp(2.35, 0.045, ease(k) * 0.35 + k * 0.65), sw = (1 - k) * 0.35;
+    if (L.state === 'fall') { const k = e / FALL, y = L.y + lerp(2.35, 0.045, ease(k) * 0.35 + k * 0.65), sw = (1 - k) * 0.35;
       m.position.set(L.x + Math.sin(e * 3.2 + ph) * sw, y, L.z + Math.cos(e * 2.1 + ph) * sw * 0.5); m.rotation.set(-Math.PI / 2 * ease(k) + Math.sin(e * 4.1 + ph) * 0.9 * (1 - k), ph + e * 1.5, Math.sin(e * 3.2 + ph) * 0.8 * (1 - k)); m.material.opacity = 1; }
-    else if (L.state === 'rest') { m.position.set(L.x, 0.045, L.z); m.rotation.set(-Math.PI / 2 + 0.06, ph + FALL * 1.5, 0); m.material.opacity = 1; }
-    else { const k = Math.min(1, e / RISE); m.position.set(L.x + Math.sin(e * 2.5 + ph) * 0.12 * k, 0.045 + ease(k) * 1.6, L.z); m.rotation.set(-Math.PI / 2 * (1 - k), ph + FALL * 1.5 - e * 1.2, Math.sin(e * 3 + ph) * 0.4 * k); m.material.opacity = 1 - ease(k);
+    else if (L.state === 'rest') { m.position.set(L.x, L.y + 0.045, L.z); m.rotation.set(-Math.PI / 2 + 0.06, ph + FALL * 1.5, 0); m.material.opacity = 1; }
+    else { const k = Math.min(1, e / RISE); m.position.set(L.x + Math.sin(e * 2.5 + ph) * 0.12 * k, L.y + 0.045 + ease(k) * 1.6, L.z); m.rotation.set(-Math.PI / 2 * (1 - k), ph + FALL * 1.5 - e * 1.2, Math.sin(e * 3 + ph) * 0.4 * k); m.material.opacity = 1 - ease(k);
       if (k >= 1) { L.state = 'off'; m.visible = false; } }
   }
 }
@@ -785,53 +959,62 @@ let animUntil = 0, animOn = false;
 function animate() { animUntil = Math.max(animUntil, performance.now() + 2500); poke(); }
 
 // ---------- Données → scène ----------
-// Pure : ce que la serre doit montrer pour un état d'Ernest.
-// Dehors : le chemin s'allonge avec le total, un carré de potager par catégorie (dès 8 choses faites), la seconde serre après 365 jours actifs.
+// Pure : ce que les serres doivent montrer pour un état d'Ernest.
+// Dehors : le chemin s'allonge avec le total, un carré de potager par catégorie (dès 8 choses faites).
 export function extFromState(S, n, mood) {
   const keys = Object.keys(S.days), counts = catCounts(S, keys);
   return {
     path: Math.min(1, n / 300),
     beds: BED_CATS.map((c) => ((counts[c] || 0) >= 8 ? Math.min(1, ((counts[c] || 0) - 8) / 60) : -1)),
     flowers: Math.max(0.15, Math.min(1, 0.35 + 0.4 * Math.min(1, n / 150) + (mood === 'high' ? 0.25 : mood === 'low' ? -0.15 : 0))),
-    serre2: activeDays(S, keys) >= 365,
   };
+}
+// Dans chaque serre : ses plantes (les plus récentes, autant que de places), sa mousse, ses grimpantes et ses
+// suspensions selon ses propres choses faites, et un bonsaï par objectif actif de ses catégories.
+export function houseFromState(S, today, id, counts, n) {
+  const H = HB[id], ps = S.garden.plants || [], mine = (p) => houseOf(p.cat) === id;
+  const goals = Array.isArray(S.goals) ? new Map(S.goals.map((g) => [g.id, g])) : null;
+  let hn = H.cats.reduce((a, c) => a + (counts[c] || 0), 0);
+  if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
+  const plants = ps.filter((p) => p.kind === 'plant' && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
+  const mossN = ps.filter((p) => p.kind === 'moss' && mine(p)).length;
+  const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || (goals.get(p.goal) || {}).status === 'active'))
+    .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0 }));
+  return { n: hn, plants, moss: Math.min(MOSS_MAX, mossN * 8 + Math.max(0, hn - 10) * 3), vine: Math.min(1, hn / 80), hanging: [8, 25, 50].filter((k) => hn >= k).length, bonsai };
 }
 export function modelFromState(S, today) {
-  const ps = S.garden.plants || [];
-  const plants = ps.filter((p) => p.kind === 'plant').slice(0, SLOTS.length).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
-  const mossN = ps.filter((p) => p.kind === 'moss').length;
-  const n = totalDone(S);
-  const goalB = ps.filter((p) => p.kind === 'bonsai').sort((a, b) => (b.branches || 0) - (a.branches || 0))[0];
-  const mood = moodAvg(S, today);
-  return {
-    plants, moss: Math.min(1400, mossN * 8 + Math.max(0, n - 30) * 3), vine: Math.min(1, n / 160),
-    hanging: [20, 45, 80, 120].filter((k) => n >= k).length, bonsai: goalB ? { seed: goalB.seed, branches: goalB.branches || 0 } : null,
-    shrooms: mood === 'low', mood: mood === 'low' ? 1 : mood === 'high' ? 4 : 3,
-    ...extFromState(S, n, mood),
-  };
+  const n = totalDone(S), counts = catCounts(S, Object.keys(S.days)), mood = moodAvg(S, today), houses = {};
+  for (const id of HOUSE_IDS) houses[id] = houseFromState(S, today, id, counts, n);
+  return { houses, shrooms: mood === 'low', mood: mood === 'low' ? 1 : mood === 'high' ? 4 : 3, ...extFromState(S, n, mood) };
 }
-let model = { plants: [], moss: 0, vine: 0, hanging: 0, bonsai: null, shrooms: false, mood: 3, path: 0, beds: [], flowers: 0.5, serre2: false };
+const EMPTY_HOUSE = { n: 0, plants: [], moss: 0, vine: 0, hanging: 0, bonsai: [] };
+let model = { houses: {}, shrooms: false, mood: 3, path: 0, beds: [], flowers: 0.5 };
 let pop = null;
 function applyModel(m) {
   const sig = JSON.stringify(m); if (sig === lastSig) return; lastSig = sig;
   model = m; poke();
-  const keep = new Set();
-  m.plants.forEach((p, i) => {
-    keep.add(p.id);
-    let L = live.get(p.id);
-    if (!L) { const b = buildPlant(p, i); L = { ...b, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); }
-    L.target = 0.35 + 0.65 * p.g;
-  });
-  for (const [id, L] of live) if (!keep.has(id)) { greenhouse.remove(L.obj); live.delete(id); }
-  ext.stones.target = Math.round(8 + (ext.stones.n - 8) * (m.path || 0));
+  const hm = (h) => (m.houses && m.houses[h.id]) || EMPTY_HOUSE, keep = new Map();
+  for (const h of HOUSES) for (const p of hm(h).plants || []) keep.set(p.id, h);
+  for (const [id, L] of live) if (keep.get(id) !== L.house) { L.house.g.remove(L.obj); disposeObj(L.obj); L.house.used[L.slot] = false; live.delete(id); }
+  for (const h of HOUSES) {
+    const H = hm(h);
+    (H.plants || []).forEach((p, i) => {
+      let L = live.get(p.id);
+      if (!L) {
+        const slot = i < SLOTS.length && !h.used[i] ? i : h.used.indexOf(false); if (slot < 0) return; // serre pleine
+        h.used[slot] = true; L = { ...buildPlant(p, h, slot), slot, house: h, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L);
+      }
+      L.target = 0.35 + 0.65 * p.g;
+    });
+    vines.filter((v) => v.house === h).forEach((v) => { v.target = Math.max(0, Math.min(1, (H.vine || 0) * 1.25 - v.i * 0.12)); });
+    mosses[h.id].target = Math.min(MOSS_MAX, H.moss || 0);
+    hanging.filter((g) => g.house === h).forEach((g) => { g.target = g.i < (H.hanging || 0) ? 1 : 0; });
+    setBonsai(h, Array.isArray(H.bonsai) ? H.bonsai : H.bonsai ? [H.bonsai] : []);
+  }
+  ext.stones.target = Math.round(9 + (ext.stones.n - 9) * (m.path || 0));
   ext.flowers.target = m.flowers ?? 0.5;
   ext.beds.forEach((b, i) => { const v = m.beds ? m.beds[i] : -1; b.riseT = v >= 0 ? 1 : 0; b.growT = v >= 0 ? 0.25 + 0.75 * v : 0; });
-  ext.serre2.target = m.serre2 ? 1 : 0;
-  vines.forEach((v, i) => { v.target = Math.max(0, Math.min(1, m.vine * 1.25 - i * 0.08)); });
-  moss.target = m.moss;
-  hanging.forEach((h, i) => { h.target = i < m.hanging ? 1 : 0; });
-  shrooms.forEach((s) => { s.visible = m.shrooms; });
-  setBonsai(m.bonsai);
+  shrooms.set(m.shrooms);
 }
 
 // ---------- Ambiances ----------
@@ -876,7 +1059,7 @@ function updateAmbience(dt, t) {
   sun.color.set(a.sun); sun.intensity = a.sunI * m * 0.9;
   if (sd.y > 0.02) sun.position.copy(sd).multiplyScalar(16); else sun.position.set(...a.sunPos);
   skyMat.uniforms.sunDir.value.copy(sd); skyMat.uniforms.glowK.value = Math.max(0, Math.min(1, (sd.y + 0.12) * 4)); skyMat.uniforms.glow.value.set(sd.y < 0.18 ? '#ff9a5a' : '#ffe2b0');
-  for (const l of lanterns) l.light.intensity = a.lantern * (0.8 + mood * 0.08) * (0.95 + Math.sin(t * 7 + l.g.position.z) * 0.03);
+  for (const l of lanterns) l.light.intensity = a.lantern * (0.8 + mood * 0.08) * (0.95 + Math.sin(t * 7 + l.house.x) * 0.03);
   for (const h of halos.lanterns) setHalo(h, Math.max(0, (a.lantern - 1.2) / 6));
   M.bulb.emissiveIntensity = 0.4 + a.lantern * 0.3;
   moon.position.copy(sd).multiplyScalar(-60).setY(Math.max(18, -sd.y * 60)); flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
@@ -897,15 +1080,14 @@ function updateGrowth(dt, t) {
   }
   for (const h of hanging) { h.cur = lerp(h.cur, h.target, k); h.g.visible = h.cur > 0.01; h.g.scale.setScalar(Math.max(0.001, h.cur)); const w = Math.sin(t * 1.3 + h.phase) * 0.03; h.g.rotation.z = w * 0.5; h.g.rotation.x = w * 0.3; }
   for (const v of vines) { v.cur = lerp(v.cur, v.target, k); const tri = Math.floor((v.idx / 3) * v.cur) * 3; v.mesh.geometry.setDrawRange(0, tri); v.im.count = Math.floor(v.n * v.cur); v.mesh.visible = v.cur > 0.01; }
-  moss.cur = lerp(moss.cur, moss.target, k); moss.im.count = Math.round(moss.cur);
+  for (const mo of Object.values(mosses)) { mo.cur = lerp(mo.cur, mo.target, k); mo.im.count = Math.round(mo.cur); }
   { const S = ext.stones; S.cur = lerp(S.cur, S.target, k * 0.6); S.im.count = Math.round(S.cur); const F = ext.flowers; F.cur = lerp(F.cur, F.target, k); F.im.count = Math.round(F.n * F.cur); }
   ext.beds.forEach((b, i) => {
     b.rise = lerp(b.rise, b.riseT, k * 0.7); b.grow = lerp(b.grow, b.riseT > 0 && b.rise > 0.9 ? b.growT : 0, k * 0.8);
     b.g.visible = b.rise > 0.01; b.g.position.y = b.y - 0.32 + 0.32 * b.rise; zoneU.value[i] = b.rise;
     b.crops.forEach((c, j) => { const s = Math.max(0.001, Math.min(1, b.grow * 11 - j) * (0.55 + 0.45 * b.grow)); c.scale.setScalar(s * 1.7); c.rotation.z = Math.sin(t * 1.4 + j + i) * 0.04; });
   });
-  { const s2 = ext.serre2; s2.cur = lerp(s2.cur, s2.target, k * 0.5); s2.g.visible = s2.cur > 0.01; s2.g.scale.setScalar(Math.max(0.001, s2.cur)); zoneU.value[ZONES.length - 1] = s2.cur; }
-  if (bonsaiObj) { const w = Math.sin(t * 0.9) * 0.006; bonsaiObj.rotation.z = w; }
+  for (const h of HOUSES) for (const B of h.bonsai) if (B.obj) B.obj.rotation.z = Math.sin(t * 0.9 + h.x) * 0.006;
 }
 
 // ---------- Rendu ----------
@@ -913,15 +1095,17 @@ const clock = new THREE.Clock();
 // Bandeau : une image fixe, recalculée quand quelque chose change, et un nouvel angle toutes les demi-heures.
 let stillDirty = true, stillSlot = -1, lastSig = '';
 const poke = () => { stillDirty = true; if (renderer) renderer.shadowMap.needsUpdate = true; };
+// Six angles, un par demi-heure. Ceux qui portent « house » sont en coordonnées locales de cette serre (porte vers +z).
 const ANGLES = [
-  // 0 à 2 rapprochés (distance ÷ 1,6) et fov serré : à 390x260, on doit voir ce qui a poussé
-  { pos: [0.8, 5.8, 8.6], t: [0, 0.5, 0.9], fov: 40 },     // plongée depuis la porte
-  { pos: [-5.9, 3.55, 4.7], t: [0, 0.8, 0], fov: 38 },       // trois quarts, côté chaumière
-  { pos: [6.55, 3.2, 3.9], t: [0, 0.9, -0.5], fov: 38 },     // trois quarts, côté mare
-  { pos: [0.6, 1.9, 5.4], t: [0, 0.95, -1.5], fov: 46 },     // dans l'allée, entre les tables
-  { pos: [-2.2, 7.5, -12], t: [0, 0.6, 0.5], fov: 40 },      // depuis le fond du jardin
-  { pos: [7.5, 3.2, 11], t: [-1.5, 0.9, 1], fov: 40 },       // depuis le potager
+  { pos: [4.5, 12.5, 22.5], t: [0, 0.4, -2.2], fov: 40 },                    // vue d'ensemble : les trois serres et la chaumière
+  { house: 'travail', pos: [1.1, 4.6, 12.4], t: [-0.3, 0.5, 1.9], fov: 40 }, // la serre Travail et l'allée (lanterne, graines, feuille)
+  { house: 'bienetre', pos: [0.9, 3.4, 9.0], t: [-0.4, 0.95, -0.4], fov: 40 }, // la serre Bien-être
+  { house: 'perso', pos: [0.9, 3.4, 9.0], t: [-0.4, 0.95, -0.4], fov: 40 },     // la serre Vie perso
+  { house: 'travail', pos: [0.35, 1.75, 3.9], t: [0, 0.9, -2.2], fov: 50 },  // dans l'allée de la serre Travail
+  { house: 'bienetre', pos: [-0.35, 1.75, 3.9], t: [0, 0.9, -2.2], fov: 50 }, // dans l'allée de la serre Bien-être
 ];
+const angleWorld = (a) => { if (!a.house) return { pos: V(...a.pos), t: V(...a.t) }; const h = HB[a.house]; return { pos: toWorld(h, a.pos[0], a.pos[1], a.pos[2]), t: toWorld(h, a.t[0], a.t[1], a.t[2]) }; };
+let forcedAngle = null; // pour la page de démonstration
 let mode = 'band', running = false, visible = true, last = 0, onFps = null, frames = 0, fpsT = 0;
 function frame(now) {
   if (!running) return;
@@ -934,12 +1118,13 @@ function frame(now) {
     return;
   }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+  { const T = controls.target; T.x = Math.max(-10, Math.min(10, T.x)); T.z = Math.max(-9, Math.min(9, T.z)); T.y = Math.max(0.4, Math.min(2.2, T.y)); }
   controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
   if ((frames & 7) === 0) renderer.shadowMap.needsUpdate = true; // ombres recalculées une image sur huit
   updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t; updateFx(nowS(), t);
   for (let i = 0; i < flies.n; i++) { const [x, y, z, ph, sp] = flies.seed[i]; flies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.5; flies.pos[i * 3 + 1] = y + Math.sin(t * sp * 1.7 + ph * 2) * 0.25; flies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.8 + ph) * 0.5; }
   flies.pts.geometry.attributes.position.needsUpdate = true;
-  ernestSprite.position.y = 0.4 + Math.sin(t * 1.6) * 0.012;
+  ernestSprite.position.y = 0.4 + ERNEST.y + Math.sin(t * 1.6) * 0.012;
   renderer.render(scene, camera);
   frames++; const pn = performance.now(); if (!fpsT) fpsT = pn; if (pn - fpsT > 1000) { if (onFps) onFps(Math.round(frames * 1000 / (pn - fpsT))); frames = 0; fpsT = pn; }
 }
@@ -947,8 +1132,8 @@ function frame(now) {
 function stillFrame() {
   const slot = Math.floor(Date.now() / 1800000);
   if (!stillDirty && slot === stillSlot) return;
-  const a = ANGLES[((slot % ANGLES.length) + ANGLES.length) % ANGLES.length];
-  camera.position.set(...a.pos); camera.lookAt(...a.t); camera.fov = a.fov || 40; camera.updateProjectionMatrix();
+  const a = ANGLES[forcedAngle ?? ((slot % ANGLES.length) + ANGLES.length) % ANGLES.length], w = angleWorld(a);
+  camera.position.copy(w.pos); camera.lookAt(w.t); camera.fov = a.fov || 40; camera.updateProjectionMatrix();
   if (camera.position.y < heightAt(camera.position.x, camera.position.z) + 0.9) camera.position.y = heightAt(camera.position.x, camera.position.z) + 0.9;
   const t = 2.5; pop = null;
   for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
@@ -980,7 +1165,7 @@ export function mount(canvas, opts = {}) {
   renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
   renderer.toneMapping = THREE.CustomToneMapping; // ACES + saturation et contraste (voir « Étalonnage » en tête)
   controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false; controls.minDistance = 2.2; controls.maxDistance = 19;
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 30;
   controls.maxPolarAngle = Math.PI * 0.49; controls.minPolarAngle = 0.25; controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
   onFps = opts.onFps || null;
   setMode(opts.mode || 'band');
@@ -998,7 +1183,7 @@ export function setMode(m) {
   if (ext.grass) ext.grass.im.count = m === 'full' ? ext.grass.n : Math.round(ext.grass.n * 0.3); // moins de brins dans le bandeau
   poke();
   ernestSprite.visible = ernestSprite.userData.shadow.visible = m === 'full';
-  if (m === 'full') { camera.position.set(1.15, 1.75, 6.3); controls.target.set(0, 1.0, -1.2); camera.fov = 52; }
+  if (m === 'full') { camera.position.set(2.2, 11.5, 19.5); controls.target.set(0, 0.6, -1.8); camera.fov = 55; } // vue d'ensemble ; deux doigts pour glisser vers une serre
   else camera.fov = 40; // l'angle du bandeau fixe son propre fov (ANGLES)
   camera.updateProjectionMatrix(); controls.update(); resize();
 }
@@ -1015,6 +1200,9 @@ export const api = {
   dropLeaf() { dropLeaf(); },
   restoreLeaf() { restoreLeaf(); },
   stop() { running = false; }, start() { if (!running && renderer) { running = true; clock.getDelta(); requestAnimationFrame(frame); } },
-  get camera() { return camera; }, get controls() { return controls; }, get scene() { return scene; },
+  // démonstration : fixe l'angle du bandeau (0 à 5, null pour revenir à la rotation par demi-heure)
+  setAngle(i) { forcedAngle = i === null || i === undefined ? null : ((Number(i) % ANGLES.length) + ANGLES.length) % ANGLES.length; poke(); },
+  houses: HOUSE_IDS,
+  get camera() { return camera; }, get controls() { return controls; }, get scene() { return scene; }, get renderer() { return renderer; },
 };
 export default api;
