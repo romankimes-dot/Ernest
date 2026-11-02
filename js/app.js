@@ -1,6 +1,6 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
@@ -64,7 +64,7 @@ const fmtDay = (k) => new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekd
 
 // ---------- Démarrage ----------
 async function init() {
-  S = store.load(); today = dayKey(); if (materialize(S, today)) store.save(S); lastKey = userKey();
+  S = store.load(); today = dayKey(); if (materialize(S, today) | reslot(S, today, nowHour())) store.save(S); lastKey = userKey();
   S._light = moodAvg(S, today);
   document.body.dataset.tab = 'today'; garden = new Garden($('#garden')); gardenUpdate(); garden.start();
   setupGarden3d();
@@ -84,7 +84,7 @@ async function init() {
   handleImport();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onReturn(); });
   window.addEventListener('hashchange', handleImport);
-  setInterval(() => { if (tab === 'today') renderTimerOnly(); }, 30000);
+  setInterval(() => { if (reslot(S, today, nowHour()) && $('#sheet').hidden) { save(); render(); } else if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   pullToRefresh();
   if (SY.config()) runSync();
@@ -108,7 +108,7 @@ async function runSync({ manual = false } = {}) {
     if (!$('#sheet').hidden && (r.state !== S)) closeSheet(); // demandé à la main : la fiche ouverte se ferme
     if (r.state !== S) {
       if (r.conflict) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
-      S = r.state; materialize(S, today); S._light = moodAvg(S, today); store.save(S);
+      S = r.state; materialize(S, today); reslot(S, today, nowHour()); S._light = moodAvg(S, today); store.save(S);
       lastKey = userKey(); UNDO.length = 0; updateUndoBtn(); gardenUpdate(); render(); setErnest();
     }
     let rev = r.rev; const pushSeq = editSeq;
@@ -150,6 +150,7 @@ function bindSync() {
 
 function onReturn() {
   if (SY.config() && Date.now() - (SY.meta().at || 0) > 30000) runSync();
+  if (dayKey() === today && reslot(S, today, nowHour())) save();
   const k = dayKey();
   if (k !== today) { today = k; if (materialize(S, today)) save(); S._light = moodAvg(S, today); gardenUpdate(); greet(); render(); return; }
   const running = dayOf(S, today).things.find((t) => t.startedAt && !t.done && t.link);
@@ -535,7 +536,7 @@ function thingSheet(t, k = today) {
   $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; const m = tracking() ? Math.max(0, Number($('#thEst').value) || 0) : 0, nowDone = $('#thDone').checked, wasDone = !!t.done;
     if (nowDone) { t.done = true; t.real = tracking() ? m : t.real || 0; t.startedAt = null; if (!wasDone) { t.doneAt = k === today ? new Date().toISOString() : `${k}T20:00:00`; plant(t.cat, 'plant'); gardenWater(); } }
     else { t.done = false; t.doneAt = null; if (tracking()) { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } }
-    t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
+    if (t.slot !== slot) delete t.slotAuto; t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
   if (!isNew) {
     $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(k, 1) > today ? addDays(k, 1) : addDays(today, 1)).things.push({ ...t, startedAt: null, spent: 0 }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
     $('#thIdea').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); save(); closeSheet(); render(); });
@@ -834,7 +835,7 @@ function importSheet(p) {
   const names = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
   openSheet(`<h2>${esc(names[p.src] || p.src)} propose</h2><div class="stack">${p.things.map((t) => `<div class="list-item"><span class="dot" style="background:${catOf(t.cat || 'revision').couleur}"></span><div class="t">${esc(t.title)}</div><span class="due">${t.day ? fmtDay(t.day).split(' ').slice(0, 2).join(' ') : 'aujourd\'hui'}${t.est ? ` · ${t.est} min` : ''}</span></div>`).join('')}${p.goals.map((g) => `<div class="list-item"><div class="t"><b>${esc(g.title)}</b> · ${(g.milestones || []).length} jalon${(g.milestones || []).length > 1 ? 's' : ''}</div></div>`).join('')}</div><button class="btn" id="impOk">Ajouter à la serre</button><button class="btn quiet" id="impNo">Ignorer</button>`);
   $('#impOk').addEventListener('click', () => {
-    const r = merge(S, p, today);
+    const r = merge(S, p, today); reslot(S, today, nowHour());
     plantHistory(S, p);
     save(); closeSheet(); render(); toast(`${r.things} chose${r.things > 1 ? 's' : ''}, ${r.goals} objectif${r.goals > 1 ? 's' : ''}, ${r.milestones} jalon${r.milestones > 1 ? 's' : ''} ajoutés.`, 3500);
   });

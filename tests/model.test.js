@@ -91,3 +91,19 @@ test('temps mesuré par catégorie', () => {
   assert.deepEqual(timeByCat(s, ['2026-11-02'], 1000 + 30 * 60000), { revision: 90, corps: 30 });
   assert.equal(fmtMin(45), '45 min'); assert.equal(fmtMin(90), '1 h 30'); assert.equal(fmtMin(120), '2 h');
 });
+
+test('moments adaptatifs : une chose de pont dont le moment est passé glisse au moment en cours', async () => {
+  const { reslot, slotAt } = await import('../js/model.js');
+  const s = { days: { d: { things: [
+    { title: 'A', slot: 'matin', slotAuto: true, done: false },
+    { title: 'B', slot: 'matin', done: false },
+    { title: 'C', slot: 'soir', slotAuto: true, done: false },
+    { title: 'D', slot: 'matin', slotAuto: true, done: true },
+  ] } } };
+  assert.equal(slotAt(9), 'matin'); assert.equal(slotAt(15), 'aprem'); assert.equal(slotAt(20), 'soir');
+  assert.equal(reslot(s, 'd', 10), 0);
+  assert.equal(reslot(s, 'd', 15), 1);
+  assert.deepEqual(s.days.d.things.map((t) => t.slot), ['aprem', 'matin', 'soir', 'matin']);
+  assert.equal(reslot(s, 'd', 19), 1);
+  assert.equal(s.days.d.things[0].slot, 'soir');
+});
