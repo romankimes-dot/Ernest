@@ -91,3 +91,17 @@ test('réglages : adresse https exigée ; code refusé signalé', async () => {
   const { f } = server();
   await assert.rejects(SY.pull({ ...cfg, token: 'faux' }, defaultState(), { rev: null, dirty: true }, T, { fetch: f }), /code secret/);
 });
+
+test('recevoir à nouveau : le plan du jour revient, même supprimé', async () => {
+  const { forgetDay } = await import('../js/bridge.js');
+  const { kv, f } = server();
+  kv.set('pont:deonto', { value: JSON.stringify({ v: 1, src: 'deonto', things: [{ title: 'Déonto · Session', day: T }], goals: [] }), rev: 'p1' });
+  const d = device(f, { ...defaultState(), updatedAt: 1 });
+  await d.sync();
+  d.edit((s) => { s.days[T].things = []; });
+  assert.equal((await d.sync()).bridged.length, 0);
+  forgetDay(d.S, T); d.m.dirty = true;
+  const r = await d.sync();
+  assert.deepEqual(r.bridged.map((x) => x.things), [1]);
+  assert.deepEqual(d.S.days[T].things.map((t) => t.title), ['Déonto · Session']);
+});

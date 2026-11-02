@@ -1,10 +1,10 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
-import { decode, merge, plantHistory } from './bridge.js';
+import { decode, merge, plantHistory, forgetDay } from './bridge.js';
 import { icon } from './icons.js';
 import * as SY from './sync.js';
 
@@ -64,7 +64,7 @@ const fmtDay = (k) => new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekd
 
 // ---------- Démarrage ----------
 async function init() {
-  S = store.load(); today = dayKey(); if (materialize(S, today)) store.save(S); lastKey = userKey();
+  S = store.load(); today = dayKey(); if (materialize(S, today) | reslot(S, today, nowHour())) store.save(S); lastKey = userKey();
   S._light = moodAvg(S, today);
   document.body.dataset.tab = 'today'; garden = new Garden($('#garden')); gardenUpdate(); garden.start();
   setupGarden3d();
@@ -84,7 +84,7 @@ async function init() {
   handleImport();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onReturn(); });
   window.addEventListener('hashchange', handleImport);
-  setInterval(() => { if (tab === 'today') renderTimerOnly(); }, 30000);
+  setInterval(() => { if (reslot(S, today, nowHour()) && $('#sheet').hidden) { save(); render(); } else if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   pullToRefresh();
   if (SY.config()) runSync();
@@ -101,12 +101,14 @@ async function runSync({ manual = false } = {}) {
   const cfg = SY.config(); if (!cfg || syncing) return;
   clearTimeout(syncTimer); syncTimer = null; syncing = true;
   try {
-    const m = SY.meta(), seq = editSeq;
-    const r = await SY.pull(cfg, S, m, today);
-    if (seq !== editSeq || !$('#sheet').hidden) { scheduleSync(15000); return; } // on réessaie quand l'écran est libre
+    // Un changement pendant la lecture (une réplique d'Ernest suffit) : on relit, trois fois au plus.
+    let r = null;
+    for (let i = 0; i < 3 && !r; i++) { const seq = editSeq; const x = await SY.pull(cfg, S, SY.meta(), today); if (seq === editSeq) r = x; }
+    if (!r || (!manual && !$('#sheet').hidden)) { scheduleSync(10000); return; } // on réessaie quand l'écran est libre
+    if (!$('#sheet').hidden && (r.state !== S)) closeSheet(); // demandé à la main : la fiche ouverte se ferme
     if (r.state !== S) {
       if (r.conflict) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
-      S = r.state; materialize(S, today); S._light = moodAvg(S, today); store.save(S);
+      S = r.state; materialize(S, today); reslot(S, today, nowHour()); S._light = moodAvg(S, today); store.save(S);
       lastKey = userKey(); UNDO.length = 0; updateUndoBtn(); gardenUpdate(); render(); setErnest();
     }
     let rev = r.rev; const pushSeq = editSeq;
@@ -116,7 +118,8 @@ async function runSync({ manual = false } = {}) {
     if (nb) toast(`${nb} chose${nb > 1 ? 's' : ''} reçue${nb > 1 ? 's' : ''} de tes révisions.`, 3500);
     else if (r.conflict && r.first) toast('Ernest repris depuis le serveur. Ce qu’il y avait sur cet appareil est gardé dans Réglages.', 5000);
     else if (r.conflict) toast('Modifié sur les deux appareils : la version la plus récente est gardée. L’autre est dans Réglages.', 5000);
-    else if (manual) toast(r.adopted ? 'Synchronisé : repris de l’autre appareil.' : 'Synchronisé.');
+    else if (manual && !r.ponts) toast('Synchronisé. Deonto n’a encore envoyé aucun plan : mets Deonto à jour (tirer vers le bas), puis reviens.', 5000);
+    else if (manual) toast(r.adopted ? 'Synchronisé : repris de l’autre appareil.' : 'Synchronisé. Rien de nouveau dans le plan de Deonto.');
   } catch (e) {
     SY.setMeta({ error: e.message });
     if (e.status === 412) scheduleSync(5000); else if (manual) toast(`Synchronisation impossible : ${e.message}.`, 4000);
@@ -129,7 +132,8 @@ function syncSection() {
   <div class="kv"><label>Code secret</label><input id="syTok" type="password" value="${esc(dec ? dec.token : '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   <button class="btn quiet" id="syGo">Connecter</button>`;
   return `<h3>Synchronisation</h3><div class="muted small">Connecté à ${esc(new URL(cfg.url).host)}. ${m.at ? `Dernière synchro : ${new Date(m.at).toLocaleString('fr-FR')}.` : 'Pas encore synchronisé.'}${m.error ? ` Dernier essai : ${esc(m.error)}.` : ''} Le plan de Deonto arrive tout seul.</div>
-  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
+  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>
+  <button class="btn quiet" id="syAgain">Recevoir à nouveau le plan du jour</button><div class="muted small">Ernest ne remet jamais une chose supprimée. Ce bouton reprend tout le plan d'aujourd'hui, même ce que tu avais supprimé.</div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
 }
 function bindSync() {
   const go = $('#syGo');
@@ -138,6 +142,7 @@ function bindSync() {
     closeSheet(); toast('Connexion…'); runSync({ manual: true });
   });
   const now = $('#syNow'); if (now) now.addEventListener('click', () => { closeSheet(); runSync({ manual: true }); });
+  const again = $('#syAgain'); if (again) again.addEventListener('click', () => { forgetDay(S, today); save(); closeSheet(); runSync({ manual: true }); });
   const off = $('#syOff'); if (off) off.addEventListener('click', () => { SY.setConfig(null); closeSheet(); toast('Synchronisation arrêtée sur cet appareil.'); });
   const back = $('#syBack');
   if (back) back.addEventListener('click', () => { const p = store.restorePrev(); if (!p) { toast('Plus de copie.'); return; } store.snapshotPrev(S); S = p; SY.setMeta({ conflictAt: null }); save(); closeSheet(); gardenUpdate(); render(); toast('Version de cet appareil reprise.'); });
@@ -145,6 +150,7 @@ function bindSync() {
 
 function onReturn() {
   if (SY.config() && Date.now() - (SY.meta().at || 0) > 30000) runSync();
+  if (dayKey() === today && reslot(S, today, nowHour())) save();
   const k = dayKey();
   if (k !== today) { today = k; if (materialize(S, today)) save(); S._light = moodAvg(S, today); gardenUpdate(); greet(); render(); return; }
   const running = dayOf(S, today).things.find((t) => t.startedAt && !t.done && t.link);
@@ -385,7 +391,6 @@ function viewToday() {
   }
   if (d.things.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
   if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
-  h += `<button class="chip paste" data-act="pasteBridge">${icon('arrow', 'sm')} Coller depuis une app de révision</button>`;
   const dn = doneOn(S, today).n; if (dn) h += `<div class="muted small">${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout.</div>`;
   return h;
 }
@@ -472,7 +477,6 @@ function action(act, ds, el, v) {
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'history': historySheet(); break;
-    case 'pasteBridge': pasteBridge(); break;
     case 'newSeries': captureSheet('series'); break;
     case 'jEdit': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (t) thingSheet(t, ds.day); break; }
     case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = say(S, 'semaine-grise', ernestEnv(S, today, plantNames())); if (t) bubble(t); } break; }
@@ -532,7 +536,7 @@ function thingSheet(t, k = today) {
   $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; const m = tracking() ? Math.max(0, Number($('#thEst').value) || 0) : 0, nowDone = $('#thDone').checked, wasDone = !!t.done;
     if (nowDone) { t.done = true; t.real = tracking() ? m : t.real || 0; t.startedAt = null; if (!wasDone) { t.doneAt = k === today ? new Date().toISOString() : `${k}T20:00:00`; plant(t.cat, 'plant'); gardenWater(); } }
     else { t.done = false; t.doneAt = null; if (tracking()) { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } }
-    t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
+    if (t.slot !== slot) delete t.slotAuto; t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
   if (!isNew) {
     $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(k, 1) > today ? addDays(k, 1) : addDays(today, 1)).things.push({ ...t, startedAt: null, spent: 0 }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
     $('#thIdea').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); save(); closeSheet(); render(); });
@@ -799,7 +803,7 @@ function settingsSheet() {
   <label class="toggle"><input type="checkbox" id="sAutoR" ${s.autoRitual ? 'checked' : ''}><span>Ouvrir le rituel du soir tout seul<small>Dès 18 h, à la première ouverture, si demain n'est pas encore préparé</small></span></label>
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
-  <div class="kv"><label>Pont : dans Deonto ou dec-revision, « Copier pour Ernest », puis colle ici</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
+  <div class="kv"><label>Pont manuel (dec-revision, mémoire) : colle ici le plan copié. Deonto arrive tout seul par la synchronisation.</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
   ${syncSection()}
   <div class="btns"><button class="btn quiet" id="sHelp">${icon('help', 'sm')} La visite</button><button class="btn quiet" id="sIntro">${icon('leaf', 'sm')} L'arrivée d'Ernest</button></div>
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
@@ -827,20 +831,11 @@ function handleImport() {
   history.replaceState(null, '', location.pathname + location.search);
   importSheet(p);
 }
-// Coller le plan copié dans Deonto ou dec-revision (« Copier pour Ernest »).
-async function pasteBridge() {
-  let txt = '';
-  try { txt = await navigator.clipboard.readText(); } catch { txt = ''; }
-  const p = decode(txt);
-  if (p) { importSheet(p); return; }
-  settingsSheet();
-  setTimeout(() => { const t = $('#sBridge'); if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); } toast(txt ? "Ce qui est copié n'est pas un plan. Dans Deonto, touche « Copier pour Ernest », puis reviens." : 'Colle le plan ici (appui long, Coller), puis « Lire le pont ».', 5000); }, 150);
-}
 function importSheet(p) {
   const names = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
   openSheet(`<h2>${esc(names[p.src] || p.src)} propose</h2><div class="stack">${p.things.map((t) => `<div class="list-item"><span class="dot" style="background:${catOf(t.cat || 'revision').couleur}"></span><div class="t">${esc(t.title)}</div><span class="due">${t.day ? fmtDay(t.day).split(' ').slice(0, 2).join(' ') : 'aujourd\'hui'}${t.est ? ` · ${t.est} min` : ''}</span></div>`).join('')}${p.goals.map((g) => `<div class="list-item"><div class="t"><b>${esc(g.title)}</b> · ${(g.milestones || []).length} jalon${(g.milestones || []).length > 1 ? 's' : ''}</div></div>`).join('')}</div><button class="btn" id="impOk">Ajouter à la serre</button><button class="btn quiet" id="impNo">Ignorer</button>`);
   $('#impOk').addEventListener('click', () => {
-    const r = merge(S, p, today);
+    const r = merge(S, p, today); reslot(S, today, nowHour());
     plantHistory(S, p);
     save(); closeSheet(); render(); toast(`${r.things} chose${r.things > 1 ? 's' : ''}, ${r.goals} objectif${r.goals > 1 ? 's' : ''}, ${r.milestones} jalon${r.milestones > 1 ? 's' : ''} ajoutés.`, 3500);
   });

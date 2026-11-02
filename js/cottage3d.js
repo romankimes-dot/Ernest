@@ -2,7 +2,7 @@
 // Murs chaulés ronds et un peu de travers, gros toit de chaume arrondi avec un « sourcil » au-dessus de la
 // porte ronde rouge, fenêtres rondes enfoncées, cheminée de pierres qui penche, lierre, mousse, digitales,
 // trèfles, amanites, tas de bois, banc et lanterne. Les éléments répétés sont des InstancedMesh (≈ 30 meshes).
-// buildCottage(THREE, { rng, M }) -> { group, smokeOrigin, update(t, night) } ; origine au sol, porte vers +z.
+// buildCottage(THREE, { rng, M }) -> { group, smokeOrigin, update(t, night), light, glowPoints: [{ p, s }] } ; origine au sol, porte vers +z.
 
 export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const group = new THREE.Group();
@@ -251,9 +251,11 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
 
   // ---------- Fenêtres rondes enfoncées, jardinières ----------
   const flowerCols = ['#e8473a', '#f2c84b', '#f4efe6', '#7a5cc8', '#e77fb0'];
+  const glowPoints = []; // centres des halos (fenêtres, lanterne), en coordonnées locales, un peu devant le mur
   for (const [p, y, box] of [[0.8, 1.05, true], [-0.92, 1.0, true], [1.95, 1.05, false], [-2.05, 1.12, false]]) {
     const n = wallN(p), w = wallPt(p, y), qq = qFace(n);
     put('glass', w.clone().addScaledVector(n, 0.05), qq, 0.36);
+    glowPoints.push({ p: w.clone().addScaledVector(n, 0.32), s: 1.1 });
     put('frame', w.clone().addScaledVector(n, 0.06), qq, [0.4, 0.4, 0.5]);
     put('dark', w.clone().addScaledVector(n, 0.065), qq, [0.025, 0.36, 0.02]);
     put('dark', w.clone().addScaledVector(n, 0.065), qq, [0.36, 0.025, 0.02]);
@@ -342,6 +344,7 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.03, 6), MAT.iron); foot.position.y = -0.255; lantern.add(foot);
     const hook = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.006, 4, 8), MAT.iron); hook.position.y = -0.01; lantern.add(hook);
     lightNode.position.set(0, -0.17, 0.12); lantern.add(lightNode);
+    glowPoints.push({ p: anchor.clone().add(V(0, -0.17, 0)).addScaledVector(n, 0.08), s: 0.85 });
     group.add(lantern);
   }
 
@@ -367,5 +370,5 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     lantern.rotation.z = Math.sin(t * 1.1) * 0.05; lantern.rotation.x = Math.sin(t * 0.83 + 1) * 0.03;
   };
   update(0, 0);
-  return { group, smokeOrigin, update, light: lightNode };
+  return { group, smokeOrigin, update, light: lightNode, glowPoints };
 }

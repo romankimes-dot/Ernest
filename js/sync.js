@@ -76,7 +76,7 @@ export async function pull(cfg, local, m, today, { fetch: f = globalThis.fetch, 
     bridged.push({ src: p.src, ...r });
   }
   const needPush = rev === null || bridged.length > 0 || (!adopted && (m.dirty || rev !== m.rev));
-  return { state: adopted || bridged.length ? st : local, rev, adopted, conflict, first: m.rev === null, bridged, needPush };
+  return { state: adopted || bridged.length ? st : local, rev, adopted, conflict, first: m.rev === null, bridged, ponts: Object.keys(ponts || {}).length, needPush };
 }
 
 // Envoi, à condition que la version en ligne soit toujours `rev` (sinon erreur 412). → nouvelle version

@@ -30,9 +30,11 @@ export function merge(state, payload, today) {
     if (!t || !t.title) continue;
     const day = /^\d{4}-\d{2}-\d{2}$/.test(t.day || '') ? t.day : today;
     const d = ensureDay(state, day);
-    // déjà reçue une fois pour ce jour (même supprimée depuis) : jamais remise
-    if (d.things.some((x) => x.title === t.title && x.src === payload.src) || (br.days[day] || []).includes(t.title)) continue;
-    d.things.push({ id: uid(), title: String(t.title).slice(0, 120), cat: t.cat || 'revision', est: Number(t.est) || 30, slot: t.slot || null, src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 });
+    // déjà là : le moment proposé est repris si aucun n'est choisi ; déjà reçue pour ce jour (même supprimée) : jamais remise
+    const ex = d.things.find((x) => x.title === t.title && x.src === payload.src);
+    if (ex) { if (!ex.slot && t.slot && !ex.done) { ex.slot = t.slot; ex.slotAuto = true; } continue; }
+    if ((br.days[day] || []).includes(t.title)) continue;
+    d.things.push({ id: uid(), title: String(t.title).slice(0, 120), cat: t.cat || 'revision', est: Number(t.est) || 30, slot: t.slot || null, ...(t.slot ? { slotAuto: true } : {}), src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 });
     (br.days[day] = br.days[day] || []).push(t.title);
     r.things++;
   }
@@ -63,5 +65,12 @@ export function plantHistory(state, payload) {
     for (let i = 0; i < Math.min(3, Number(hd.n) || 0); i++) { state.garden.plants.push({ id: uid(), cat: 'revision', day: hd.day, seed: Math.floor(Math.random() * 1e9), kind: 'plant', src: payload.src }); n++; }
     if (!state.days[hd.day] && hd.n > 0) ensureDay(state, hd.day).things.push({ id: uid(), title: `Révision (${SRC_NAMES[payload.src] || payload.src})`, cat: 'revision', est: 0, done: true, real: 0, src: payload.src, doneAt: hd.day + 'T20:00:00' });
   }
+  return n;
+}
+
+// « Recevoir à nouveau » : oublie ce qui a été reçu ce jour-là (et la dernière version du plan), pour tout reprendre.
+export function forgetDay(state, day) {
+  let n = 0;
+  for (const br of Object.values(state.bridges || {})) { if (br.days && br.days[day]) { delete br.days[day]; n++; } delete br.hash; }
   return n;
 }
