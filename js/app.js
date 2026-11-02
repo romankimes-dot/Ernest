@@ -4,7 +4,7 @@ import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, 
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
-import { decode, merge, plantHistory } from './bridge.js';
+import { decode, merge, plantHistory, forgetDay } from './bridge.js';
 import { icon } from './icons.js';
 import * as SY from './sync.js';
 
@@ -129,7 +129,8 @@ function syncSection() {
   <div class="kv"><label>Code secret</label><input id="syTok" type="password" value="${esc(dec ? dec.token : '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   <button class="btn quiet" id="syGo">Connecter</button>`;
   return `<h3>Synchronisation</h3><div class="muted small">Connecté à ${esc(new URL(cfg.url).host)}. ${m.at ? `Dernière synchro : ${new Date(m.at).toLocaleString('fr-FR')}.` : 'Pas encore synchronisé.'}${m.error ? ` Dernier essai : ${esc(m.error)}.` : ''} Le plan de Deonto arrive tout seul.</div>
-  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
+  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>
+  <button class="btn quiet" id="syAgain">Recevoir à nouveau le plan du jour</button><div class="muted small">Ernest ne remet jamais une chose supprimée. Ce bouton reprend tout le plan d'aujourd'hui, même ce que tu avais supprimé.</div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
 }
 function bindSync() {
   const go = $('#syGo');
@@ -138,6 +139,7 @@ function bindSync() {
     closeSheet(); toast('Connexion…'); runSync({ manual: true });
   });
   const now = $('#syNow'); if (now) now.addEventListener('click', () => { closeSheet(); runSync({ manual: true }); });
+  const again = $('#syAgain'); if (again) again.addEventListener('click', () => { forgetDay(S, today); save(); closeSheet(); runSync({ manual: true }); });
   const off = $('#syOff'); if (off) off.addEventListener('click', () => { SY.setConfig(null); closeSheet(); toast('Synchronisation arrêtée sur cet appareil.'); });
   const back = $('#syBack');
   if (back) back.addEventListener('click', () => { const p = store.restorePrev(); if (!p) { toast('Plus de copie.'); return; } store.snapshotPrev(S); S = p; SY.setMeta({ conflictAt: null }); save(); closeSheet(); gardenUpdate(); render(); toast('Version de cet appareil reprise.'); });
