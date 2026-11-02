@@ -4,20 +4,22 @@ import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, 
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
-import { decode, merge } from './bridge.js';
+import { decode, merge, plantHistory } from './bridge.js';
 import { icon } from './icons.js';
+import * as SY from './sync.js';
 
 const VERSION = '0.8.0';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Annuler la dernière action : on garde les états précédents des données (pas les répliques ni le carnet).
-const UNDO = []; let lastKey = null, undoLabel = null, restoring = false;
+const UNDO = []; let lastKey = null, undoLabel = null, restoring = false, editSeq = 0;
 const userKey = () => JSON.stringify([S.days, S.list, S.ideas, S.goals, S.weeks, S.garden, S.settings, S.milestones, S.series, S.seriesMade]);
 const save = () => {
   const k = userKey();
   if (lastKey !== null && k !== lastKey && !restoring) { UNDO.push({ key: lastKey, label: undoLabel || 'la dernière action' }); if (UNDO.length > 30) UNDO.shift(); }
-  lastKey = k; undoLabel = null; store.save(S); updateUndoBtn();
+  lastKey = k; undoLabel = null; S.updatedAt = Date.now(); store.save(S); updateUndoBtn();
+  editSeq++; if (SY.config()) { SY.markDirty(); scheduleSync(); }
 };
 const label = (l) => { undoLabel = l; };
 function updateUndoBtn() { const b = document.getElementById('btnUndo'); if (b) b.hidden = !UNDO.length; }
@@ -85,9 +87,64 @@ async function init() {
   setInterval(() => { if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   pullToRefresh();
+  if (SY.config()) runSync();
+  window.addEventListener('online', () => { if (SY.config()) runSync(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && syncTimer) runSync(); });
+}
+
+// ---------- Synchronisation en ligne (js/sync.js) ----------
+// Envoi au plus une fois par minute après un changement, tout de suite quand l'app passe en arrière-plan ; lecture à
+// l'ouverture et au retour. Rien n'est remplacé pendant qu'une fiche est ouverte ou qu'un changement arrive en cours de route.
+let syncTimer = null, syncing = false;
+function scheduleSync(ms = 60000) { if (syncTimer || !SY.config()) return; syncTimer = setTimeout(() => { syncTimer = null; runSync(); }, ms); }
+async function runSync({ manual = false } = {}) {
+  const cfg = SY.config(); if (!cfg || syncing) return;
+  clearTimeout(syncTimer); syncTimer = null; syncing = true;
+  try {
+    const m = SY.meta(), seq = editSeq;
+    const r = await SY.pull(cfg, S, m, today);
+    if (seq !== editSeq || !$('#sheet').hidden) { scheduleSync(15000); return; } // on réessaie quand l'écran est libre
+    if (r.state !== S) {
+      if (r.conflict) { SY.keepLocal(S); SY.setMeta({ conflictAt: Date.now() }); }
+      S = r.state; materialize(S, today); S._light = moodAvg(S, today); store.save(S);
+      lastKey = userKey(); UNDO.length = 0; updateUndoBtn(); gardenUpdate(); render(); setErnest();
+    }
+    let rev = r.rev; const pushSeq = editSeq;
+    if (r.needPush) rev = await SY.push(cfg, S, r.rev);
+    SY.setMeta({ rev, dirty: editSeq !== pushSeq, at: Date.now(), error: null });
+    const nb = r.bridged.reduce((a, b) => a + b.things, 0);
+    if (nb) toast(`${nb} chose${nb > 1 ? 's' : ''} reçue${nb > 1 ? 's' : ''} de tes révisions.`, 3500);
+    else if (r.conflict && r.first) toast('Ernest repris depuis le serveur. Ce qu’il y avait sur cet appareil est gardé dans Réglages.', 5000);
+    else if (r.conflict) toast('Modifié sur les deux appareils : la version la plus récente est gardée. L’autre est dans Réglages.', 5000);
+    else if (manual) toast(r.adopted ? 'Synchronisé : repris de l’autre appareil.' : 'Synchronisé.');
+  } catch (e) {
+    SY.setMeta({ error: e.message });
+    if (e.status === 412) scheduleSync(5000); else if (manual) toast(`Synchronisation impossible : ${e.message}.`, 4000);
+  } finally { syncing = false; }
+}
+function syncSection() {
+  const cfg = SY.config(), m = SY.meta(), dec = SY.decConfig();
+  if (!cfg) return `<h3>Synchronisation</h3><div class="muted small">Retrouver Ernest sur le téléphone et l'ordinateur, et recevoir tout seul le plan de Deonto. Même serveur et même code que dans Deonto.</div>
+  <div class="kv"><label>Adresse du serveur</label><input id="syUrl" type="url" placeholder="https://dec-deonto.….workers.dev" value="${esc(dec ? dec.url : '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <div class="kv"><label>Code secret</label><input id="syTok" type="password" value="${esc(dec ? dec.token : '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <button class="btn quiet" id="syGo">Connecter</button>`;
+  return `<h3>Synchronisation</h3><div class="muted small">Connecté à ${esc(new URL(cfg.url).host)}. ${m.at ? `Dernière synchro : ${new Date(m.at).toLocaleString('fr-FR')}.` : 'Pas encore synchronisé.'}${m.error ? ` Dernier essai : ${esc(m.error)}.` : ''} Le plan de Deonto arrive tout seul.</div>
+  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
+}
+function bindSync() {
+  const go = $('#syGo');
+  if (go) go.addEventListener('click', () => {
+    if (!SY.setConfig({ url: $('#syUrl').value, token: $('#syTok').value })) { toast('Adresse (https://…) ou code manquant.'); return; }
+    closeSheet(); toast('Connexion…'); runSync({ manual: true });
+  });
+  const now = $('#syNow'); if (now) now.addEventListener('click', () => { closeSheet(); runSync({ manual: true }); });
+  const off = $('#syOff'); if (off) off.addEventListener('click', () => { SY.setConfig(null); closeSheet(); toast('Synchronisation arrêtée sur cet appareil.'); });
+  const back = $('#syBack');
+  if (back) back.addEventListener('click', () => { const p = store.restorePrev(); if (!p) { toast('Plus de copie.'); return; } store.snapshotPrev(S); S = p; SY.setMeta({ conflictAt: null }); save(); closeSheet(); gardenUpdate(); render(); toast('Version de cet appareil reprise.'); });
 }
 
 function onReturn() {
+  if (SY.config() && Date.now() - (SY.meta().at || 0) > 30000) runSync();
   const k = dayKey();
   if (k !== today) { today = k; if (materialize(S, today)) save(); S._light = moodAvg(S, today); gardenUpdate(); greet(); render(); return; }
   const running = dayOf(S, today).things.find((t) => t.startedAt && !t.done && t.link);
@@ -743,12 +800,14 @@ function settingsSheet() {
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
   <div class="kv"><label>Pont : dans Deonto ou dec-revision, « Copier pour Ernest », puis colle ici</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
+  ${syncSection()}
   <div class="btns"><button class="btn quiet" id="sHelp">${icon('help', 'sm')} La visite</button><button class="btn quiet" id="sIntro">${icon('leaf', 'sm')} L'arrivée d'Ernest</button></div>
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
   $('#sSave').addEventListener('click', () => { setTimeout(() => toast('Réglages enregistrés.'), 50); s.prenom = $('#sName').value.trim(); s.bedtime = $('#sBed').value || '22:30'; s.autoRitual = $('#sAutoR').checked; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
+  bindSync();
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });
   $('#sBridgeGo').addEventListener('click', () => { const p = decode($('#sBridge').value); if (!p) { toast('Pont illisible.'); return; } importSheet(p); });
   $('#sIntro').addEventListener('click', () => { S.ernest.firstSeq = 0; save(); closeSheet(); greet(); });
@@ -782,7 +841,7 @@ function importSheet(p) {
   openSheet(`<h2>${esc(names[p.src] || p.src)} propose</h2><div class="stack">${p.things.map((t) => `<div class="list-item"><span class="dot" style="background:${catOf(t.cat || 'revision').couleur}"></span><div class="t">${esc(t.title)}</div><span class="due">${t.day ? fmtDay(t.day).split(' ').slice(0, 2).join(' ') : 'aujourd\'hui'}${t.est ? ` · ${t.est} min` : ''}</span></div>`).join('')}${p.goals.map((g) => `<div class="list-item"><div class="t"><b>${esc(g.title)}</b> · ${(g.milestones || []).length} jalon${(g.milestones || []).length > 1 ? 's' : ''}</div></div>`).join('')}</div><button class="btn" id="impOk">Ajouter à la serre</button><button class="btn quiet" id="impNo">Ignorer</button>`);
   $('#impOk').addEventListener('click', () => {
     const r = merge(S, p, today);
-    if (Array.isArray(p.history)) for (const hd of p.history) { if (!/^\d{4}-\d{2}-\d{2}$/.test(hd.day || '') || S.garden.plants.some((x) => x.day === hd.day && x.src === p.src)) continue; for (let i = 0; i < Math.min(3, Number(hd.n) || 0); i++) S.garden.plants.push({ id: uid(), cat: 'revision', day: hd.day, seed: Math.floor(Math.random() * 1e9), kind: 'plant', src: p.src }); if (!S.days[hd.day] && hd.n > 0) ensureDay(S, hd.day).things.push({ id: uid(), title: `Révision (${names[p.src] || p.src})`, cat: 'revision', est: 0, done: true, real: 0, src: p.src, doneAt: hd.day + 'T20:00:00' }); }
+    plantHistory(S, p);
     save(); closeSheet(); render(); toast(`${r.things} chose${r.things > 1 ? 's' : ''}, ${r.goals} objectif${r.goals > 1 ? 's' : ''}, ${r.milestones} jalon${r.milestones > 1 ? 's' : ''} ajoutés.`, 3500);
   });
   $('#impNo').addEventListener('click', closeSheet);

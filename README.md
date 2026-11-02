@@ -27,6 +27,9 @@ Format unique, transporté par lien profond `https://romankimes-dot.github.io/Er
 - **dec-memoire** : `python3 -I scripts/export-ernest.py --lien` (lancé par `/fin-de-session`) : objectif Mémoire avec les échéances en jalons. Titres et dates seulement.
 Ernest montre ce qui va être ajouté et demande confirmation ; rien n'est ajouté deux fois.
 
+## Synchronisation
+Réglages › Synchronisation : même serveur et même code que Dec-Deonto (Worker Cloudflare, voir `cloudflare/README.md` de Dec-Deonto ; pré-remplis si Deonto est connecté dans le même navigateur). L'état est envoyé au plus une fois par minute après un changement et à la mise en arrière-plan, relu à l'ouverture (`js/sync.js`). Copie en ligne versionnée : modifiée des deux côtés, la plus récente l'emporte et l'autre se reprend dans Réglages ; au premier branchement d'un appareil, la copie en ligne l'emporte. Les plans déposés par les apps de révision (casier `/pont/<src>`) arrivent tout seuls, une fois par version ; une chose supprimée n'est jamais remise.
+
 ## Données
 Tout est sur le téléphone (`localStorage`, clé `ernest.state.v1`), copie automatique toutes les 3 heures, état précédent gardé avant un import ou un effacement. Réglages › Exporter (partage ou copie) : la Semaine le rappelle au-delà de 7 jours. Rappel du soir : iOS n'autorise pas une notification locale sans serveur ; une alarme à 21 h fait le travail.
 
