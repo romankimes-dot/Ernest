@@ -15,23 +15,34 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const sstep = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
   const vary = (c, amt = 0.08) => { const o = C(c); const h = {}; o.getHSL(h); o.setHSL(h.h + (rng() - 0.5) * amt * 0.4, clamp01(h.s + (rng() - 0.5) * amt), clamp01(h.l + (rng() - 0.5) * amt)); return o; };
   const std = (o) => new THREE.MeshStandardMaterial(o);
+  // textures procédurales (canvas) : fibres de paille, grain de bois, piqûres de pierre
+  const canTex = (w, h, draw, rx = 1, ry = 1) => { if (typeof document === 'undefined') return null; const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); draw(x, w, h); const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); return t; };
+  const strawTex = (rx, ry) => canTex(256, 256, (x, w, h) => { x.fillStyle = '#b8b8b8'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 900; i++) { const v = 120 + Math.floor(rng() * 135), px = rng() * w, py = rng() * h, L = 20 + rng() * 70; x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 0.6 + rng() * 1.6; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + (rng() - 0.5) * 6, py + L / 2, px + (rng() - 0.5) * 8, py + L); x.stroke(); }
+    x.fillStyle = 'rgba(40,30,20,0.35)'; for (let i = 0; i < 40; i++) x.fillRect(rng() * w, rng() * h, 1.2, 10 + rng() * 30); }, rx, ry);
+  const grainTex = (rx, ry) => canTex(128, 256, (x, w, h) => { x.fillStyle = '#a0a0a0'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 70; i++) { const v = 90 + Math.floor(rng() * 110), px = rng() * w; x.strokeStyle = `rgb(${v},${v},${v})`; x.lineWidth = 0.5 + rng() * 2; x.beginPath(); x.moveTo(px, 0); for (let y = 0; y <= h; y += 16) x.lineTo(px + Math.sin(y * 0.05 + i) * 3 * rng(), y); x.stroke(); }
+    for (let i = 0; i < 6; i++) { x.strokeStyle = 'rgba(50,50,50,.6)'; x.beginPath(); x.ellipse(rng() * w, rng() * h, 3 + rng() * 4, 8 + rng() * 10, 0, 0, 6.29); x.stroke(); } }, rx, ry);
+  const pitTex = (rx, ry) => canTex(128, 128, (x, w, h) => { x.fillStyle = '#909090'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 700; i++) { const v = 60 + Math.floor(rng() * 160); x.fillStyle = `rgba(${v},${v},${v},.6)`; x.beginPath(); x.arc(rng() * w, rng() * h, 0.6 + rng() * 2.6, 0, 6.29); x.fill(); } }, rx, ry);
+  const withTex = (m, bump, bs, map) => { if (bump) { m.bumpMap = bump; m.bumpScale = bs; } if (map) m.map = map; m.needsUpdate = true; return m; };
 
   // ---------- Matériaux ----------
   const MAT = {
     wash: std({ color: 0xffffff, vertexColors: true, roughness: 0.97 }),
-    thatch: std({ color: 0xffffff, vertexColors: true, roughness: 1 }),
-    straw: std({ color: 0xffffff, roughness: 1, flatShading: true }),
-    stone: std({ color: 0xffffff, roughness: 0.95, flatShading: true }),
-    paint: std({ color: 0xa3301f, roughness: 0.62, flatShading: true }),
+    thatch: withTex(std({ color: 0xffffff, vertexColors: true, roughness: 1 }), strawTex(14, 3), 5, strawTex(14, 3)),
+    straw: withTex(std({ color: 0xffffff, roughness: 1 }), strawTex(1, 1), 3, strawTex(1, 1)),
+    stone: withTex(std({ color: 0xffffff, roughness: 0.95 }), pitTex(2, 2), 3),
+    paint: withTex(std({ color: 0xa3301f, roughness: 0.62 }), grainTex(3, 1), 2),
     trim: std({ color: 0x2f5b3f, roughness: 0.7 }),
-    wood: std({ color: 0xffffff, roughness: 0.88 }),
-    woodDark: M.woodDark || std({ color: 0x5a3a1a, roughness: 0.9 }),
-    bark: M.bark || std({ color: 0x5b3f26, roughness: 0.95 }),
+    wood: withTex(std({ color: 0xffffff, roughness: 0.88 }), grainTex(1, 1), 3),
+    woodDark: withTex((M.woodDark ? M.woodDark.clone() : std({ color: 0x5a3a1a, roughness: 0.9 })), grainTex(1, 1), 3),
+    bark: withTex((M.bark ? M.bark.clone() : std({ color: 0x5b3f26, roughness: 0.95 })), grainTex(2, 1), 5),
     endgrain: std({ color: 0xc8a26a, roughness: 0.9 }),
     iron: std({ color: 0x26241f, roughness: 0.5, metalness: 0.75 }),
-    leaf: std({ color: 0xffffff, roughness: 0.75, side: THREE.DoubleSide, flatShading: true }),
+    leaf: std({ color: 0xffffff, roughness: 0.75, side: THREE.DoubleSide }),
     petal: std({ color: 0xffffff, roughness: 0.6, side: THREE.DoubleSide, flatShading: true }),
-    dots: std({ color: 0xffffff, roughness: 0.7, flatShading: true }),
+    dots: std({ color: 0xffffff, roughness: 0.7 }),
     glass: std({ color: 0x2c3e4c, roughness: 0.1, metalness: 0.5, emissive: 0xffa24a, emissiveIntensity: 0.08 }),
     glow: std({ color: 0xffe0a0, emissive: 0xffa040, emissiveIntensity: 0.3 }),
     pot: M.terra || std({ color: 0xb4652a, roughness: 0.9 }),
@@ -51,11 +62,11 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const qEuler = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z));
   const qBasis = (xA, yA, zA) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA, yA, zA));
 
-  const gStone = new THREE.DodecahedronGeometry(0.5, 0);
-  const gBlob = new THREE.IcosahedronGeometry(0.5, 0);
+  const gStone = (() => { const g = new THREE.IcosahedronGeometry(0.5, 2), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = 1 + 0.12 * Math.sin(x * 9.1 + y * 4.3) * Math.cos(z * 7.7 - x * 3.1) - 0.08 * Math.max(0, Math.abs(y) * 2 - 0.6); p.setXYZ(i, x * k, y * k, z * k); } g.computeVertexNormals(); return g; })(); // galet arrondi, bosselé
+  const gBlob = new THREE.IcosahedronGeometry(0.5, 1);
   const gBox = new THREE.BoxGeometry(1, 1, 1);
   const gLeaf = new THREE.CircleGeometry(0.5, 5);
-  const gLog = new THREE.CylinderGeometry(0.5, 0.5, 1, 7);
+  const gLog = new THREE.CylinderGeometry(0.5, 0.5, 1, 14);
   bin('stone', gStone, MAT.stone);
   bin('tuft', gBlob, MAT.straw, { cast: false });
   bin('moss', gBlob, MAT.leaf, { cast: false });
@@ -152,7 +163,7 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     g.computeVertexNormals();
     const roof = new THREE.Mesh(g, MAT.thatch); roof.castShadow = roof.receiveShadow = true; group.add(roof);
-    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 7, 5), std({ color: 0xb48b3e, roughness: 1, flatShading: true }));
+    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10), (() => { const m = MAT.straw.clone(); m.color.set(0xb48b3e); return m; })());
     knot.scale.set(1, 0.7, 1); knot.position.set(roofLean(3.66), 3.66, 0); knot.castShadow = true; group.add(knot);
   }
   // touffes de chaume : la frange de l'avant-toit et le relief du toit
@@ -190,7 +201,7 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     }
     const ct = at(top + 0.1);
     put('stone', ct, qEuler(0.05, 0.4, -0.06), [0.6, 0.1, 0.6], '#7a7468');
-    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.26, 8), MAT.pot); pot.position.copy(ct).add(V(0.02, 0.17, 0)); pot.rotation.z = -0.08; pot.castShadow = true; group.add(pot);
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.26, 16), MAT.pot); pot.position.copy(ct).add(V(0.02, 0.17, 0)); pot.rotation.z = -0.08; pot.castShadow = true; group.add(pot);
     smokeOrigin = pot.position.clone().add(V(0, 0.14, 0));
   }
 
@@ -219,7 +230,7 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     const sh = new THREE.Shape();
     const yb = 0.1;
     sh.moveTo(-DR, yb); sh.lineTo(DR, yb); sh.lineTo(DR, DC); sh.absarc(0, DC, DR, 0, Math.PI, false); sh.lineTo(-DR, yb);
-    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 14 });
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 3, curveSegments: 20 });
     const door = new THREE.Mesh(g, MAT.paint); door.position.z = DZ - 0.06; door.castShadow = door.receiveShadow = true; group.add(door);
     const fz = DZ + 0.04;
     for (const x of [-0.21, 0, 0.21]) { const h = DC + Math.sqrt(DR * DR - x * x) - yb - 0.06; put('dark', V(x, yb + h / 2 + 0.01, fz), q.identity().clone(), [0.016, h, 0.012]); }
