@@ -440,18 +440,65 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
     dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.28 + r() * 0.07, 1, 0.22 + r() * 0.05); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); cm.setColorAt(i, vary(col('#a39b86'), r, 0.1)); }
   cm.receiveShadow = true; outdoor.add(cm);
 }
-// Muret de pierres sèches autour du jardin, ouvert sur le chemin
+// Muret de pierres sèches autour du jardin, ouvert sur le chemin : trois assises jointives à joints décalés,
+// deux parements avec un léger fruit (plus large en bas), un couronnement de pierres debout, de la mousse dessus.
 {
-  const r = rngOf(55), stones = [], R = 12.5;
-  for (let a = 0; a < Math.PI * 2; a += 0.045) {
-    const x = Math.cos(a) * R, z = Math.sin(a) * R * 1.2; if (z > 8 && Math.abs(x - pathX(z)) < 1.3) continue;
-    // pierres plates, la première enfoncée de 30 % dans le sol, les suivantes posées dessus
-    let y = heightAt(x, z);
-    for (let l = 0; l < 3; l++) { const s = 0.18 + r() * 0.08 - l * 0.02, sy = s * 0.42; y += l === 0 ? sy * 0.4 : sy * 1.55; stones.push([x + (r() - 0.5) * 0.2, y, z + (r() - 0.5) * 0.2, s, sy, a]); }
+  const r = rngOf(55), stones = [], R = 12.5, RZ = 1.2;
+  // pierre : sphère poussée vers un pavé arrondi, bosselée ; normales calculées de la même façon (pas d'arêtes)
+  const stoneGeo = (seed) => {
+    const g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position, nr = g.attributes.normal, n = new THREE.Vector3(), c = new THREE.Vector3(), rr = rngOf(300 + seed), ph = [rr() * 6, rr() * 6, rr() * 6], col3 = [];
+    for (let i = 0; i < p.count; i++) {
+      n.fromBufferAttribute(p, i).normalize(); const m = Math.max(Math.abs(n.x), Math.abs(n.y), Math.abs(n.z));
+      c.copy(n).divideScalar(m); const v = n.clone().lerp(c, 0.62);
+      const k = 1 + 0.06 * Math.sin(n.x * 6.3 + ph[0]) * Math.sin(n.y * 5.1 + ph[1]) + 0.04 * Math.sin(n.z * 8.7 + n.x * 3 + ph[2]);
+      p.setXYZ(i, v.x * k * 0.5, v.y * k * 0.5, v.z * k * 0.5);
+      const ax = Math.abs(n.x) === m ? new THREE.Vector3(Math.sign(n.x), 0, 0) : Math.abs(n.y) === m ? new THREE.Vector3(0, Math.sign(n.y), 0) : new THREE.Vector3(0, 0, Math.sign(n.z));
+      const nn = n.clone().lerp(ax, 0.45).normalize(); nr.setXYZ(i, nn.x, nn.y, nn.z);
+      const f = 0.72 + 0.34 * smooth(-0.6, 0.5, n.y); col3.push(f, f, f); // dessous assombri
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col3, 3)); return g;
+  };
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, vertexColors: true, ...(TX ? { map: TX.stone, bumpMap: TX.stoneB, bumpScale: 3 } : {}) });
+  const VAR = 3, lists = Array.from({ length: VAR }, () => []);
+  const at = (a) => [Math.cos(a) * R, Math.sin(a) * R * RZ];
+  const open = (a) => { const [x, z] = at(a); return z > 8 && Math.abs(x - pathX(z)) < 1.3; };
+  const dsda = (a) => Math.hypot(R * Math.sin(a), R * RZ * Math.cos(a));
+  const tints = ['#9b9381', '#8f8a7a', '#a39a86', '#857f70'], moss = '#7f8a5a';
+  const put = (x, y, z, sx, sy, sz, rotY, tint, tilt = 0.06) => {
+    const q = lists[Math.floor(r() * VAR)]; q.push([x, y, z, sx, sy, sz, rotY + (r() - 0.5) * 0.12, (r() - 0.5) * tilt, (r() - 0.5) * tilt, tint]);
+  };
+  const COURSES = [{ h: 0.17, off: 0.17 }, { h: 0.15, off: 0.145 }, { h: 0.14, off: 0.12 }];
+  COURSES.forEach((C, l) => {
+    for (const side of [-1, 1]) {
+      let a = (l % 2 ? 0.012 : 0) + (side > 0 ? 0.006 : 0);
+      while (a < Math.PI * 2) {
+        const len = 0.32 + r() * 0.2, da = len / dsda(a), am = a + da / 2; a += da; if (open(am)) continue;
+        const [x0, z0] = at(am), tx = -R * Math.sin(am), tz = R * RZ * Math.cos(am), tl = Math.hypot(tx, tz), nx = tz / tl, nz = -tx / tl;
+        const x = x0 + nx * C.off * side, z = z0 + nz * C.off * side;
+        let y = heightAt(x0, z0) - 0.07; for (let k = 0; k < l; k++) y += COURSES[k].h; y += C.h / 2;
+        const t = l === 0 && r() < 0.35 ? moss : tints[Math.floor(r() * tints.length)];
+        put(x, y, z, len * 1.04, C.h * (0.95 + r() * 0.2), 0.2 + r() * 0.06, -Math.atan2(tz, tx), col(t).multiplyScalar(l === 0 ? 0.85 : 1));
+        if (side > 0) stones.push([x0, y, z0, len * 0.6, C.h, am]);
+      }
+    }
+  });
+  // couronnement : pierres debout, serrées, en travers du mur
+  const top = COURSES.reduce((s, C) => s + C.h, 0) - 0.07, mossTop = [];
+  for (let a = 0; a < Math.PI * 2;) {
+    const th = 0.1 + r() * 0.05, da = th / dsda(a), am = a + da / 2; a += da; if (open(am)) continue;
+    const [x, z] = at(am), tx = -R * Math.sin(am), tz = R * RZ * Math.cos(am), h = 0.2 + r() * 0.08;
+    put(x, heightAt(x, z) + top + h / 2 - 0.02, z, th * 1.05, h, 0.36 + r() * 0.06, -Math.atan2(tz, tx), col(r() < 0.3 ? moss : tints[Math.floor(r() * tints.length)]).multiplyScalar(1.05), 0.18);
+    if (r() < 0.22) mossTop.push([x, heightAt(x, z) + top + h - 0.01, z, -Math.atan2(tz, tx)]);
   }
-  const m = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), stones.length);
-  stones.forEach(([x, y, z, s, sy, a], i) => { dummy.position.set(x, y, z); dummy.rotation.set((r() - 0.5) * 0.25, -a + (r() - 0.5) * 0.5, (r() - 0.5) * 0.25); dummy.scale.set(s * 1.5, sy, s * 1.05); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col(r() < 0.2 ? '#7f8466' : '#958e7c'), r, 0.12)); });
-  m.castShadow = m.receiveShadow = true; outdoor.add(m);
+  lists.forEach((L, v) => {
+    const m = new THREE.InstancedMesh(stoneGeo(v), mat, L.length);
+    L.forEach(([x, y, z, sx, sy, sz, ry, rx, rz, tint], i) => { dummy.position.set(x, y, z); dummy.rotation.set(rx, ry, rz, 'YXZ'); dummy.scale.set(sx, sy, sz); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(tint, r, 0.08)); });
+    m.castShadow = m.receiveShadow = true; outdoor.add(m);
+  });
+  // mousse en coussins sur le couronnement
+  const mm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), Math.max(1, mossTop.length * 5)); let mk = 0;
+  for (const [x, y, z, ry] of mossTop) for (let j = 0, n = 3 + Math.floor(r() * 3); j < n; j++) { const ox = (r() - 0.5) * 0.1, oz = (r() - 0.5) * 0.26; dummy.position.set(x + Math.cos(ry) * ox + Math.sin(ry) * oz, y - 0.015 - Math.abs(oz) * 0.25, z - Math.sin(ry) * ox + Math.cos(ry) * oz); dummy.rotation.set(r(), r() * 6.28, r()); dummy.scale.set(0.03 + r() * 0.03, 0.02 + r() * 0.012, 0.03 + r() * 0.035); dummy.updateMatrix(); mm.setMatrixAt(mk, dummy.matrix); mm.setColorAt(mk++, vary(col(r() < 0.5 ? '#4f6a30' : '#66803c'), r, 0.14)); }
+  mm.count = mk; mm.receiveShadow = true; outdoor.add(mm);
   wallStones = stones;
 }
 // Potager : un carré en bois par catégorie, qui sort de terre quand la catégorie a assez servi, puis se remplit.
@@ -492,7 +539,8 @@ BEDS.forEach((b, bi) => {
     }
     treeSpots.push([x, z, conifer ? H * 0.34 : H * 0.42]);
   }
-  for (let i = 0; i < 60; i++) { const a = r() * 6.28, x = Math.cos(a) * (11 + r() * 3), z = Math.sin(a) * (11 + r() * 3) * 1.2; if ((z > 8 && Math.abs(x - pathX(z)) < 2) || inHouse(x, z, 1)) continue; bushes.push([x, heightAt(x, z) + 0.18, z, 0.35 + r() * 0.35, r()]); }
+  // buissons : en touffes de plusieurs boules, surtout le long du muret (dehors), quelques-uns dedans
+  for (let i = 0; i < 64; i++) { const a = r() * 6.28, out = r() < 0.72, d = out ? 13.25 + r() * 1.4 : 10.9 + r() * 0.5, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.2; if ((z > 7 && Math.abs(x - pathX(z)) < 2.2) || inHouse(x, z, 1)) continue; bushes.push([x, heightAt(x, z), z, 0.34 + r() * 0.3, r()]); }
   // dégradé vertical dans la géométrie : dessous assombri de 35 %, sommet un peu éclairci (multiplié par la couleur d'instance)
   // boule bosselée (houppiers, buissons) : un bruit de position, normales gardées lisses
   const lumpy = (g, amt, seed) => { const p = g.attributes.position, nr = g.attributes.normal, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const k = 1 + amt * (Math.sin(v.x * 5.1 + seed) * Math.sin(v.y * 4.3 + seed * 2) + 0.6 * Math.sin(v.z * 7.7 - v.x * 3.1 + seed)); nr.setXYZ(i, v.x, v.y, v.z); p.setXYZ(i, v.x * k, v.y * k, v.z * k); } return g; };
@@ -505,8 +553,30 @@ BEDS.forEach((b, bi) => {
   const bm = new THREE.InstancedMesh(grad(lumpy(new THREE.IcosahedronGeometry(1, 2), 0.1, 1.3), -0.9, 0.75), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, vertexColors: true }), blobs.length);
   blobs.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, v * 6.28, 0); dummy.scale.set(s * 1.12, s * 0.9, s * 1.12); dummy.updateMatrix(); bm.setMatrixAt(i, dummy.matrix); bm.setColorAt(i, col(leafy[Math.floor(v * leafy.length)])); });
   bm.visible = !!PAL.leaves;
-  const um = new THREE.InstancedMesh(grad(lumpy(new THREE.IcosahedronGeometry(1, 2), 0.16, 4.1), -0.8, 0.7, 0.6, 1.1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, vertexColors: true }), bushes.length);
-  bushes.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, v * 6.28, 0); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, vary(col(SEASON === 'automne' ? ['#6f7f34', '#8a7a30', '#a0662c', '#5f7432'][i % 4] : '#3f6e3a'), rngOf(i), 0.12)); });
+  // touffe : boules feuillues (silhouette bosselée, ombrage moucheté par des normales bruitées, dessous sombre)
+  const leafyGeo = (() => {
+    const g = new THREE.IcosahedronGeometry(1, 2), p = g.attributes.position, nr = g.attributes.normal, n = new THREE.Vector3(), c = [];
+    for (let i = 0; i < p.count; i++) {
+      n.fromBufferAttribute(p, i).normalize();
+      const big = Math.sin(n.x * 5.1 + 4.1) * Math.sin(n.y * 4.3 + 8.2) + 0.6 * Math.sin(n.z * 7.7 - n.x * 3.1 + 4.1), fine = Math.sin(n.x * 17 + n.y * 5) * Math.sin(n.y * 15 - n.z * 7) * Math.sin(n.z * 19 + n.x * 3);
+      const k = 1 + 0.13 * big + 0.06 * fine; p.setXYZ(i, n.x * k, n.y * k, n.z * k);
+      const nn = n.clone().add(new THREE.Vector3(Math.sin(n.y * 23 + n.z * 7), Math.sin(n.z * 21 + n.x * 5), Math.sin(n.x * 25 + n.y * 9)).multiplyScalar(0.32)).normalize(); nr.setXYZ(i, nn.x, nn.y, nn.z);
+      const f = (0.55 + 0.55 * smooth(-0.85, 0.75, n.y)) * (0.86 + 0.2 * (fine * 0.5 + 0.5)); c.push(f, f, f);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return g;
+  })();
+  const bushCols = SEASON === 'automne' ? ['#6f7f34', '#8a7a30', '#a0662c', '#5f7432', '#4f6a30'] : SEASON === 'hiver' ? ['#3f5a3a', '#4a5f42', '#36503a'] : ['#3f6e3a', '#4a7a3e', '#356236', '#5a8442'];
+  const lumps = [], dots = [];
+  bushes.forEach(([x, y, z, s, v], i) => {
+    const rr = rngOf(700 + i), base = col(bushCols[Math.floor(v * bushCols.length)]), n = 3 + Math.floor(rr() * 3), rot = v * 6.28;
+    lumps.push([x, y + s * 0.5, z, s, s * 0.82, base.clone().multiplyScalar(1.04)]);
+    for (let j = 0; j < n; j++) { const a = rot + (j / n) * 6.28 + rr() * 0.6, d = s * (0.55 + rr() * 0.25), sz = s * (0.55 + rr() * 0.25); lumps.push([x + Math.cos(a) * d, y + sz * 0.42, z + Math.sin(a) * d, sz, sz * 0.78, vary(base, rr, 0.1).multiplyScalar(0.92)]); }
+    if (SEASON !== 'hiver' && rr() < 0.45) { const dc = SEASON === 'automne' ? ['#b8322a', '#d0502e'] : ['#f4efe6', '#e8a0b8', '#f2d24a']; const pick = col(dc[Math.floor(rr() * dc.length)]);
+      for (let j = 0; j < 9; j++) { const a = rr() * 6.28, el = 0.2 + rr() * 1.0, R0 = s * 0.98; dots.push([x + Math.cos(a) * Math.cos(el) * R0 * 1.05, y + s * 0.5 + Math.sin(el) * R0 * 0.8, z + Math.sin(a) * Math.cos(el) * R0 * 1.05, pick]); } }
+  });
+  const um = new THREE.InstancedMesh(leafyGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, vertexColors: true }), lumps.length);
+  lumps.forEach(([x, y, z, sxz, sy, c], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, i * 1.7, 0); dummy.scale.set(sxz, sy, sxz); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, c); });
+  if (dots.length) { const dm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), dots.length); dots.forEach(([x, y, z, c], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.028); dummy.updateMatrix(); dm.setMatrixAt(i, dummy.matrix); dm.setColorAt(i, c); }); outdoor.add(dm); }
   // vent dans les houppiers : le haut bouge plus que le bas, chaque arbre à son rythme (position de l'instance)
   const sway = (mat, amp, key) => {
     mat.onBeforeCompile = (sh) => {
