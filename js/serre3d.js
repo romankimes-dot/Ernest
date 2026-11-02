@@ -18,4 +18,5 @@ document.getElementById('mood').addEventListener('input', apply);
 { const h = new Date().getHours(); const k = h >= 8 && h < 18 ? 'day' : h >= 18 && h < 21 ? 'dusk' : 'night'; document.querySelectorAll('#time button').forEach((x) => x.classList.toggle('on', x.dataset.t === k)); G.setTime(k); }
 apply();
 document.getElementById('loading').remove();
-window.__serre = { applyStage: (s) => { stage = s; apply(); }, applyTime: (k) => G.setTime(k), get camera() { return G.camera; }, get controls() { return G.controls; } };
+window.__serre = { applyStage: (s) => { stage = s; apply(); }, applyTime: (k) => G.setTime(k), get camera() { return G.camera; }, get controls() { return G.controls; },
+  setMode: (m) => G.setMode(m), setLantern: (on) => G.setLantern(on), plantSeeds: (n) => G.plantSeeds(n), dropLeaf: () => G.dropLeaf(), restoreLeaf: () => G.restoreLeaf(), api: G };
