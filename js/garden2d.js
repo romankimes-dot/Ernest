@@ -95,6 +95,7 @@ export class Garden {
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, lerp('#0a1a24', '#8fc3d9', day * mood)); g.addColorStop(.7, lerp('#0b1511', '#c9dcc0', day * mood * .8)); g.addColorStop(1, lerp('#1a2418', '#9bb48a', day * mood * .8));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const band = lerp('#0a1a24', '#8fc3d9', day * mood); if (band !== this._band && cv.parentElement) { this._band = band; cv.parentElement.style.background = band; }
     // Lune ou soleil
     if (day < .5) { ctx.fillStyle = `rgba(239,230,210,${.9 - day})`; ctx.beginPath(); ctx.arc(W * .82, H * .2, 12, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = lerp('#0a1a24', '#8fc3d9', day * mood); ctx.beginPath(); ctx.arc(W * .82 + 6, H * .2 - 4, 11, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.fillStyle = `rgba(255,236,170,${(day - .5) * 1.6})`; ctx.beginPath(); ctx.arc(W * .82, H * .2, 14, 0, Math.PI * 2); ctx.fill(); }

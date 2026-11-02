@@ -5,8 +5,9 @@ import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, 
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
 import { decode, merge } from './bridge.js';
+import { icon } from './icons.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 let S, today, tab = 'today', garden, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -14,6 +15,8 @@ const save = () => store.save(S);
 const nowHour = () => new Date().getHours();
 const BLOCKS = { matin: 'Matin', midi: 'Midi', aprem: 'Après-midi', soir: 'Soir' };
 const slotLabel = (s) => (!s ? '' : BLOCKS[s] || s);
+const blocksHtml = (slot) => `<div class="blocks">${Object.entries(BLOCKS).map(([k, v]) => `<button data-b="${k}" class="${slot === k ? 'on' : ''}">${v}</button>`).join('')}</div>`;
+const MOMENTS = [['matin', 'Matin'], ['midi', 'Midi'], ['aprem', 'Après-midi'], ['soir', 'Soir'], [null, 'Dans la journée']];
 const slotOrder = (s) => (!s ? 9 : BLOCKS[s] ? ['matin', 'midi', 'aprem', 'soir'].indexOf(s) * 100 + 50 : (parseInt(s, 10) || 0) * 10);
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const fmtDay = (k) => new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -24,7 +27,7 @@ async function init() {
   S._light = moodAvg(S, today);
   garden = new Garden($('#garden')); garden.update(S, today); garden.start();
   document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-  $('#fab').addEventListener('click', () => captureSheet());
+  $('#fab').addEventListener('click', () => captureSheet(tab === 'liste' ? 'list' : tab === 'semaine' ? 'goal' : 'today'));
   $('#btnSettings').addEventListener('click', settingsSheet);
   $('#sheetBg').addEventListener('click', closeSheet);
   $('#bulle').addEventListener('click', hideBubble);
@@ -101,26 +104,41 @@ const chipValue = (root, name) => { const on = root.querySelector(`[data-chips="
 // ---------- Aujourd'hui ----------
 function viewToday() {
   const d = ensureDay(S, today), tomorrow = addDays(today, 1), j = jMinus(S.settings.exam, today);
-  const things = [...d.things].sort((a, b) => (a.done - b.done) || (slotOrder(a.slot) - slotOrder(b.slot)));
-  const firstUndone = things.find((t) => !t.done);
+  const ordered = [...d.things].sort((a, b) => slotOrder(a.slot) - slotOrder(b.slot));
+  const firstUndone = ordered.find((t) => !t.done);
   const dueToday = sortList(S.list).filter((l) => !l.done && l.due && l.due <= today);
-  let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${d.things.length ? (d.things.every((t) => t.done) ? 'Tout est fait.' : d.things.length <= 3 ? 'Trois choses.' : 'Aujourd\'hui.') : 'Rien de posé.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(S.settings.examLabel)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
+  const all = d.things.length > 0 && d.things.every((t) => t.done);
+  let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(S.settings.examLabel)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
+  if (!S.ernest.helpSeen) h += helpCard();
   if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
-  if (!d.things.length && !d.planned) {
+  if (!d.things.length) {
     const sug = suggestions(S, today).filter((s) => s.kind === 'list').slice(0, 3);
-    h += `<div class="card amber stack"><div>Ernest propose pour aujourd'hui :</div>${sug.length ? sug.map((s, i) => `<label class="row"><input type="checkbox" checked data-sug="${i}" style="width:auto"> <span class="dot" style="background:${catOf(s.cat).couleur}"></span> ${esc(s.title)} <span class="muted small">· ${esc(s.why)}</span></label>`).join('') : `<div class="muted small">La liste est vide. Une seule chose suffit.</div>`}<button class="btn" data-act="acceptSug">${sug.length ? 'OK pour aujourd\'hui' : 'Poser une chose'}</button></div>`;
+    h += `<div class="card amber stack">${sug.length ? `<div>Dans ta liste, pour aujourd'hui :</div>${sug.map((s, i) => `<label class="row"><input type="checkbox" checked data-sug="${i}" style="width:auto"> <span class="dot" style="background:${catOf(s.cat).couleur}"></span> ${esc(s.title)}</label>`).join('')}<button class="btn" data-act="acceptSug">Les placer dans ma journée</button>` : `<div class="muted">Une seule chose suffit pour commencer.</div>`}<button class="btn ${sug.length ? 'quiet' : ''}" data-act="addThing">${icon('plus', 'sm')} Poser une chose pour aujourd'hui</button></div>`;
   }
-  if (nowHour() >= 18 && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span><span style="font-size:22px;color:var(--amber)">→</span></button>`;
-  h += `<div class="stack">${things.map((t) => thingRow(t, t === firstUndone)).join('')}</div>`;
+  if (nowHour() >= 18 && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span class="row">${icon('moon')}<span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
+  for (const [k, label] of MOMENTS) {
+    const items = ordered.filter((t) => (BLOCKS[t.slot] ? t.slot : null) === k).sort((a, b) => a.done - b.done);
+    if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => thingRow(t, t === firstUndone)).join('')}</div></div>`;
+  }
   if (firstUndone) h += firstUndone.startedAt ? `<button class="btn" data-act="done" data-id="${firstUndone.id}">Terminer · <span class="timer">${elapsed(firstUndone)}</span></button>` : `<button class="btn" data-act="start" data-id="${firstUndone.id}">Démarrer : ${esc(firstUndone.title)}</button>`;
-  if (d.things.length && d.things.length < 6) h += `<button class="btn quiet" data-act="addThing">+ Une chose de plus</button>`;
-  if (dueToday.length) h += `<div class="eyebrow" style="margin-top:6px">Aussi dans la liste</div><div class="stack">${dueToday.map(listRow).join('')}</div>`;
+  if (d.things.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
+  if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
   const dn = doneOn(S, today).n; if (dn) h += `<div class="muted small">${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout.</div>`;
   return h;
 }
+function helpCard() {
+  const r = (ic, t) => `<div class="help-row">${icon(ic)}<div>${t}</div></div>`;
+  return `<div class="card help stack"><div class="eyebrow">Comment ça marche</div>
+  ${r('sun', "<b>Aujourd'hui</b> : ce que tu as décidé de faire aujourd'hui, placé dans la journée (matin, midi, après-midi, soir). Trois choses suffisent.")}
+  ${r('list', "<b>Liste</b> : tout ce qui attend, sans date ou pour plus tard. Courses, colis, voiture. Ce qui est daté d'aujourd'hui remonte ici.")}
+  ${r('moon', "<b>Le soir</b> : tu choisis ce qui passera dans la journée de demain, souvent depuis la liste.")}
+  ${r('week', "<b>Semaine</b> : ce qui a poussé, et tes objectifs avec leurs étapes.")}
+  ${r('plus', "Le bouton <b>+</b> attrape tout : pour aujourd'hui, pour la liste, une idée ou un objectif. Tu choisis où ça va.")}
+  <button class="btn quiet" data-act="helpOk">Compris</button></div>`;
+}
 function thingRow(t, first) {
   const c = catOf(t.cat);
-  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? '✓' : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(slotLabel(t.slot) || c.nom)}${t.done && t.real ? ` · ${t.real} min` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.est ? ` · ~${t.est} min` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">↗</button>` : ''}</div>`;
+  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? icon('check') : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(c.nom)}${t.done && t.real ? ` · ${t.real} min` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.est ? ` · ~${t.est} min` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">${icon('open')}</button>` : ''}</div>`;
 }
 const elapsed = (t) => { const m = Math.round((Date.now() - t.startedAt) / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
 function renderTimerOnly() { document.querySelectorAll('.timer').forEach((el) => { const t = dayOf(S, today).things.find((x) => x.startedAt && !x.done); if (t) el.textContent = elapsed(t); }); }
@@ -135,10 +153,12 @@ function action(act, ds, el, v) {
   const thing = ds.id ? d.things.find((t) => t.id === ds.id) : null;
   switch (act) {
     case 'installOk': S.ernest.installHint = true; save(); render(); break;
+    case 'helpOk': S.ernest.helpSeen = true; save(); render(); break;
+    case 'listToday': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; d.things.push({ id: uid(), title: l.text, cat: l.cat || 'perso', est: estimate(S, l.cat || 'perso'), slot: null, done: false, real: 0, fromList: l.id }); d.planned = true; save(); toast('Placée dans ta journée.'); render(); break; }
     case 'acceptSug': {
       const sug = suggestions(S, today).filter((s) => s.kind === 'list').slice(0, 3);
       const picked = [...v.querySelectorAll('[data-sug]')].filter((c) => c.checked).map((c) => sug[Number(c.dataset.sug)]);
-      if (!picked.length) { d.planned = true; save(); thingSheet(); return; }
+      if (!picked.length) { thingSheet(); return; }
       for (const s of picked) { const l = S.list.find((x) => x.id === s.id); d.things.push({ id: uid(), title: s.title, cat: s.cat, est: estimate(S, s.cat), slot: null, src: null, link: null, done: false, real: 0, fromList: l ? l.id : null }); }
       d.planned = true; save(); render(); break;
     }
@@ -197,11 +217,11 @@ function milestones() {
 // Feuille : une chose (créer ou modifier)
 function thingSheet(t) {
   const d = ensureDay(S, today), isNew = !t; t = t || { id: uid(), title: '', cat: 'perso', est: null, slot: null, done: false, real: 0 };
-  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand</label><div class="blocks">${Object.entries(BLOCKS).map(([k, v]) => `<button data-b="${k}" class="${t.slot === k ? 'on' : ''}">${v}</button>`).join('')}</div></div><div class="kv"><label>Durée estimée (min)</label><input id="thEst" type="number" inputmode="numeric" value="${t.est || estimate(S, t.cat)}" style="width:120px"></div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="row" style="gap:8px"><button class="btn quiet" id="thTomorrow">→ Demain</button><button class="btn quiet" id="thIdea">→ Idée</button><button class="btn quiet" id="thDrop">Laisser</button></div>`}`);
+  openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div><div class="kv"><label>Durée estimée (min)</label><input id="thEst" type="number" inputmode="numeric" value="${t.est || estimate(S, t.cat)}" style="width:120px"></div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="row" style="gap:8px"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('arrow', 'sm')} Idée</button><button class="btn quiet" id="thDrop">Laisser</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh); let slot = t.slot;
   sh.querySelector('[data-chips]').addEventListener('change', (e) => { if (e.detail) $('#thEst').value = estimate(S, e.detail); });
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
-  $('#thSave').addEventListener('click', () => { const title = $('#thTitle').value.trim(); if (!title) return; t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; t.est = Number($('#thEst').value) || null; t.slot = slot; if (isNew) { d.things.push(t); d.planned = true; } save(); closeSheet(); render(); });
+  $('#thSave').addEventListener('click', () => { const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; t.est = Number($('#thEst').value) || null; t.slot = slot; if (isNew) { d.things.push(t); d.planned = true; } save(); closeSheet(); render(); });
   if (!isNew) {
     $('#thTomorrow').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); ensureDay(S, addDays(today, 1)).things.push({ ...t, startedAt: null }); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'reporte', e)); save(); closeSheet(); render(); });
     $('#thIdea').addEventListener('click', () => { d.things = d.things.filter((x) => x.id !== t.id); S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); save(); closeSheet(); render(); });
@@ -211,15 +231,34 @@ function thingSheet(t) {
 }
 
 // ---------- Capture (+) ----------
-function captureSheet() {
-  let mode = 'todo', due = null, forToday = false;
-  openSheet(`<input id="capText" placeholder="Attraper quelque chose…" autocomplete="off"><div class="chips"><button class="chip on" data-m="todo">À faire</button><button class="chip" data-m="idea">Idée</button><button class="chip" data-m="today">Pour aujourd'hui</button></div><div id="capMore">${chips(null)}<div class="chips" style="margin-top:8px"><button class="chip" data-d="0">Aujourd'hui</button><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Cette semaine</button><input type="date" id="capDate" style="width:auto;padding:6px 10px;border-radius:999px;font-size:13px"></div></div><button class="btn" id="capSave">Attraper</button>`);
-  const sh = $('#sheet'); bindChips(sh);
-  sh.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.m; sh.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', x === b)); $('#capMore').hidden = mode === 'idea'; }));
-  sh.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { const was = b.classList.contains('on'); sh.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); due = was ? null : addDays(today, Number(b.dataset.d)); if (!was) b.classList.add('on'); $('#capDate').value = due || ''; }));
-  $('#capDate').addEventListener('change', () => { due = $('#capDate').value || null; sh.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); });
-  const go = () => { const text = $('#capText').value.trim(); if (!text) return; const cat = chipValue(sh, 'cat'); if (mode === 'idea') addList(text, 'idea'); else if (mode === 'today') { ensureDay(S, today).things.push({ id: uid(), title: text, cat: cat || 'perso', est: estimate(S, cat || 'perso'), slot: null, done: false, real: 0 }); ensureDay(S, today).planned = true; save(); } else addList(text, 'todo', cat, due); closeSheet(); if (mode === 'today') switchTab('today'); else render(); };
-  $('#capSave').addEventListener('click', go); $('#capText').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+function captureSheet(preset = 'today') {
+  let dest = preset, due = null, slot = null;
+  const DEST = [['today', 'sun', "Aujourd'hui", 'Je le fais aujourd\'hui'], ['list', 'list', 'Liste', 'Plus tard, ou à une date'], ['idea', 'bulb', 'Idée', 'Une pensée à garder'], ['goal', 'flag', 'Objectif', 'Un cap, avec des étapes']];
+  openSheet(`<input id="capText" placeholder="Qu'est-ce que tu veux attraper ?" autocomplete="off"><div class="dest">${DEST.map(([k, ic, t, sub]) => `<button data-dest="${k}" class="${k === dest ? 'on' : ''}">${icon(ic)}<span><b>${t}</b><small>${sub}</small></span></button>`).join('')}</div><div id="capOpts" class="stack"></div><button class="btn" id="capSave">Attraper</button>`);
+  const sh = $('#sheet');
+  const opts = () => {
+    const o = $('#capOpts');
+    if (dest === 'today') o.innerHTML = `${chips(null)}<div class="kv"><label>Quand dans la journée (facultatif)</label>${blocksHtml(slot)}</div>`;
+    else if (dest === 'list') o.innerHTML = `${chips(null)}<div class="kv"><label>Pour quand (facultatif)</label><div class="chips"><button class="chip" data-d="1">Demain</button><button class="chip" data-d="7">Dans la semaine</button><input type="date" id="capDate" class="chip-date"></div></div>`;
+    else if (dest === 'goal') o.innerHTML = `${chips(null)}<div class="kv"><label>Échéance (facultative)</label><input type="date" id="capGoalDue"></div><div class="kv"><label>Étapes, une par ligne (facultatif)</label><textarea id="capGoalMs" placeholder="Première étape&#10;Deuxième étape"></textarea></div>`;
+    else o.innerHTML = `<div class="muted small">Elle ira dans Liste › Idées. Tu la trieras quand tu voudras.</div>`;
+    bindChips(o);
+    o.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; o.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
+    o.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { const was = b.classList.contains('on'); o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); due = was ? null : addDays(today, Number(b.dataset.d)); if (!was) b.classList.add('on'); const cd = $('#capDate'); if (cd) cd.value = due || ''; }));
+    const cd = $('#capDate'); if (cd) cd.addEventListener('change', () => { due = cd.value || null; o.querySelectorAll('[data-d]').forEach((x) => x.classList.remove('on')); });
+  };
+  sh.querySelectorAll('[data-dest]').forEach((b) => b.addEventListener('click', () => { dest = b.dataset.dest; due = null; slot = null; sh.querySelectorAll('[data-dest]').forEach((x) => x.classList.toggle('on', x === b)); opts(); }));
+  opts();
+  const go = () => {
+    const text = $('#capText').value.trim();
+    if (!text) { toast("Écris d'abord ce que tu veux attraper."); $('#capText').focus(); return; }
+    const cat = chipValue(sh, 'cat');
+    if (dest === 'today') { const d = ensureDay(S, today); d.things.push({ id: uid(), title: text, cat: cat || 'perso', est: estimate(S, cat || 'perso'), slot, done: false, real: 0 }); d.planned = true; save(); closeSheet(); toast('Placée dans ta journée.'); switchTab('today'); }
+    else if (dest === 'list') { addList(text, 'todo', cat, due); closeSheet(); toast(due && due <= today ? "Dans la liste, et visible aujourd'hui." : due ? `Dans la liste, pour le ${new Date(due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.` : 'Dans la liste.'); render(); }
+    else if (dest === 'idea') { addList(text, 'idea'); closeSheet(); toast('Rangée dans les idées.'); render(); }
+    else { const ms = ($('#capGoalMs').value || '').split('\n').map((x) => x.trim()).filter(Boolean).map((t) => ({ text: t, done: false })); S.goals.push({ id: uid(), title: text, cat: cat || 'perso', due: $('#capGoalDue').value || null, horizon: 'month', milestones: ms, status: 'active', reviews: {} }); save(); closeSheet(); toast('Objectif posé, dans Semaine.'); switchTab('semaine'); }
+  };
+  $('#capSave').addEventListener('click', go); $('#capText').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
   setTimeout(() => $('#capText').focus(), 50);
 }
 function addList(text, kind, cat = null, due = null) {
@@ -233,19 +272,19 @@ function addList(text, kind, cat = null, due = null) {
 // ---------- Liste ----------
 function viewListe() {
   const open = sortList(S.list).filter((l) => !l.done), done = sortList(S.list).filter((l) => l.done).slice(0, 30), ideas = S.ideas.filter((i) => i.status === 'inbox' || i.status === 'kept');
-  let h = `<h1>La liste.</h1><input id="capture" placeholder="${listeFilter === 'ideas' ? 'Une idée…' : 'Une chose à faire, un jour…'}" autocomplete="off"><div class="chips"><button class="chip ${listeFilter === 'todo' ? 'on' : ''}" data-act="filter" data-v="todo">À faire · ${open.length}</button><button class="chip ${listeFilter === 'ideas' ? 'on' : ''}" data-act="filter" data-v="ideas">Idées · ${ideas.length}</button><button class="chip ${listeFilter === 'done' ? 'on' : ''}" data-act="filter" data-v="done">Faites</button></div>`;
+  let h = `<h1>La liste.</h1><div class="muted small">Tout ce qui attend, sans date ou pour plus tard. Le soleil fait passer une entrée dans ta journée.</div><input id="capture" placeholder="${listeFilter === 'ideas' ? 'Une idée…' : 'Une chose à faire, un jour…'}" autocomplete="off"><div class="chips"><button class="chip ${listeFilter === 'todo' ? 'on' : ''}" data-act="filter" data-v="todo">À faire · ${open.length}</button><button class="chip ${listeFilter === 'ideas' ? 'on' : ''}" data-act="filter" data-v="ideas">Idées · ${ideas.length}</button><button class="chip ${listeFilter === 'done' ? 'on' : ''}" data-act="filter" data-v="done">Faites</button></div>`;
   if (listeFilter === 'todo') h += open.length ? `<div class="stack">${open.map(listRow).join('')}</div>` : `<div class="muted">Rien en attente. La serre est calme.</div>`;
   else if (listeFilter === 'done') h += done.length ? `<div class="stack">${done.map(listRow).join('')}</div>` : `<div class="muted">Pas encore.</div>`;
-  else h += ideas.length ? `<div class="stack">${ideas.map((i) => `<div class="card stack"><div>${esc(i.text)}</div><div class="muted small">${new Date(i.at).toLocaleDateString('fr-FR')}${i.status === 'kept' ? ' · gardée' : ''}</div><div class="chips"><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="todo">→ à faire</button><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="goal">→ objectif</button>${i.status === 'inbox' ? `<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="keep">garder</button>` : ''}<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="drop">jeter</button></div></div>`).join('')}</div>` : `<div class="muted">Aucune idée posée. Elles viendront.</div>`;
+  else h += ideas.length ? `<div class="stack">${ideas.map((i) => `<div class="card stack"><div>${esc(i.text)}</div><div class="muted small">${new Date(i.at).toLocaleDateString('fr-FR')}${i.status === 'kept' ? ' · gardée' : ''}</div><div class="chips"><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="todo">${icon('arrow', 'sm')} à faire</button><button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="goal">${icon('arrow', 'sm')} objectif</button>${i.status === 'inbox' ? `<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="keep">garder</button>` : ''}<button class="chip" data-act="ideaAct" data-id="${i.id}" data-v="drop">jeter</button></div></div>`).join('')}</div>` : `<div class="muted">Aucune idée posée. Elles viendront.</div>`;
   return h;
 }
 function listRow(l) {
   const c = l.cat ? catOf(l.cat) : null;
-  return `<div class="list-item ${l.done ? 'done' : ''}"><button class="check" data-act="listToggle" data-id="${l.id}" aria-label="Fait">${l.done ? '✓' : ''}</button><div class="t" data-act="listEdit" data-id="${l.id}">${c ? `<span class="dot" style="background:${c.couleur};display:inline-block;margin-right:6px"></span>` : ''}${esc(l.text)}</div>${l.due ? `<span class="due ${l.due < today ? 'past' : ''}">${l.due === today ? 'aujourd\'hui' : l.due === addDays(today, 1) ? 'demain' : new Date(l.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>` : ''}</div>`;
+  return `<div class="list-item ${l.done ? 'done' : ''}"><button class="check" data-act="listToggle" data-id="${l.id}" aria-label="Fait">${l.done ? icon('check') : ''}</button><div class="t" data-act="listEdit" data-id="${l.id}">${c ? `<span class="dot" style="background:${c.couleur};display:inline-block;margin-right:6px"></span>` : ''}${esc(l.text)}</div>${l.due ? `<span class="due ${l.due < today ? 'past' : ''}">${l.due === today ? 'aujourd\'hui' : l.due === addDays(today, 1) ? 'demain' : new Date(l.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>` : ''}${l.done ? '' : `<button class="mini" data-act="listToday" data-id="${l.id}" aria-label="Faire aujourd'hui">${icon('sun')}</button>`}</div>`;
 }
 function listSheet(l) {
   if (!l) return;
-  openSheet(`<h2>Cette entrée</h2><input id="liText" value="${esc(l.text)}">${chips(l.cat)}<div class="kv"><label>Date (facultative)</label><input type="date" id="liDue" value="${l.due || ''}"></div><button class="btn" id="liSave">Enregistrer</button><div class="row" style="gap:8px"><button class="btn quiet" id="liToday">→ Aujourd'hui</button><button class="btn quiet" id="liIdea">→ Idée</button><button class="btn quiet" id="liDel">Supprimer</button></div>`);
+  openSheet(`<h2>Cette entrée</h2><input id="liText" value="${esc(l.text)}">${chips(l.cat)}<div class="kv"><label>Date (facultative)</label><input type="date" id="liDue" value="${l.due || ''}"></div><button class="btn" id="liSave">Enregistrer</button><div class="row" style="gap:8px"><button class="btn quiet" id="liToday">${icon('arrow', 'sm')} Aujourd'hui</button><button class="btn quiet" id="liIdea">${icon('arrow', 'sm')} Idée</button><button class="btn quiet" id="liDel">Supprimer</button></div>`);
   const sh = $('#sheet'); bindChips(sh);
   $('#liSave').addEventListener('click', () => { l.text = $('#liText').value.trim() || l.text; l.cat = chipValue(sh, 'cat'); l.due = $('#liDue').value || null; save(); closeSheet(); render(); });
   $('#liToday').addEventListener('click', () => { const d = ensureDay(S, today); d.things.push({ id: uid(), title: l.text, cat: l.cat || 'perso', est: estimate(S, l.cat || 'perso'), slot: null, done: false, real: 0, fromList: l.id }); d.planned = true; save(); closeSheet(); switchTab('today'); });
@@ -262,10 +301,10 @@ function ritualSheet() {
   const rows = [0, 1, 2].map((i) => { const t = dt.things[i]; return { title: t ? t.title : '', cat: t ? t.cat : 'perso', est: t ? t.est : null, slot: t ? t.slot : null, id: t ? t.id : null, src: t ? t.src : null, link: t ? t.link : null }; });
   openSheet(`<div class="eyebrow">Le soir</div><h2>${esc(say(S, 'rituel.debut', e) || 'On prépare demain.')}</h2>
   <div class="kv"><label>Qu'est-ce qui a compté aujourd'hui ?</label><input id="rJournal" value="${esc(d.journal || '')}" placeholder="Une ligne suffit" autocomplete="off"></div>
-  <div class="kv"><label>Et toi, aujourd'hui</label><div class="moods">${['😮‍💨', '😐', '🙂', '😄', '✨'].map((m, i) => `<button data-mood="${i}" class="${d.mood === i ? 'on' : ''}" aria-label="${moodLabel(i)}">${m}</button>`).join('')}</div></div>
+  <div class="kv"><label>Et toi, aujourd'hui</label><div class="moods">${[0, 1, 2, 3, 4].map((i) => `<button data-mood="${i}" class="${d.mood === i ? 'on' : ''}" aria-label="${moodLabel(i)}">${icon('m' + i)}<small>${moodLabel(i)}</small></button>`).join('')}</div></div>
   ${undone.length ? `<div class="kv"><label>Pas fait aujourd'hui</label><div class="stack" id="rUndone">${undone.map((t) => `<div class="list-item" data-u="${t.id}"><div class="t">${esc(t.title)}</div><button class="chip" data-uact="tomorrow">demain</button><button class="chip" data-uact="idea">idée</button><button class="chip" data-uact="drop">laisser</button></div>`).join('')}</div></div>` : ''}
   <div class="kv"><label>Les 3 de demain, ${esc(fmtDay(tomorrow))}</label>${sug.length ? `<div class="chips" id="rSug">${sug.map((s, i) => `<button class="chip" data-s="${i}"><span class="dot" style="background:${catOf(s.cat).couleur}"></span>${esc(s.title)} <span class="muted">· ${esc(s.why)}</span></button>`).join('')}</div>` : ''}
-  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}<div class="row"><div class="blocks" style="flex:1">${Object.entries(BLOCKS).map(([k, v]) => `<button data-b="${k}" class="${r.slot === k ? 'on' : ''}">${v}</button>`).join('')}</div></div><div class="row"><input class="rE" type="number" inputmode="numeric" value="${r.est || estimate(S, r.cat)}" style="width:90px"><span class="muted small">min${r.src ? ` · ${esc(r.src)}` : ''}</span></div></div>`).join('')}</div></div>
+  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}<div class="row"><input class="rE" type="number" inputmode="numeric" value="${r.est || estimate(S, r.cat)}" style="width:90px"><span class="muted small">min${r.src ? ` · ${esc(r.src)}` : ''}</span></div></div>`).join('')}</div></div>
   <button class="btn" id="rSave">Bonne nuit</button>`);
   const sh = $('#sheet'); bindChips(sh);
   sh.querySelectorAll('[data-mood]').forEach((b) => b.addEventListener('click', () => { d.mood = Number(b.dataset.mood); sh.querySelectorAll('[data-mood]').forEach((x) => x.classList.toggle('on', x === b)); }));
@@ -307,8 +346,9 @@ function viewSemaine() {
   h += `<button class="btn ${dow(today) === 0 && !reviewed ? '' : 'ghost'}" data-act="review">${reviewed ? 'Revoir le point de la semaine' : 'Faire le point de la semaine'}</button>`;
   const goals = S.goals.filter((g) => g.status === 'active').sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
   h += `<div class="row spread" style="margin-top:6px"><h2>Objectifs</h2><button class="chip" data-act="addGoal">+ objectif</button></div>`;
-  h += goals.length ? `<div class="stack">${goals.map((g) => { const c = catOf(g.cat), left = g.due ? Math.round((new Date(g.due) - new Date(today)) / 86400000) : null; const done = g.milestones.filter((m) => m.done).length; return `<div class="goal"><div class="row spread" data-act="goalEdit" data-id="${g.id}"><div class="row"><span class="dot" style="background:${c.couleur}"></span><b>${esc(g.title)}</b></div><span class="muted small">${g.due ? (left >= 0 ? `J-${left}` : 'passé') : g.horizon === 'week' ? 'semaine' : ''}</span></div>${g.milestones.map((m, i) => `<div class="ms ${m.done ? 'done' : ''}" data-act="goalMs" data-id="${g.id}" data-i="${i}"><span class="check">${m.done ? '✓' : ''}</span><span>${esc(m.text)}${m.due ? ` <span class="small">· ${new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>` : ''}</span></div>`).join('')}${g.milestones.length ? `<div class="muted small">${done} / ${g.milestones.length} jalons${g.reviews && g.reviews[wk] ? ` · ${g.reviews[wk]}` : ''}</div>` : ''}</div>`; }).join('')}</div>` : `<div class="muted">Aucun objectif. Un court, un moyen, ça suffit.</div>`;
-  if (Date.now() - (S.lastExportAt || 0) > 7 * 86400000 && totalDone(S) > 3) h += `<button class="card row spread" data-act="export" style="width:100%;text-align:left"><span>Sauvegarder la serre<br><span class="muted small">Tout est sur ce téléphone. Un export par semaine, par sécurité.</span></span><span style="color:var(--amber)">→</span></button>`;
+  h += `<div class="muted small">Un cap et ses étapes. Coche une étape quand elle est faite : un bonsaï pousse dans la serre.</div>`;
+  h += goals.length ? `<div class="stack">${goals.map((g) => { const c = catOf(g.cat), left = g.due ? Math.round((new Date(g.due) - new Date(today)) / 86400000) : null; const done = g.milestones.filter((m) => m.done).length; return `<div class="goal"><div class="row spread" data-act="goalEdit" data-id="${g.id}"><div class="row"><span class="dot" style="background:${c.couleur}"></span><b>${esc(g.title)}</b></div><span class="muted small">${g.due ? (left >= 0 ? `J-${left}` : 'passé') : g.horizon === 'week' ? 'semaine' : ''}</span></div>${g.milestones.map((m, i) => `<div class="ms ${m.done ? 'done' : ''}" data-act="goalMs" data-id="${g.id}" data-i="${i}"><span class="check">${m.done ? icon('check', 'sm') : ''}</span><span>${esc(m.text)}${m.due ? ` <span class="small">· ${new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>` : ''}</span></div>`).join('')}${g.milestones.length ? `<div class="muted small">${done} / ${g.milestones.length} jalons${g.reviews && g.reviews[wk] ? ` · ${g.reviews[wk]}` : ''}</div>` : ''}</div>`; }).join('')}</div>` : `<div class="muted">Aucun objectif. Un court, un moyen, ça suffit.</div>`;
+  if (Date.now() - (S.lastExportAt || 0) > 7 * 86400000 && totalDone(S) > 3) h += `<button class="card row spread" data-act="export" style="width:100%;text-align:left"><span>Sauvegarder la serre<br><span class="muted small">Tout est sur ce téléphone. Un export par semaine, par sécurité.</span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
   return h;
 }
 function goalSheet(g) {
@@ -371,13 +411,14 @@ function settingsSheet() {
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="row" style="gap:8px"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
   <div class="kv"><label>Pont (coller ce que Dec-Deonto, dec-revision ou le mémoire ont produit)</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
-  <div class="row" style="gap:8px"><button class="btn quiet" id="sIntro">Revoir l'arrivée d'Ernest</button><button class="btn quiet" id="sReset">Tout effacer</button></div>
+  <div class="row" style="gap:8px"><button class="btn quiet" id="sIntro">Revoir l'arrivée d'Ernest</button><button class="btn quiet" id="sHelp">Revoir comment ça marche</button><button class="btn quiet" id="sReset">Tout effacer</button></div>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
   $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });
   $('#sBridgeGo').addEventListener('click', () => { const p = decode($('#sBridge').value); if (!p) { toast('Pont illisible.'); return; } importSheet(p); });
   $('#sIntro').addEventListener('click', () => { S.ernest.firstSeq = 0; save(); closeSheet(); greet(); });
+  $('#sHelp').addEventListener('click', () => { S.ernest.helpSeen = false; save(); closeSheet(); switchTab('today'); });
   $('#sReset').addEventListener('click', () => { openSheet(`<h2>Tout effacer ?</h2><div class="muted">La serre, la liste, le carnet. Une copie de l'état actuel est gardée, récupérable depuis Réglages › Importer.</div><button class="btn" id="rsYes">Effacer</button><button class="btn quiet" id="rsNo">Non</button>`); $('#rsYes').addEventListener('click', () => { S = store.reset(S); save(); closeSheet(); render(); greet(); }); $('#rsNo').addEventListener('click', closeSheet); });
 }
 function exportSheet() {

@@ -109,8 +109,10 @@ export function sortList(list) {
 // Suggestions pour « les 3 de demain » : liste datée pour demain ou passée, minimums non atteints, idées marquées.
 export function suggestions(state, tomorrow) {
   const out = [];
+  const placed = new Set();
+  for (const k of [addDays(tomorrow, -1), tomorrow]) for (const t of dayOf(state, k).things) if (t.fromList && !t.done) placed.add(t.fromList);
   for (const l of sortList(state.list)) {
-    if (l.done) continue;
+    if (l.done || placed.has(l.id)) continue;
     if (l.due && l.due <= tomorrow) out.push({ kind: 'list', id: l.id, title: l.text, cat: l.cat || 'perso', why: l.due < tomorrow ? 'date passée' : 'pour demain' });
   }
   const days = weekDays(tomorrow);

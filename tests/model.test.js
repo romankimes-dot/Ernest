@@ -39,6 +39,8 @@ test('tri de la liste et suggestions', () => {
   const sug = suggestions(s, '2026-11-04');
   assert.equal(sug[0].title, 'd'); assert.equal(sug[0].why, 'pour demain');
   assert.ok(sug.some((x) => x.kind === 'min' && x.cat === 'corps'));
+  s.days['2026-11-03'].things.push({ id: 'z', title: 'd', cat: 'perso', done: false, fromList: 4 });
+  assert.ok(!suggestions(s, '2026-11-04').some((x) => x.id === 4), 'déjà placée');
 });
 test('répliques : conditions, variables, rotation', () => {
   const lines = [{ ctx: 'coche', t: 'A {plante}' }, { ctx: 'coche', t: 'B', when: { mood: 'low' } }, { ctx: 'coche', t: 'C', when: { jmin: 0, jmax: 3 } }, { ctx: 'x', t: 'D' }];

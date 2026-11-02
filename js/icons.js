@@ -1,0 +1,23 @@
+// Icônes au trait, douces et cohérentes : 24 × 24, trait 1,75, bouts arrondis, couleur du texte.
+const P = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21M5.6 5.6l1.1 1.1M17.3 17.3l1.1 1.1M5.6 18.4l1.1-1.1M17.3 6.7l1.1-1.1"/>',
+  moon: '<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
+  list: '<path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h10"/><circle cx="5" cy="6.5" r=".9" fill="currentColor"/><circle cx="5" cy="12" r=".9" fill="currentColor"/><circle cx="5" cy="17.5" r=".9" fill="currentColor"/>',
+  week: '<rect x="3.5" y="5" width="17" height="15" rx="3.5"/><path d="M3.5 10h17M8 3v3.5M16 3v3.5"/><circle cx="8.5" cy="14.5" r=".9" fill="currentColor"/><circle cx="12" cy="14.5" r=".9" fill="currentColor"/>',
+  carnet: '<path d="M7 3.5h10.5a1.5 1.5 0 0 1 1.5 1.5v15H8a2.5 2.5 0 0 1-2.5-2.5V5A1.5 1.5 0 0 1 7 3.5z"/><path d="M5.5 17.5A2.5 2.5 0 0 1 8 15h11M10 8h5.5"/>',
+  gear: '<path d="M4 7.5h9M17 7.5h3M4 16.5h3M11 16.5h9"/><circle cx="15" cy="7.5" r="2"/><circle cx="9" cy="16.5" r="2"/>',
+  plus: '<path d="M12 5.5v13M5.5 12h13"/>',
+  check: '<path d="M5.5 12.5l4 4 9-9"/>',
+  open: '<path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13.5V18a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 18V8a1.5 1.5 0 0 1 1.5-1.5H11"/>',
+  arrow: '<path d="M5 12h14M13.5 6.5 19 12l-5.5 5.5"/>',
+  bulb: '<path d="M9 17.5h6M10 20.5h4"/><path d="M8.5 14.5a6 6 0 1 1 7 0c-.7.5-1 1.2-1 2v1h-5v-1c0-.8-.3-1.5-1-2z"/>',
+  flag: '<path d="M6 21V4"/><path d="M6 4.5c4-2 7 2 12 0v8c-5 2-8-2-12 0"/>',
+  leaf: '<path d="M5 19c.5-8.5 5.5-13.5 14-14-.5 8.5-5.5 13.5-14 14z"/><path d="M5 19l7.5-7.5"/>',
+  // Humeur : cinq visages du même dessin
+  m0: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 10.2h2M13.5 10.2h2M9 16q3-2.2 6 0"/>',
+  m1: '<circle cx="12" cy="12" r="8.5"/><circle cx="9.5" cy="10" r=".9" fill="currentColor"/><circle cx="14.5" cy="10" r=".9" fill="currentColor"/><path d="M9 15.2h6"/>',
+  m2: '<circle cx="12" cy="12" r="8.5"/><circle cx="9.5" cy="10" r=".9" fill="currentColor"/><circle cx="14.5" cy="10" r=".9" fill="currentColor"/><path d="M9 14.4q3 2 6 0"/>',
+  m3: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 10.4q1-1.3 2 0M13.5 10.4q1-1.3 2 0"/><path d="M8.5 13.8q3.5 3.6 7 0"/>',
+  m4: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 10.4q1-1.3 2 0M13.5 10.4q1-1.3 2 0"/><path d="M8.3 13.5q3.7 4.4 7.4 0z"/><path d="M19.5 3.5v2M18.5 4.5h2"/>',
+};
+export const icon = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
