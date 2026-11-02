@@ -179,6 +179,8 @@ async function setupGarden3d() {
     $('#garden').hidden = true; garden.stop();
     c.addEventListener('click', openSerre);
     $('#serreClose').addEventListener('click', closeSerre);
+    // iPhone : un pincement ou un double-tap sur un bouton zoomait toute la page (bouton retour et sélecteur hors de l'écran)
+    for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) $('#serreFull').addEventListener(ev, (e) => e.preventDefault(), { passive: false });
   } catch (e) { g3d = null; $('#garden3d').hidden = true; $('#garden').hidden = false; garden.start(); }
 }
 function openSerre() {

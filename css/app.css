@@ -175,7 +175,7 @@ h3{font-size:17px;color:var(--amber)}
 
 /* Serre 3D */
 #garden3d{cursor:pointer}
-.serre-full{position:fixed;inset:0;z-index:30;background:#08131c}
+.serre-full{position:fixed;inset:0;z-index:30;background:#08131c;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} /* vue de jeu : ni zoom de page (pincer, double-tap), ni sélection */
 .serre-full canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .sf-close{position:absolute;top:calc(var(--sat) + 12px);left:max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:4px;padding:8px 14px 8px 8px;border-radius:999px;background:rgba(11,21,17,.65);border:1px solid var(--line);color:var(--fg);font-size:14px;z-index:2}
 .sf-cap{position:absolute;left:0;right:0;bottom:0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(18px + var(--sab)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(rgba(8,19,28,0),rgba(8,19,28,.85));font-size:14px;text-align:center;pointer-events:none;z-index:2}
@@ -343,7 +343,7 @@ input:focus-visible,textarea:focus-visible{outline:none}
 .bars .track{display:block;height:8px;border-radius:4px;background:var(--bg3)}
 .bars .track i{height:100%}
 /* Promenade avec Ernest (serre en plein écran) */
-.sf-walk{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(var(--sab) + 84px);display:flex;gap:6px;z-index:3}
+.sf-walk{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(var(--sab) + 96px);display:flex;gap:6px;z-index:3}
 .sf-walk button{padding:10px 14px;min-height:42px;border-radius:999px;background:rgba(11,21,17,.72);border:1px solid var(--line);color:var(--fg);font-size:13.5px;backdrop-filter:blur(8px)}
 .sf-walk button.on{border-color:var(--amber);color:var(--amber)}
 .sf-joy{position:absolute;left:max(22px,env(safe-area-inset-left,0px));bottom:calc(var(--sab) + 84px);width:118px;height:118px;border-radius:50%;background:radial-gradient(circle,rgba(239,230,210,.08),rgba(11,21,17,.5));border:1px solid rgba(239,230,210,.22);z-index:3;touch-action:none;display:grid;place-items:center;backdrop-filter:blur(4px)}
