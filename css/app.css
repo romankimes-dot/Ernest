@@ -272,3 +272,20 @@ body.running .fab{bottom:calc(136px + var(--sab))}
 .sf-pick{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 64px);display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(11,21,17,.72);border:1px solid var(--line);backdrop-filter:blur(8px);z-index:2;max-width:calc(100% - 24px)}
 .sf-pick button{padding:9px 12px;min-height:40px;border-radius:999px;font-size:13px;color:var(--fg2);white-space:nowrap}
 .sf-pick button.on{background:rgba(242,178,61,.18);color:var(--amber)}
+/* Lot E : rituel en trois écrans, carte d'Ernest unique, toast centré */
+.rdots{display:inline-flex;gap:5px;margin-left:8px;vertical-align:middle}
+.rdots span{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.rdots span.on{background:var(--amber)}
+.rstep{display:flex;flex-direction:column;gap:14px}
+.rfoot{position:sticky;bottom:calc(-1 * var(--sab) - 18px);display:flex;gap:8px;padding:12px 0 calc(6px + var(--sab));background:linear-gradient(rgba(18,32,26,0),var(--bg2) 30%);margin-top:6px}
+.rfoot .btn{flex:1}
+.rfoot .btn.quiet{flex:0 0 auto;padding-left:18px;padding-right:18px}
+.ernest-card{border-color:rgba(242,178,61,.35)}
+.susp-row{gap:10px}
+.susp-row .chip{min-width:44px;min-height:40px;justify-content:center}
+.linkrow{display:flex;align-items:center;gap:8px;color:var(--fg2);font-size:13.5px;padding:10px 2px;width:100%;text-align:left}
+@keyframes toastpop{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%)}}
+.toast{animation:toastpop .2s ease both!important}
+body.running .view,body.running main{padding-bottom:190px}
+.rfoot .btn{width:auto;min-width:0}
+.sheet{overflow-x:hidden}
