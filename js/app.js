@@ -361,6 +361,7 @@ function bindChips(root) {
 const chipValue = (root, name) => { const on = root.querySelector(`[data-chips="${name}"] .chip.on`); return on ? on.dataset.v : null; };
 
 // ---------- Aujourd'hui ----------
+let doneOpen = false; // choses faites dépliées (le temps de la session)
 function viewToday() {
   examPrep(S, today); examPrep(S, addDays(today, 1));
   const d = ensureDay(S, today), tomorrow = addDays(today, 1), dl = nextDeadline(S, today), j = dl ? jMinus(dl.date, today) : null;
@@ -384,14 +385,17 @@ function viewToday() {
     h += `<div class="card amber stack">${sug.length ? `<div>Dans ta liste, pour aujourd'hui :</div>${sug.map((s, i) => `<label class="row"><input type="checkbox" checked data-sug="${i}" style="width:auto"> <span class="dot" style="background:${catOf(s.cat).couleur}"></span> ${esc(s.title)}</label>`).join('')}<button class="btn" data-act="acceptSug">Les placer dans ma journée</button>` : `<div class="muted">Une seule chose suffit pour commencer.</div>`}<button class="btn ${sug.length ? 'quiet' : ''}" data-act="addThing">${icon('plus', 'sm')} Poser une chose pour aujourd'hui</button></div>`;
   }
   for (const [k, label] of MOMENTS) {
-    const items = ordered.filter((t) => (BLOCKS[t.slot] ? t.slot : null) === k).sort((a, b) => a.done - b.done);
+    const items = ordered.filter((t) => !t.done && (BLOCKS[t.slot] ? t.slot : null) === k);
     if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => swipeWrap('thing', t.id, thingRow(t, t === firstUndone))).join('')}</div></div>`;
   }
   if (d.things.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
   if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
   let pending = 0; for (let i = 1; i <= 7; i++) pending += dayOf(S, addDays(today, -i)).things.filter((t) => !t.done && !t.moved && !t.prep).length;
   if (pending && !showSusp) h += `<button class="linkrow" data-act="history">${icon('history', 'sm')} ${pending} chose${pending > 1 ? 's' : ''} en suspens ces derniers jours ${icon('arrow', 'sm')}</button>`;
-  const dn = doneOn(S, today).n; if (dn) h += `<div class="muted small">${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout.</div>`;
+  // Choses faites : rangées en bas, repliées (un appui les montre), la plus récente d'abord.
+  const doneThings = d.things.filter((t) => t.done).sort((a, b) => String(b.doneAt || '').localeCompare(String(a.doneAt || '')));
+  const dn = doneOn(S, today).n;
+  if (dn || doneThings.length) h += `<div class="moment done-fold"><button class="linkrow" data-act="doneFold" aria-expanded="${doneOpen}">${icon('check', 'sm')} ${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout <span class="muted small">${doneThings.length ? (doneOpen ? 'masquer' : 'voir') : ''}</span></button>${doneOpen && doneThings.length ? `<div class="stack">${doneThings.map((t) => swipeWrap('thing', t.id, thingRow(t, false))).join('')}</div>` : ''}</div>`;
   return h;
 }
 const TOUR = [
@@ -470,6 +474,7 @@ function action(act, ds, el, v) {
     case 'resumeSusp': { label('la reprise'); const n = suspended(); for (const { t } of n) { t.moved = true; d.things.push({ ...t, id: uid(), done: false, startedAt: null, spent: 0, moved: false }); } d.planned = true; save(); render(); toast(`${n.length} chose${n.length > 1 ? 's' : ''} reprise${n.length > 1 ? 's' : ''}.`); break; }
     case 'suspLater': S.ernest.suspLater = today; save(); render(); break;
     case 'installOk': S.ernest.installHint = true; save(); render(); break;
+    case 'doneFold': doneOpen = !doneOpen; render(); break;
     case 'listToday': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; d.things.push({ id: uid(), title: l.text, cat: l.cat || 'perso', est: estimate(S, l.cat || 'perso'), slot: null, done: false, real: 0, fromList: l.id }); d.planned = true; save(); toast('Placée dans ta journée.'); render(); break; }
     case 'acceptSug': {
       const sug = suggestions(S, today).filter((s) => s.kind === 'list').slice(0, 3);
