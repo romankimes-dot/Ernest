@@ -115,13 +115,14 @@ if (TX) {
 }
 // Verre : un liseré de Fresnel (bords rasants plus opaques et teintés) ; plantes : un liseré de contre-jour
 // qui détache les feuilles du fond. Deux uniformes partagés, réglés par l'ambiance.
-const glassU = { uGlassK: { value: 1 }, uGlassTint: { value: col('#dfeee6') } };
+const glassU = { uGlassK: { value: 1 }, uGlassTint: { value: col('#dfeee6') }, uGlow: { value: 0 }, uGlowCol: { value: col('#ffb45a') } }; // uGlow : verre ambré la nuit (lanternes allumées), sans lumière en plus
 const rimU = { uRimK: { value: 0.5 }, uRimCol: { value: col('#ffe2b0') } };
 M.glass.onBeforeCompile = (sh) => {
   Object.assign(sh.uniforms, glassU);
-  sh.fragmentShader = 'uniform float uGlassK;\nuniform vec3 uGlassTint;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
+  sh.fragmentShader = 'uniform float uGlassK;\nuniform vec3 uGlassTint;\nuniform float uGlow;\nuniform vec3 uGlowCol;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
     float frG = pow( 1.0 - abs( dot( normalize( vViewPosition ), normal ) ), 3.0 );
     outgoingLight += uGlassTint * frG * 0.28 * uGlassK; diffuseColor.a = min( 1.0, diffuseColor.a + frG * 0.3 + 0.02 );
+    outgoingLight += uGlowCol * uGlow * ( 0.55 + frG * 0.6 ); diffuseColor.a = min( 1.0, diffuseColor.a + uGlow * 0.16 );
     #include <opaque_fragment>`);
 };
 for (const m of [M.leaf, M.leafFlat, M.stem, M.cactus]) {
@@ -140,10 +141,11 @@ M.glass.customProgramCacheKey = () => 'glassFresnel';
 // Trois petites serres (chacune ≈ 46 % de l'ancienne grande) en arc devant la chaumière, portes tournées vers le
 // chemin. Coordonnées locales d'une serre : porte vers +z, origine au centre du sol.
 const HW = 2.6, HD = 4.2, HH = 2.2, HR = 3.35; // demi-largeur, demi-profondeur, hauteur des murs, faîtage
+// Chaque serre a son accent (porte, panneau, lanterne, chemin de table) et ses pots : on les distingue de dehors.
 const HOUSES = [
-  { id: 'travail', name: 'Travail', cats: ['travail'], x: 0, z: -2.6, ry: 0 },
-  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'], x: 7.1, z: -0.3, ry: -0.32 },
-  { id: 'perso', name: 'Vie perso', cats: ['perso'], x: -7.1, z: -0.3, ry: 0.32 },
+  { id: 'travail', name: 'Travail', cats: ['travail'], x: 0, z: -2.6, ry: 0, accent: '#5f7fa6', signBg: '#26395a', pot: ['#8d9db0', '#6f8199'], potR: 0.45 }, // ardoise, grès bleu-gris
+  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'], x: 7.1, z: -0.3, ry: -0.32, accent: '#8fa58a', signBg: '#34502f', pot: ['#c8794a', '#a85f34'], potR: 0.95 }, // sauge, terre cuite brute
+  { id: 'perso', name: 'Vie perso', cats: ['perso'], x: -7.1, z: -0.3, ry: 0.32, accent: '#c9786a', signBg: '#5e2430', pot: ['#f1e7d0', '#e2d3b4'], potR: 0.55 }, // rose, pots peints crème
 ];
 export const HOUSE_IDS = HOUSES.map((h) => h.id);
 export const HOUSE_OF = { travail: 'travail', bienetre: 'bienetre', perso: 'perso' }; // une catégorie = une serre
@@ -201,8 +203,9 @@ function ibFlush(parent) {
 {
   const box1 = new THREE.BoxGeometry(1, 1, 1), floorGeo = new THREE.PlaneGeometry(HW * 2, HD * 2); floorGeo.rotateX(-Math.PI / 2);
   ibDef('frame', box1, M.frame); ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0x6b3f2a, roughness: 1 }));
-  ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0x8fa58a, roughness: 0.65, metalness: 0 })); // portes vert sauge
-  ibDef('tile', box1, M.stone, false, true); ibDef('floor', floorGeo, M.gravel, false, true);
+  ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, metalness: 0 })); // portes peintes : couleur de la serre (par instance)
+  ibDef('cloth', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), false, true); // chemins de table
+  ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
 }
 // Vitrages d'une serre, fusionnés : murs, toit, pignon arrière plein, pignon avant ouvert sur la porte.
 const glassGeo = (() => {
@@ -218,22 +221,22 @@ const glassGeo = (() => {
   return mergeGeos(parts);
 })();
 // Panneau peint : planche de bois, nom en lettres crème (empattements, un peu penchées comme à la main).
-function signTex(text) {
+function signTex(text, bg = '#6e4526') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 200; const x = c.getContext('2d'), r = rngOf(text.length * 97);
-  x.fillStyle = '#6e4526'; x.fillRect(0, 0, 512, 200);
+  x.fillStyle = bg; x.fillRect(0, 0, 512, 200);
   for (let i = 0; i < 40; i++) { const y = r() * 200; x.strokeStyle = r() < 0.5 ? 'rgba(40,22,10,.35)' : 'rgba(150,100,60,.3)'; x.lineWidth = 1 + r() * 3; x.beginPath(); x.moveTo(0, y); for (let px = 0; px <= 512; px += 32) x.lineTo(px, y + Math.sin(px * 0.02 + i) * 3); x.stroke(); }
   x.strokeStyle = 'rgba(241,232,210,.75)'; x.lineWidth = 4; x.strokeRect(14, 14, 484, 172);
   x.fillStyle = '#f1e8d2'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  let fs = 104; do { x.font = `italic 700 ${fs}px "Bradley Hand", Georgia, "Times New Roman", serif`; fs -= 4; } while (x.measureText(text).width > 440 && fs > 40);
+  let fs = 112; do { x.font = `italic 700 ${fs}px "Bradley Hand", Georgia, "Times New Roman", serif`; fs -= 4; } while (x.measureText(text).width > 456 && fs > 64); // jamais sous 64 : lisible dans le bandeau
   x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 4; x.shadowOffsetY = 2; x.fillText(text, 256, 106);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 const BAYS = 6, TBX = 1.75, TY = 0.82, TZ0 = -HD + 1.5, TZ1 = HD - 1.0; // tables : axe, hauteur, début et fin
-const lanterns = [], signMats = [];
+const lanterns = [], signMats = [], bulbMats = [];
 for (const h of HOUSES) {
   const g = h.g, W = g.matrixWorld, r = rngOf(3 + HOUSES.indexOf(h) * 31);
   ibPut('floor', W, V(0, 0, 0), Q0, V(1, 1, 1));
-  for (let i = 0; i < 21; i++) { const z = HD - 0.3 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; boxAt('tile', W, x, 0.015, z, 0.52 + r() * 0.1, 0.04, 0.34 + r() * 0.04, (r() - 0.5) * 0.2, vary(col('#8c8676'), r, 0.1)); }
+  for (let i = 0; i < 21; i++) { const z = HD - 0.3 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; boxAt('tile', W, x, 0.015, z, 0.52 + r() * 0.1, 0.04, 0.34 + r() * 0.04, (r() - 0.5) * 0.2, vary(col('#b9b2a0'), r, 0.08)); }
   // soubassement de briques
   for (const s of [-1, 1]) { boxAt('brick', W, s * HW, 0.25, 0, 0.16, 0.5, HD * 2); boxAt('brick', W, s * (HW + 0.62) / 2, 0.25, HD, HW - 0.62, 0.5, 0.16); }
   boxAt('brick', W, 0, 0.25, -HD, HW * 2, 0.5, 0.16);
@@ -248,8 +251,12 @@ for (const h of HOUSES) {
   for (const s of [-1, 1]) beam(W, V(s * HW, 1.25, HD), V(s * 0.6, 1.25, HD), 0.035);
   const gl = new THREE.Mesh(glassGeo, M.glass); gl.renderOrder = 2; g.add(gl);
   // porte et marche
-  for (const x of [-0.6, 0.6]) boxAt('door', W, x, 1.05, HD + 0.02, 0.07, 2.1, 0.07);
-  boxAt('door', W, 0, 2.1, HD + 0.02, 1.27, 0.07, 0.07);
+  const acc = col(h.accent);
+  for (const x of [-0.6, 0.6]) boxAt('door', W, x, 1.05, HD + 0.02, 0.1, 2.1, 0.09, 0, acc);
+  boxAt('door', W, 0, 2.12, HD + 0.02, 1.3, 0.1, 0.09, 0, acc);
+  // battant ouvert vers le dehors, rabattu contre la façade à droite : cadre et soubassement plein, de la couleur de la serre
+  { const ry = -0.3, ux = Math.cos(ry), uz = -Math.sin(ry), at = (u, y, sx, sy, sz) => boxAt('door', W, 0.6 + ux * u, y, HD + 0.06 + uz * u, sx, sy, sz, ry, acc);
+    for (const u of [0.04, 1.08]) at(u, 1.03, 0.07, 1.98, 0.05); for (const y of [0.08, 0.82, 2.0]) at(0.56, y, 1.04, 0.07, 0.05); at(0.56, 0.45, 1.0, 0.7, 0.03); }
   boxAt('tile', W, 0, 0.06, HD + 0.3, 1.5, 0.12, 0.5, 0, col('#9a9484'));
   // tables le long des murs, étagère dessous
   for (const s of [-1, 1]) {
@@ -258,23 +265,28 @@ for (const h of HOUSES) {
     boxAt('dark', W, s * (TBX - 0.47), TY + 0.03, zc, 0.05, 0.12, L);
     for (let i = 0; i < 5; i++) for (const dx of [-0.4, 0.4]) boxAt('dark', W, s * TBX + dx, TY / 2, TZ0 + 0.2 + i * (L - 0.4) / 4, 0.06, TY, 0.06);
     boxAt('dark', W, s * TBX, 0.22, zc, 0.85, 0.04, L - 0.2);
+    boxAt('cloth', W, s * TBX, TY + 0.036, zc, 0.97, 0.012, L + 0.04, 0, acc); // chemin de table de la couleur de la serre
+    boxAt('cloth', W, s * (TBX - 0.49), TY - 0.03, zc, 0.012, 0.13, L + 0.04, 0, acc); // et son retombé côté allée
   }
   // panneau de bois peint, à gauche de la porte, un peu tourné vers le chemin
-  const sg = new THREE.Group(); sg.position.set(-1.45, 0, HD + 0.6); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true);
+  const sg = new THREE.Group(); sg.position.set(-1.62, 0, HD + 0.75); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true);
   const SW = sg.matrixWorld;
-  for (const x of [-0.5, 0.5]) boxAt('dark', SW, x, 0.6, -0.03, 0.07, 1.2, 0.07);
-  boxAt('wood', SW, 0, 1.0, 0, 1.3, 0.52, 0.05);
-  const tex = signTex(h.name), sm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0 }); signMats.push(sm); // un peu de lueur la nuit, pour rester lisible
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.48), sm);
-  face.position.set(0, 1.0, 0.027); face.castShadow = true; sg.add(face);
+  for (const x of [-0.72, 0.72]) boxAt('dark', SW, x, 0.78, -0.04, 0.08, 1.56, 0.08);
+  boxAt('wood', SW, 0, 1.25, 0, 1.88, 0.78, 0.05);
+  const tex = signTex(h.name, h.signBg), sm = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0 }); signMats.push(sm); // un peu de lueur la nuit, pour rester lisible
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.7), sm);
+  face.position.set(0, 1.25, 0.027); face.castShadow = true; sg.add(face);
   // lanterne suspendue au faîtage
   const lg = new THREE.Group(), ly = HH + 0.1;
   lg.add(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.22, 6, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2116, metalness: 0.6, roughness: 0.5, wireframe: true })));
   const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.08, 6), M.chain); cap.position.y = 0.15; lg.add(cap);
-  lg.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), M.bulb));
+  const tint = col('#ffb85c').lerp(acc, 0.3), bulbM = M.bulb.clone(); bulbM.emissive = col('#f2b23d').lerp(acc, 0.35); bulbMats.push(bulbM);
+  lg.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), bulbM));
   const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, HR - ly - 0.15, 4), M.chain); ch.position.y = (HR - ly - 0.15) / 2 + 0.15; lg.add(ch);
-  const light = new THREE.PointLight(0xffb85c, 9, 9, 1.5); lg.add(light);
-  lg.position.set(0, ly, 0.3); g.add(lg); lanterns.push({ g: lg, light, house: h });
+  const light = new THREE.PointLight(tint, 9, 9, 1.5); lg.add(light);
+  lg.position.set(0, ly, 0.3); g.add(lg); lanterns.push({ g: lg, light, house: h, tint });
+  // pots de la serre : deux teintes de sa matière (grès, terre cuite, peint)
+  h.pots = h.pot.map((c) => { const m = M.terra.clone(); m.color = col(c); m.roughness = h.potR; return m; });
 }
 // arrosoir, pour la vie (serre Travail, près de la porte)
 { const can = new THREE.Group(); const body = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x5f87a8, roughness: 0.4, metalness: 0.5 })); body.position.y = 0.11; can.add(body);
@@ -305,10 +317,23 @@ const BRANCHES = ['bienetre', 'perso'].map((id) => {
   let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
   return { id, curve, pts, len: curve.getLength(), box: [x0 - 1.5, x1 + 1.5, z0 - 1.5, z1 + 1.5] };
 });
-// Distance au chemin (allée principale et branches), pour l'herbe, les fleurs et la teinte du sol.
+// La maison d'Ernest : chaumière de conte (js/cottage3d.js), fenêtres qui s'allument le soir, cheminée qui fume
+const cottageB = buildCottage(THREE, { rng: rngOf(77), M });
+const cottage = cottageB.group; scene.add(cottage);
+{ const cx = -6.0, cz = -9.6; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.5; cottage.updateMatrixWorld(true); } // derrière les serres, porte vers le jardin
+// Allée de la chaumière : elle quitte la branche de Vie perso, passe entre cette serre et la serre Travail, et
+// finit au pas de la porte ronde. Toujours là (ce n'est pas un chemin qui pousse).
+const COT_PATH = (() => {
+  const door = cottageB.door.clone().applyMatrix4(cottage.matrixWorld), out = V(Math.sin(0.5), 0, Math.cos(0.5)), br = BRANCHES.find((b) => b.id === 'perso').curve.getPoint(0.42);
+  door.y = 0; br.y = 0;
+  const curve = new THREE.CatmullRomCurve3([br, V(-3.1, 0, 3.4), V(-3.2, 0, 0.6), V(-3.75, 0, -3.0), door.clone().addScaledVector(out, 1.6), door.clone().addScaledVector(out, 0.15)], false, 'centripetal'), pts = curve.getSpacedPoints(60);
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); }
+  return { curve, pts, len: curve.getLength(), box: [x0 - 1.5, x1 + 1.5, z0 - 1.5, z1 + 1.5] };
+})();
+// Distance au chemin (allée principale, branches, allée de la chaumière), pour l'herbe, les fleurs et la teinte du sol.
 function pathDist(x, z) {
   let d = z > DOOR_Z - 0.3 ? Math.abs(x - pathX(z)) : 99;
-  for (const b of BRANCHES) { const [x0, x1, z0, z1] = b.box; if (x < x0 || x > x1 || z < z0 || z > z1) continue; for (const p of b.pts) d = Math.min(d, Math.hypot(x - p.x, z - p.z)); }
+  for (const b of [...BRANCHES, COT_PATH]) { const [x0, x1, z0, z1] = b.box; if (x < x0 || x > x1 || z < z0 || z > z1) continue; for (const p of b.pts) d = Math.min(d, Math.hypot(x - p.x, z - p.z)); }
   return d;
 }
 // Saison réelle : couleurs de l'herbe et des feuillages.
@@ -393,6 +418,11 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
   const n = st.length, m = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.06, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), n);
   st.forEach(([x, z], i) => { dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.3 + r() * 0.08, 1, 0.24 + r() * 0.06); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#9a927e'), r, 0.1)); });
   m.receiveShadow = true; outdoor.add(m); ext.stones = { im: m, n, cur: 9, target: 9 };
+  // allée de la chaumière : mêmes dalles, toutes posées
+  const C = COT_PATH, cn = Math.floor(C.len / 0.55), cm = new THREE.InstancedMesh(m.geometry, m.material, cn);
+  for (let i = 0; i < cn; i++) { const u = (i + 0.5) / cn, p = C.curve.getPointAt(u), tn = C.curve.getTangentAt(u), o = (i % 2 ? 0.2 : -0.2) + (r() - 0.5) * 0.1, x = p.x - tn.z * o, z = p.z + tn.x * o;
+    dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.28 + r() * 0.07, 1, 0.22 + r() * 0.05); dummy.updateMatrix(); cm.setMatrixAt(i, dummy.matrix); cm.setColorAt(i, vary(col('#a39b86'), r, 0.1)); }
+  cm.receiveShadow = true; outdoor.add(cm);
 }
 // Muret de pierres sèches autour du jardin, ouvert sur le chemin
 {
@@ -480,10 +510,7 @@ const mist = [];
 { const tex = softTex((x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
   const r = rngOf(14); for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 })); const a = r() * 6.28, d = 14 + r() * 18; sp.position.set(Math.cos(a) * d, 0.8 + r() * 1.2, Math.sin(a) * d); sp.scale.set(16 + r() * 10, 3 + r() * 2, 1); mist.push(sp); scene.add(sp); } }
 
-// La maison d'Ernest : chaumière de conte (js/cottage3d.js), fenêtres qui s'allument le soir, cheminée qui fume
-const cottageB = buildCottage(THREE, { rng: rngOf(77), M });
-const cottage = cottageB.group; scene.add(cottage);
-{ const cx = -6.0, cz = -9.6; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.5; } // derrière les serres, porte vers le jardin
+// La maison d'Ernest (construite plus haut, avec son allée) : fumée de la cheminée
 const smoke = [];
 { const tex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(230,226,215,.7)'); g.addColorStop(1, 'rgba(230,226,215,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
   const base = cottageB.smokeOrigin.clone(); cottage.updateMatrixWorld(); base.applyMatrix4(cottage.matrixWorld);
@@ -571,6 +598,9 @@ const GEO = {
   blob: new THREE.IcosahedronGeometry(1, 1),
   ball: new THREE.IcosahedronGeometry(1, 0),
   needle: leafGeo(0.006, 0.055, 0.01, 0.2, 2),
+  // feuille ronde et festonnée du géranium, à plat (normale vers le haut), un peu en coupe
+  roundLeaf: (() => { const s = new THREE.Shape(); for (let i = 0; i <= 40; i++) { const a = (i / 40) * Math.PI * 2, r = 0.05 * (1 + 0.07 * Math.cos(a * 9)) * (a > 4.5 && a < 4.92 ? 0.7 : 1); i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r + 0.045) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r + 0.045); }
+    const g = new THREE.ShapeGeometry(s, 3); g.rotateX(-Math.PI / 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i) + 0.045; p.setY(i, (x * x + z * z) * 6); } g.computeVertexNormals(); return g; })(),
   // colonne de cactus à côtes, hauteur 1, rayon 0,5, sommet arrondi
   cactus: (() => { const g = new THREE.LatheGeometry([[0, 0], [0.44, 0], [0.5, 0.08], [0.5, 0.78], [0.43, 0.93], [0.24, 0.99], [0, 1]].map(([x, y]) => new THREE.Vector2(x, y)), 16); const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), k = 1 + 0.09 * Math.cos(Math.atan2(z, x) * 8); p.setX(i, x * k); p.setZ(i, z * k); } g.computeVertexNormals(); return g; })(),
@@ -637,7 +667,7 @@ function flowering(rng, size, o = {}) {
   return g;
 }
 function broadleaf(rng, size) {
-  const g = new THREE.Group(), n = 4 + Math.floor(rng() * 4), im = inst(GEO.leafBig, M.leaf, n), base = col(['#2f6b48', '#3f7a46', '#2a5e44'][Math.floor(rng() * 3)]);
+  const g = new THREE.Group(), n = 4 + Math.floor(rng() * 4), im = inst(GEO.leafBig, M.leaf, n), base = col(['#4f8a5a', '#5a9462', '#467f52'][Math.floor(rng() * 3)]); // caoutchouc : vert franc, lisible
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + rng() * 0.6, out = 0.12 + rng() * 0.18, H = size * (0.35 + rng() * 0.35);
     const pts = [V(0, 0, 0), V(Math.cos(a) * out * 0.3, H * 0.6, Math.sin(a) * out * 0.3), V(Math.cos(a) * out, H, Math.sin(a) * out)];
@@ -657,16 +687,34 @@ function grass(rng, size, tall = false) {
 }
 // Vie perso : fleurs des champs (marguerites, coquelicots, bleuets) dans un pied d'herbes
 function wildflowers(rng, size) {
-  const g = grass(rng, size * 0.75), heads = 4 + Math.floor(rng() * 5), petals = inst(GEO.petal, M.leaf, heads * 8), cores = inst(GEO.ball, M.leafFlat, heads); let kp = 0;
+  const g = grass(rng, size * 0.5), heads = 7 + Math.floor(rng() * 5), petals = inst(GEO.petal, M.leaf, heads * 8), cores = inst(GEO.ball, M.leafFlat, heads); let kp = 0;
   const kinds = [['#f6f1e4', '#e8b440'], ['#d8402e', '#2a1a14'], ['#4f7fd8', '#2f3f80'], ['#f2d24a', '#c98a28'], ['#e9a6c8', '#e8b440']];
   for (let s = 0; s < heads; s++) {
     const a = rng() * 6.28, r = rng() * 0.07, H = size * (0.45 + rng() * 0.35), [pc, cc] = kinds[Math.floor(rng() * kinds.length)];
     const { mesh, curve } = tube([V(Math.cos(a) * r, 0, Math.sin(a) * r), V(Math.cos(a) * (r + 0.02), H * 0.55, Math.sin(a) * (r + 0.02)), V(Math.cos(a) * (r + 0.05 + rng() * 0.05), H, Math.sin(a) * (r + 0.05))], 0.0035, M.stem, 6); g.add(mesh);
     const top = curve.getPoint(1), np = pc === '#d8402e' ? 5 : 8;
-    for (let i = 0; i < np; i++) { dummy.position.copy(top); dummy.rotation.set(pc === '#d8402e' ? -0.6 : -1.35, (i / np) * Math.PI * 2, 0, 'YXZ'); dummy.scale.setScalar(size * (pc === '#d8402e' ? 1.9 : 1.3)); dummy.updateMatrix(); petals.setMatrixAt(kp, dummy.matrix); petals.setColorAt(kp++, vary(col(pc), rng, 0.05)); }
-    dummy.position.copy(top).add(V(0, 0.008, 0)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.012); dummy.updateMatrix(); cores.setMatrixAt(s, dummy.matrix); cores.setColorAt(s, col(cc));
+    for (let i = 0; i < np; i++) { dummy.position.copy(top); dummy.rotation.set(pc === '#d8402e' ? -0.6 : -1.35, (i / np) * Math.PI * 2, 0, 'YXZ'); dummy.scale.setScalar(size * (pc === '#d8402e' ? 3.8 : 2.6)); dummy.updateMatrix(); petals.setMatrixAt(kp, dummy.matrix); petals.setColorAt(kp++, vary(col(pc), rng, 0.05)); }
+    dummy.position.copy(top).add(V(0, 0.012, 0)); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.022); dummy.updateMatrix(); cores.setMatrixAt(s, dummy.matrix); cores.setColorAt(s, col(cc));
   }
   petals.count = kp; g.add(petals, cores); return g;
+}
+// Vie perso : géranium, un dôme de feuilles rondes et des boules de fleurs rouges sur de longues tiges
+function geranium(rng, size) {
+  const g = new THREE.Group(), nl = 10 + Math.floor(rng() * 5), stems = 3 + Math.floor(rng() * 3), leaves = inst(GEO.roundLeaf, M.leaf, nl), florets = inst(GEO.blob, M.leafFlat, stems * 18);
+  const leafC = col(['#4f8a3a', '#5a9442', '#46803a'][Math.floor(rng() * 3)]), red = col(['#d8283a', '#e0323c', '#c81e34', '#e8504a', '#e0306a'][Math.floor(rng() * 5)]);
+  for (let i = 0; i < nl; i++) {
+    const a = i * 2.39996 + rng() * 0.3, out = 0.03 + (i / nl) * 0.1, y = size * (0.2 - (i / nl) * 0.13) + rng() * 0.02;
+    dummy.position.set(Math.cos(a) * out, y, Math.sin(a) * out); dummy.quaternion.setFromUnitVectors(UP, V(Math.cos(a) * 0.55, 1, Math.sin(a) * 0.55).normalize()); dummy.rotateY(-a - Math.PI / 2); dummy.scale.setScalar(size * (1.05 + rng() * 0.45)); dummy.updateMatrix();
+    leaves.setMatrixAt(i, dummy.matrix); leaves.setColorAt(i, vary(leafC, rng, 0.08));
+  }
+  let k = 0;
+  for (let s = 0; s < stems; s++) {
+    const a = (s / stems) * 6.28 + rng() * 0.8, r = 0.02 + rng() * 0.05, H = size * (0.42 + rng() * 0.16), top = V(Math.cos(a) * (r + 0.04), H, Math.sin(a) * (r + 0.04));
+    g.add(tube([V(Math.cos(a) * 0.015, 0.02, Math.sin(a) * 0.015), V(Math.cos(a) * r, H * 0.6, Math.sin(a) * r), top], 0.004, M.stem, 6).mesh);
+    const R = size * (0.055 + rng() * 0.015), c = vary(red, rng, 0.05);
+    for (let i = 0; i < 18; i++) { const u = i / 18, th = i * 2.39996, ph = Math.acos(1 - u * 1.3); dummy.position.set(top.x + Math.sin(ph) * Math.cos(th) * R, top.y + R * 0.5 + Math.cos(ph) * R * 0.8, top.z + Math.sin(ph) * Math.sin(th) * R); dummy.rotation.set(rng() * 3, rng() * 3, 0); dummy.scale.setScalar(R * (0.36 + rng() * 0.12)); dummy.updateMatrix(); florets.setMatrixAt(k, dummy.matrix); florets.setColorAt(k++, vary(c, rng, 0.06)); }
+  }
+  florets.count = k; g.add(leaves, florets); return g;
 }
 // Boulot : ficus, un petit tronc et un houppier de feuilles vernies
 function ficus(rng, size) {
@@ -726,7 +774,7 @@ function bonsai(rng, size) {
   for (const f of foliage) for (let j = 0; j < 3; j++) { dummy.position.copy(f).add(V((rng() - 0.5) * 0.12, (rng() - 0.2) * 0.06, (rng() - 0.5) * 0.12).multiplyScalar(size * 1.5)); dummy.rotation.set(rng(), rng(), rng()); const s = size * (0.09 + rng() * 0.06); dummy.scale.set(s * 1.3, s * 0.7, s * 1.3); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.14)); }
   g.add(im); return g;
 }
-const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildflowers, aromatic, basil, rosemary, flowering,
+const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildflowers, aromatic, basil, rosemary, flowering, geranium,
   lavender: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 1 }), violet: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 0.25 }),
   thyme: aromatic, tallgrass: (r, s) => grass(r, s * 1.6, true) };
 
@@ -735,7 +783,7 @@ const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildf
 const speciesOf = (p) => floraOf(p)[0]; // mélange de végétaux propre à chaque serre (model.js, FLORA)
 const SLOTS = [];
 { const t = [];
-  for (const s of [1, -1]) for (let i = 0; i < 6; i++) for (const row of [0, 1]) t.push({ x: s * (TBX - 0.2 + row * 0.42), z: TZ1 - 0.45 - i * 0.92 + row * 0.35, y: TY + 0.03, i, row, s, floor: false });
+  for (const s of [1, -1]) for (let i = 0; i < 6; i++) for (const row of [0, 1]) t.push({ x: s * (TBX - 0.2 + row * 0.42), z: TZ1 - 0.45 - i * 0.92 + row * 0.35, y: TY + 0.042, i, row, s, floor: false });
   t.sort((a, b) => (a.i - b.i) || (a.row - b.row) || (a.s - b.s)); // d'abord près de la porte
   SLOTS.push(...t);
   for (const x of [1.55, -1.55]) SLOTS.push({ x, z: HD - 0.55, y: 0, floor: true }); // deux grands pots au sol, de part et d'autre de la porte
@@ -745,22 +793,22 @@ const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, swa
 for (const h of HOUSES) h.used = new Array(SLOTS.length).fill(false);
 function buildPlant(p, h, slotIdx) {
   const sl = SLOTS[slotIdx], rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(), tall = sp === 'broadleaf' || sp === 'ficus';
-  if (sl.floor) { g.add(makePot(2.1, M.terraDark)); const pl = compact(SPECIES[sp](rng, tall ? 0.95 : 1.2)); pl.position.y = 0.42; g.add(pl); g.position.set(sl.x, 0, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
+  if (sl.floor) { g.add(makePot(2.1, h.pots[1])); const pl = compact(SPECIES[sp](rng, tall ? 0.95 : 1.2)); pl.position.y = 0.42; g.add(pl); g.position.set(sl.x, 0, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
   const big = tall ? 1.2 : 1, ps = (0.85 + rng() * 0.35) * big;
-  g.add(makePot(ps, rng() < 0.25 ? M.terraDark : M.terra));
+  g.add(makePot(ps, h.pots[rng() < 0.3 ? 1 : 0]));
   const pl = compact(SPECIES[sp](rng, 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; g.add(pl);
   g.position.set(sl.x + (rng() - 0.5) * 0.08, sl.y, sl.z + (rng() - 0.5) * 0.08); g.rotation.y = rng() * Math.PI * 2;
   h.g.add(g); return { obj: g, plant: pl };
 }
 // Bonsaïs du fond : un par objectif actif de la catégorie (trois au plus), une branche par étape franchie ;
-// le plus fourni au centre, sur le grand socle.
+// le plus fourni au centre, sur une petite sellette de bois.
 const BONSAI_SPOTS = [[0, -HD + 0.85, 1], [-1.15, -HD + 0.7, 0.78], [1.15, -HD + 0.7, 0.78]];
 const pedestals = (() => {
-  const n = HOUSES.length * BONSAI_SPOTS.length, ped = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.42, 0.7, 20), M.stone, n), tray = new THREE.InstancedMesh(new THREE.BoxGeometry(0.62, 0.08, 0.4), M.terraDark, n);
+  const n = HOUSES.length * BONSAI_SPOTS.length, ped = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.28, 0.32, 0.4, 12), M.wood, n), tray = new THREE.InstancedMesh(new THREE.BoxGeometry(0.62, 0.08, 0.4), M.terraDark, n);
   ped.castShadow = ped.receiveShadow = tray.castShadow = true; scene.add(ped, tray);
   const set = (h, j, on) => { const [x, z, s] = BONSAI_SPOTS[j], i = HOUSES.indexOf(h) * BONSAI_SPOTS.length + j, k = on ? s : 0.0001, W = h.g.matrixWorld;
-    m4.compose(V(x, 0.35 * k, z), Q0, V(k, k, k)); ped.setMatrixAt(i, W.clone().multiply(m4));
-    m4.compose(V(x, 0.74 * k, z), Q0, V(k, k, k)); tray.setMatrixAt(i, W.clone().multiply(m4));
+    m4.compose(V(x, 0.2 * k, z), Q0, V(k, k, k)); ped.setMatrixAt(i, W.clone().multiply(m4));
+    m4.compose(V(x, 0.44 * k, z), Q0, V(k, k, k)); tray.setMatrixAt(i, W.clone().multiply(m4));
     ped.instanceMatrix.needsUpdate = tray.instanceMatrix.needsUpdate = true; };
   for (const h of HOUSES) for (let j = 0; j < BONSAI_SPOTS.length; j++) set(h, j, j === 0);
   return { set };
@@ -773,7 +821,7 @@ function setBonsai(h, list) {
     if (B.obj) { h.g.remove(B.obj); disposeObj(B.obj); B.obj = null; }
     if (j > 0) pedestals.set(h, j, !!b);
     if (!b) return;
-    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.78 * s, z); h.g.add(B.obj);
+    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.48 * s, z); h.g.add(B.obj);
   });
 }
 // suspensions : trois par serre, elles descendent avec les choses faites de la serre
@@ -851,7 +899,7 @@ const ernestSprite = (() => {
 const glowTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,220,160,.95)'); g.addColorStop(0.22, 'rgba(255,184,96,.55)'); g.addColorStop(0.6, 'rgba(255,150,60,.16)'); g.addColorStop(1, 'rgba(255,140,50,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
 const halo = (parent, pos, size) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 })); sp.position.copy(pos); sp.scale.setScalar(size); sp.visible = false; sp.userData.size = size; parent.add(sp); return sp; };
 const setHalo = (sp, k) => { sp.material.opacity = Math.min(1, k); sp.visible = k > 0.01; };
-const halos = { lanterns: lanterns.map((l) => halo(l.g, V(0, 0, 0), 2.1)), cottage: cottageB.glowPoints.map((g) => halo(cottage, g.p, g.s * 1.45)) };
+const halos = { lanterns: lanterns.map((l) => { const sp = halo(l.g, V(0, 0, 0), 2.1); sp.material.color.set('#ffffff').lerp(col(l.house.accent), 0.3); return sp; }), cottage: cottageB.glowPoints.map((g) => halo(cottage, g.p, g.s * 1.45)) };
 
 // ---------- Ombres douces au sol (« blob shadows ») : un disque radial instancié, un seul appel de dessin ----------
 const blobTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(0,0,0,.62)'); g.addColorStop(0.5, 'rgba(0,0,0,.38)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
@@ -1015,9 +1063,9 @@ function applyModel(m) {
 
 // ---------- Ambiances ----------
 const TIMES = {
-  day: { top: '#7fb8d6', bottom: '#d9e6c8', fog: '#bcd6d0', fogNear: 22, fogFar: 80, hemiSky: '#cfe8f2', hemiGround: '#5b4a30', hemi: 1.15, sun: '#fff1d6', sunI: 2.6, sunPos: [6, 10, 5], lantern: 0.6, flies: 0, stars: 0, moon: 0, exposure: 1.0, rim: 0.32, rimCol: '#fff4dc', glass: 1, vig: 0.42 },
-  dusk: { top: '#2a3a5c', bottom: '#e0956a', fog: '#6b5a62', fogNear: 18, fogFar: 70, hemiSky: '#e0a080', hemiGround: '#3a2a22', hemi: 0.7, sun: '#ffb070', sunI: 1.4, sunPos: [-9, 3.5, 2], lantern: 4, flies: 0.5, stars: 0.3, moon: 0.4, exposure: 1.05, rim: 0.5, rimCol: '#ffb880', glass: 0.7, vig: 0.5 },
-  night: { top: '#071321', bottom: '#17263a', fog: '#18242f', fogNear: 13, fogFar: 58, hemiSky: '#3a5684', hemiGround: '#0d1826', hemi: 0.6, sun: '#9fb8e0', sunI: 0.55, sunPos: [-6, 9, -6], lantern: 7, flies: 1, stars: 1, moon: 1, exposure: 0.9, rim: 0.42, rimCol: '#ffc27a', glass: 0.4, vig: 0.55 },
+  day: { top: '#7fb8d6', bottom: '#d9e6c8', fog: '#bcd6d0', fogNear: 22, fogFar: 80, hemiSky: '#cfe8f2', hemiGround: '#5b4a30', hemi: 1.15, sun: '#fff1d6', sunI: 2.6, sunPos: [6, 10, 5], lantern: 0.6, flies: 0, stars: 0, moon: 0, exposure: 1.0, rim: 0.32, rimCol: '#fff4dc', glass: 1, glow: 0, vig: 0.42 },
+  dusk: { top: '#2a3a5c', bottom: '#e0956a', fog: '#6b5a62', fogNear: 18, fogFar: 70, hemiSky: '#e0a080', hemiGround: '#3a2a22', hemi: 0.7, sun: '#ffb070', sunI: 1.4, sunPos: [-9, 3.5, 2], lantern: 5, flies: 0.5, stars: 0.3, moon: 0.4, exposure: 1.05, rim: 0.5, rimCol: '#ffb880', glass: 0.7, glow: 0.3, vig: 0.5 },
+  night: { top: '#0e2140', bottom: '#1f3352', fog: '#1c2a40', fogNear: 16, fogFar: 80, hemiSky: '#3f5c8c', hemiGround: '#101b2c', hemi: 0.6, sun: '#9fb8e0', sunI: 0.55, sunPos: [-6, 9, -6], lantern: 11, flies: 1, stars: 1, moon: 1, exposure: 0.9, rim: 0.42, rimCol: '#ffc27a', glass: 0.4, glow: 0.75, vig: 0.5 },
 };
 const amb = { cur: null, to: null, fixed: null };
 // Heure réelle → ambiance, avec fondus à l'aube et au crépuscule.
@@ -1048,7 +1096,7 @@ function updateAmbience(dt, t) {
   for (const key of Object.keys(b)) { if (typeof b[key] === 'number') a[key] = lerp(a[key], b[key], k); else if (Array.isArray(b[key])) a[key] = a[key].map((v, i) => lerp(v, b[key][i], k)); else a[key] = '#' + col(a[key]).lerp(col(b[key]), k).getHexString(); }
   const mood = model.mood, m = 0.75 + mood * 0.09;
   skyMat.uniforms.top.value.set(a.top); skyMat.uniforms.bottom.value.set(a.bottom); scene.fog.color.set(a.fog); scene.fog.near = a.fogNear; scene.fog.far = a.fogFar;
-  rimU.uRimK.value = a.rim * (mode === 'band' ? 1.6 : 1); rimU.uRimCol.value.set(a.rimCol); glassU.uGlassK.value = a.glass; vignette.material.uniforms.uK.value = a.vig;
+  rimU.uRimK.value = a.rim * (mode === 'band' ? 1.6 : 1); rimU.uRimCol.value.set(a.rimCol); glassU.uGlassK.value = a.glass; glassU.uGlow.value = a.glow * (0.8 + mood * 0.05); vignette.material.uniforms.uK.value = a.vig;
   pond.water.material.color.set(a.top).lerp(col(a.bottom), 0.25).lerp(col('#3d6a6c'), 0.55);
   hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m * 1.2;
   const sd = sunDirAt(hourSun); skyLife.sunDir.copy(sd);
@@ -1057,7 +1105,7 @@ function updateAmbience(dt, t) {
   skyMat.uniforms.sunDir.value.copy(sd); skyMat.uniforms.glowK.value = Math.max(0, Math.min(1, (sd.y + 0.12) * 4)); skyMat.uniforms.glow.value.set(sd.y < 0.18 ? '#ff9a5a' : '#ffe2b0');
   for (const l of lanterns) l.light.intensity = a.lantern * (0.8 + mood * 0.08) * (0.95 + Math.sin(t * 7 + l.house.x) * 0.03);
   for (const h of halos.lanterns) setHalo(h, Math.max(0, (a.lantern - 1.2) / 6));
-  M.bulb.emissiveIntensity = 0.4 + a.lantern * 0.3;
+  M.bulb.emissiveIntensity = 0.4 + a.lantern * 0.3; for (const b of bulbMats) b.emissiveIntensity = M.bulb.emissiveIntensity;
   moon.position.copy(sd).multiplyScalar(-60).setY(Math.max(18, -sd.y * 60)); flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
   if (renderer) renderer.toneMappingExposure = a.exposure * (0.9 + mood * 0.04);
   updateLife(a, t, dt, sd, hourSun);
@@ -1093,12 +1141,12 @@ let stillDirty = true, stillSlot = -1, lastSig = '';
 const poke = () => { stillDirty = true; if (renderer) renderer.shadowMap.needsUpdate = true; };
 // Six angles, un par demi-heure. Ceux qui portent « house » sont en coordonnées locales de cette serre (porte vers +z).
 const ANGLES = [
-  { pos: [4.5, 12.5, 22.5], t: [0, 0.4, -2.2], fov: 40 },                    // vue d'ensemble : les trois serres et la chaumière
+  { pos: [-0.3, 4.3, 14.8], t: [-0.6, 1.3, -1.5], fov: 54 },                     // vue d'ensemble, plus basse : on voit les plantes à travers le verre
   { house: 'travail', pos: [1.1, 4.6, 12.4], t: [-0.3, 0.5, 1.9], fov: 40 }, // la serre Travail et l'allée (lanterne, graines, feuille)
-  { house: 'bienetre', pos: [0.9, 3.4, 9.0], t: [-0.4, 0.95, -0.4], fov: 40 }, // la serre Bien-être
-  { house: 'perso', pos: [0.9, 3.4, 9.0], t: [-0.4, 0.95, -0.4], fov: 40 },     // la serre Vie perso
-  { house: 'travail', pos: [0.35, 1.75, 3.9], t: [0, 0.9, -2.2], fov: 50 },  // dans l'allée de la serre Travail
-  { house: 'bienetre', pos: [-0.35, 1.75, 3.9], t: [0, 0.9, -2.2], fov: 50 }, // dans l'allée de la serre Bien-être
+  { house: 'bienetre', pos: [-0.5, 3.5, 9.6], t: [-0.8, 0.95, -0.4], fov: 40 }, // la serre Bien-être, son panneau à gauche
+  { house: 'perso', pos: [-0.5, 3.5, 9.6], t: [-0.8, 0.95, -0.4], fov: 40 },     // la serre Vie perso, son panneau à gauche
+  { house: 'perso', pos: [0.2, 1.45, 1.9], t: [-1.75, 0.95, -0.9], fov: 58 },    // à hauteur de table, Vie perso : géraniums, fleurs des champs
+  { house: 'bienetre', pos: [0.2, 1.45, 1.9], t: [-1.75, 0.95, -0.9], fov: 58 }, // à hauteur de table, Bien-être : cactus, plantes grasses, aromatiques
 ];
 const angleWorld = (a) => { if (!a.house) return { pos: V(...a.pos), t: V(...a.t) }; const h = HB[a.house]; return { pos: toWorld(h, a.pos[0], a.pos[1], a.pos[2]), t: toWorld(h, a.t[0], a.t[1], a.t[2]) }; };
 let forcedAngle = null; // pour la page de démonstration
@@ -1106,13 +1154,14 @@ let mode = 'band', running = false, visible = true, last = 0, onFps = null, fram
 // Sélecteur de serre : la caméra glisse vers une serre (vue de trois quarts, porte en face) ou vers l'ensemble.
 let fly = null;
 // vue d'ensemble : plus haute et plus loin en portrait, pour que les trois serres tiennent dans l'écran
-const overview = () => (camera.aspect < 1 ? [new THREE.Vector3(1.2, 15.5, 29), new THREE.Vector3(0, 0.4, -4)] : [new THREE.Vector3(2.2, 11.5, 19.5), new THREE.Vector3(0, 0.6, -1.8)]);
+const overview = () => (camera.aspect < 1 ? [new THREE.Vector3(0, 22, 39), new THREE.Vector3(0, 0.4, -3)] : [new THREE.Vector3(2.2, 11.5, 19.5), new THREE.Vector3(0, 0.6, -1.8)]);
 function focus(id) {
   if (!renderer) return;
   let p1, t1;
   const h = HB[id];
   if (!h) { const [p, t] = overview(); p1 = p; t1 = t; }
-  else { h.g.updateMatrixWorld(true); p1 = new THREE.Vector3(1.8, 3.4, HD + 6.2).applyMatrix4(h.g.matrixWorld); t1 = new THREE.Vector3(0, 0.9, -0.4).applyMatrix4(h.g.matrixWorld); }
+  else { h.g.updateMatrixWorld(true); const portrait = camera.aspect < 1; // un peu à gauche et assez loin : le panneau reste dans le cadre, même en portrait
+    p1 = (portrait ? V(-0.8, 4.2, HD + 9.5) : V(-0.3, 3.8, HD + 7.5)).applyMatrix4(h.g.matrixWorld); t1 = (portrait ? V(-0.8, 0.9, 0) : V(-0.6, 0.9, 0)).applyMatrix4(h.g.matrixWorld); }
   fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1, t1, s: performance.now() };
 }
 function frame(now) {
@@ -1174,7 +1223,7 @@ export function mount(canvas, opts = {}) {
   renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
   renderer.toneMapping = THREE.CustomToneMapping; // ACES + saturation et contraste (voir « Étalonnage » en tête)
   controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 38;
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 48; // la vue d'ensemble en portrait est à 47
   controls.maxPolarAngle = Math.PI * 0.49; controls.minPolarAngle = 0.25; controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
   onFps = opts.onFps || null;
   setMode(opts.mode || 'band');

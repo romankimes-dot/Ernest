@@ -4,13 +4,13 @@
 import { growth, catId, floraOf } from './model.js';
 
 export const HOUSES2D = [
-  { id: 'travail', name: 'Travail', cats: ['travail'] },
-  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'] },
-  { id: 'perso', name: 'Vie perso', cats: ['perso'] },
+  { id: 'travail', name: 'Travail', cats: ['travail'], accent: '#5f7fa6', signBg: '#26395a' }, // mêmes accents qu'en 3D
+  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'], accent: '#8fa58a', signBg: '#34502f' },
+  { id: 'perso', name: 'Vie perso', cats: ['perso'], accent: '#c9786a', signBg: '#5e2430' },
 ];
 const houseOf = (cat) => catId(cat);
 // aspect 2D d'une plante : d'après son végétal (le même mélange par serre qu'en 3D)
-const LOOK = { ficus: 'boulot', broadleaf: 'boulot', lavender: 'revision', fern: 'esprit', mossy: 'esprit', succulent: 'corps', cactus: 'corps', thyme: 'cuisine', basil: 'cuisine', rosemary: 'cuisine', wildflowers: 'perso', flowering: 'perso', violet: 'revision', tallgrass: 'perso' };
+const LOOK = { ficus: 'boulot', broadleaf: 'boulot', lavender: 'revision', fern: 'esprit', mossy: 'esprit', succulent: 'corps', cactus: 'corps', thyme: 'cuisine', basil: 'cuisine', rosemary: 'cuisine', wildflowers: 'perso', flowering: 'perso', geranium: 'geranium', violet: 'revision', tallgrass: 'perso' };
 const lookOf = (p) => LOOK[floraOf(p)[0]] || 'perso';
 const rnd = (seed) => { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 
@@ -79,11 +79,11 @@ function bonsai(ctx, x, y, g, r, t, col, branches = 0) {
   ctx.fillStyle = col.leaf; ctx.beginPath(); ctx.ellipse(x + 3, y - H - 3, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
 }
 // Révision : lavande ; Boulot : grandes feuilles ; Corps : succulentes ; Esprit : fougères ; Cuisine : aromatiques ; Perso : fleurs des champs.
-const GEN = { esprit: fougere, corps: succulente, revision: herbacee, cuisine: aromatique, boulot: fougere, perso: herbacee };
+const GEN = { esprit: fougere, corps: succulente, revision: herbacee, cuisine: aromatique, boulot: fougere, perso: herbacee, geranium: herbacee };
 const COLS = {
   revision: { leaf: '#7a9a7a', dark: '#4c6a55', flower: '#9d7cc8' }, corps: { leaf: '#8fc98f', dark: '#3f8a5c', flower: '#f2b23d' },
   esprit: { leaf: '#5fae6d', dark: '#2f6b48', flower: '#6fb3c9' }, cuisine: { leaf: '#9cc46a', dark: '#5c8a3a', flower: '#f2b23d' },
-  boulot: { leaf: '#3f7a46', dark: '#2a5e44', flower: '#efe6d2' }, perso: { leaf: '#9cc46a', dark: '#6b7a66', flower: '#e86f8a' },
+  boulot: { leaf: '#3f7a46', dark: '#2a5e44', flower: '#efe6d2' }, perso: { leaf: '#9cc46a', dark: '#6b7a66', flower: '#e86f8a' }, geranium: { leaf: '#5a9442', dark: '#3f6a35', flower: '#d8283a' },
 };
 
 export class Garden {
@@ -123,13 +123,15 @@ export class Garden {
       // lanterne la nuit
       if (day < .7) {
         const fl = (0.85 + Math.sin(t / 300 + hi) * 0.05) * (1 - day) * (this.light === 'low' ? .7 : 1), ly = top + (eave - top) * .55;
-        const lg = ctx.createRadialGradient(xm, ly, 2, xm, ly, sw * .6); lg.addColorStop(0, `rgba(242,178,61,${.45 * fl})`); lg.addColorStop(1, 'rgba(242,178,61,0)');
+        const lc = rgbMix('#f2b23d', hs.accent, .3); // lueur teintée par l'accent de la serre
+        const lg = ctx.createRadialGradient(xm, ly, 2, xm, ly, sw * .6); lg.addColorStop(0, `rgba(${lc},${.45 * fl})`); lg.addColorStop(1, `rgba(${lc},0)`);
         ctx.fillStyle = lg; ctx.fillRect(x0, top, sw, floor - top);
         ctx.strokeStyle = 'rgba(239,230,210,.4)'; ctx.beginPath(); ctx.moveTo(xm, top); ctx.lineTo(xm, ly - 4); ctx.stroke();
         ctx.fillStyle = '#f2b23d'; ctx.beginPath(); ctx.arc(xm, ly, 4, 0, Math.PI * 2); ctx.fill();
       }
       // table
       ctx.fillStyle = lerp('#8a5a2b', '#b07a3f', day * .5); ctx.fillRect(x0 + 4, table, sw - 8, 6); ctx.fillStyle = '#4a2f14'; ctx.fillRect(x0 + 6, table + 6, 3, floor - table - 6); ctx.fillRect(x1 - 9, table + 6, 3, floor - table - 6);
+      ctx.fillStyle = hs.accent; ctx.fillRect(x0 + 3, table - 1, sw - 6, 3); ctx.fillRect(x0 + 3, table + 2, sw - 6, 4); // chemin de table de la couleur de la serre
       // plantes de la serre : les plus récentes sur la table, puis au sol ; bonsaïs des objectifs actifs au sol ; mousse au pied
       const mine = plants.filter((p) => houseOf(p.cat) === hs.id);
       const pl = mine.filter((p) => p.kind !== 'moss' && p.kind !== 'bonsai'), moss = mine.filter((p) => p.kind === 'moss');
@@ -147,7 +149,7 @@ export class Garden {
       // panneau
       ctx.font = 'italic 600 12px Georgia, "Times New Roman", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       const tw = ctx.measureText(hs.name).width + 14, py = floor + (H - floor) * .5;
-      ctx.fillStyle = '#4a2f14'; ctx.fillRect(xm - 1.5, py, 3, H - py); ctx.fillStyle = '#6e4526'; ctx.fillRect(xm - tw / 2, py - 9, tw, 18);
+      ctx.fillStyle = '#4a2f14'; ctx.fillRect(xm - 1.5, py, 3, H - py); ctx.fillStyle = hs.signBg; ctx.fillRect(xm - tw / 2, py - 9, tw, 18); ctx.strokeStyle = hs.accent; ctx.lineWidth = 1.5; ctx.strokeRect(xm - tw / 2 + 1, py - 8, tw - 2, 16);
       ctx.fillStyle = '#f1e8d2'; ctx.fillText(hs.name, xm, py + 1); ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
     });
     // Arrosage
@@ -163,3 +165,4 @@ function lerp(a, b, t) {
   return `rgb(${Math.round(pa[0] + (pb[0] - pa[0]) * k)},${Math.round(pa[1] + (pb[1] - pa[1]) * k)},${Math.round(pa[2] + (pb[2] - pa[2]) * k)})`;
 }
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgbMix = (a, b, t) => { const pa = hex(a), pb = hex(b); return pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(','); };

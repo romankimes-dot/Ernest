@@ -14,7 +14,7 @@ export const catOf = (id) => CATS.find((c) => c.id === catId(id));
 export const FLORA = {
   travail: [['ficus', 'le ficus'], ['broadleaf', 'le caoutchouc'], ['lavender', 'la lavande'], ['lavender', 'la lavande'], ['fern', 'la fougère']],
   bienetre: [['succulent', 'la plante grasse'], ['cactus', 'le cactus'], ['thyme', 'le thym'], ['basil', 'le basilic'], ['rosemary', 'le romarin'], ['mossy', 'la mousse']],
-  perso: [['wildflowers', 'les fleurs des champs'], ['wildflowers', 'les fleurs des champs'], ['flowering', 'le géranium'], ['violet', 'la violette'], ['tallgrass', 'les hautes herbes']],
+  perso: [['wildflowers', 'les fleurs des champs'], ['wildflowers', 'les fleurs des champs'], ['geranium', 'le géranium'], ['violet', 'la violette'], ['geranium', 'le géranium']],
 };
 export const floraOf = (p) => { const l = FLORA[catId(p.cat)]; const h = Math.imul((p.seed >>> 0) ^ 0x9e3779b9, 0x85ebca6b) >>> 0; return l[h % l.length]; };
 // Convertit un état ancien (six catégories) vers les trois serres. Sans effet sur un état déjà converti.

@@ -370,5 +370,5 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
     lantern.rotation.z = Math.sin(t * 1.1) * 0.05; lantern.rotation.x = Math.sin(t * 0.83 + 1) * 0.03;
   };
   update(0, 0);
-  return { group, smokeOrigin, update, light: lightNode, glowPoints };
+  return { group, smokeOrigin, update, light: lightNode, glowPoints, door: new THREE.Vector3(0, 0, DZ + 0.27) }; // door : pas de la porte (local), pour l'allée
 }
