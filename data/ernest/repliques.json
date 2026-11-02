@@ -1243,15 +1243,24 @@
 },
 {
 "ctx": "coche.derniere",
-"t": "Trois. La journée est pleine. Je ferme le pot."
+"t": "Trois. La journée est pleine. Je ferme le pot.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
-"t": "La troisième. Tout le reste est du jardinage libre, {plante} t'attend pour ça."
+"t": "La troisième. Tout le reste est du jardinage libre, {plante} t'attend pour ça.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
-"t": "Trois sur trois. {plante} fait une feuille en ton honneur, ça prendra deux semaines."
+"t": "Trois sur trois. {plante} fait une feuille en ton honneur, ça prendra deux semaines.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
@@ -1267,7 +1276,8 @@
 "when": {
 "dow": [
 1
-]
+],
+"three": true
 }
 },
 {
@@ -1276,14 +1286,16 @@
 "when": {
 "dow": [
 0
-]
+],
+"three": true
 }
 },
 {
 "ctx": "coche.derniere",
 "t": "Trois. Tu peux fermer la porte de la serre et aller vivre.",
 "when": {
-"mood": "low"
+"mood": "low",
+"three": true
 }
 },
 {
@@ -1297,14 +1309,16 @@
 "ctx": "coche.derniere",
 "t": "Trois, encore. Les lucioles se demandent si tu es l'un des leurs.",
 "when": {
-"mood": "high"
+"mood": "high",
+"three": true
 }
 },
 {
 "ctx": "coche.derniere",
 "t": "Trois aujourd'hui, et hier aussi. Je vais devoir agrandir la serre.",
 "when": {
-"doneYesterday": true
+"doneYesterday": true,
+"three": true
 }
 },
 {
@@ -1318,7 +1332,8 @@
 "ctx": "coche.derniere",
 "t": "Trois. Ça fait {n} en tout. Le chiffre me plaît, il a une bonne forme.",
 "when": {
-"minN": 30
+"minN": 30,
+"three": true
 }
 },
 {
@@ -1329,7 +1344,8 @@
 "ctx": "coche.derniere",
 "t": "Trois choses. L'idée « {idee} » peut sortir maintenant, si elle veut.",
 "when": {
-"hasIdea": true
+"hasIdea": true,
+"three": true
 }
 },
 {
@@ -1338,11 +1354,17 @@
 },
 {
 "ctx": "coche.derniere",
-"t": "Trois. La table est vide. J'y pose un pot de menthe pour la soirée."
+"t": "Trois. La table est vide. J'y pose un pot de menthe pour la soirée.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
-"t": "Et de trois. Le reste de la journée est en jachère, c'est bon pour la terre."
+"t": "Et de trois. Le reste de la journée est en jachère, c'est bon pour la terre.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
@@ -1355,7 +1377,10 @@
 },
 {
 "ctx": "coche.derniere",
-"t": "Trois. Les plantes ne te félicitent pas, elles poussent. Prends-le comme ça."
+"t": "Trois. Les plantes ne te félicitent pas, elles poussent. Prends-le comme ça.",
+"when": {
+"three": true
+}
 },
 {
 "ctx": "coche.derniere",
@@ -2642,7 +2667,7 @@
 {
 "ctx": "premiere.ouverture",
 "seq": 1,
-"t": "Bonsoir. Je m'appelle Ernest. Je suis gobelin, jardinier, et un peu majordome quand il faut."
+"t": "Bonjour. Je m'appelle Ernest. Je suis gobelin, jardinier, et un peu majordome quand il faut."
 },
 {
 "ctx": "premiere.ouverture",
