@@ -224,7 +224,7 @@ export function buildCottage(THREE, { rng = Math.random, M = {} } = {}) {
   const flowerCols = ['#e8473a', '#f2c84b', '#f4efe6', '#7a5cc8', '#e77fb0'];
   for (const [p, y, box] of [[0.8, 1.05, true], [-0.92, 1.0, true], [1.95, 1.05, false], [-2.05, 1.12, false]]) {
     const n = wallN(p), w = wallPt(p, y), qq = qFace(n);
-//EMB // embrasure plus claire
+    put('stone', w.clone().addScaledVector(n, 0.01), qq, [0.56, 0.56, 0.06], '#d9cfb8'); // embrasure plus claire
     put('glass', w.clone().addScaledVector(n, 0.05), qq, 0.36);
     put('frame', w.clone().addScaledVector(n, 0.06), qq, [0.4, 0.4, 0.5]);
     put('dark', w.clone().addScaledVector(n, 0.065), qq, [0.025, 0.36, 0.02]);
