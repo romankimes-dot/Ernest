@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { svg as ernestSvg } from './ernest.js';
-import { growth, totalDone, moodAvg } from './model.js';
+import { growth, totalDone, moodAvg, catCounts, activeDays } from './model.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -139,6 +139,13 @@ const PAL = {
 }[SEASON];
 
 const outdoor = new THREE.Group(); scene.add(outdoor);
+// Étape 4 : emplacements du potager (un carré par catégorie) et de la seconde serre. L'herbe s'efface sous eux quand ils apparaissent.
+const BED_CATS = ['revision', 'corps', 'esprit', 'cuisine', 'boulot', 'perso'];
+const BEDS = [[-5.6, 0.8], [-5.6, 3.6], [-5.6, 6.4], [5.6, 1.3], [5.6, 4.1], [5.6, 6.9]].map(([x, z]) => ({ x, z, hx: 0.6, hz: 1.15 }));
+const SERRE2 = { x: 8.6, z: 4.6, hx: 1.25, hz: 1.6 };
+const ZONES = [...BEDS, SERRE2];
+const zoneAt = (x, z, m = 0.12) => ZONES.findIndex((b) => Math.abs(x - b.x) < b.hx + m && Math.abs(z - b.z) < b.hz + m);
+const zoneU = { value: new Array(ZONES.length).fill(0) };
 // Terrain
 {
   const g = new THREE.PlaneGeometry(190, 190, 150, 150); g.rotateX(-Math.PI / 2);
@@ -155,40 +162,42 @@ const outdoor = new THREE.Group(); scene.add(outdoor);
 }
 // Prairie : des milliers de brins qui ondulent (vent calculé dans le shader)
 const windU = { value: 0 };
+const ext = { beds: [], serre2: null };
 {
   const blade = new THREE.BufferGeometry();
   blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.03, 0, 0, 0.03, 0, 0, -0.02, 0.35, 0, 0.02, 0.35, 0, 0, 0.7, 0], 3));
   blade.setIndex([0, 1, 2, 2, 1, 3, 2, 3, 4]); blade.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, side: THREE.DoubleSide });
   mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = windU;
-    sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+    sh.uniforms.uTime = windU; sh.uniforms.uZone = zoneU;
+    sh.vertexShader = `uniform float uTime;\nuniform float uZone[${ZONES.length}];\nattribute float aZone;\n` + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       vec3 ip = vec3(instanceMatrix[3][0], 0.0, instanceMatrix[3][2]);
       float k = position.y * position.y * 1.6;
       float w = sin(uTime * 1.7 + ip.x * 0.35 + ip.z * 0.22) * 0.6 + sin(uTime * 3.1 + ip.x * 1.3) * 0.25;
-      transformed.x += w * k * 0.35; transformed.z += w * k * 0.18;`);
+      transformed.x += w * k * 0.35; transformed.z += w * k * 0.18;
+      if (aZone > -0.5) transformed *= 1.0 - uZone[int(aZone + 0.5)];`);
   };
-  const N = 24000, im = new THREE.InstancedMesh(blade, mat, N), r = rngOf(33), base = PAL.grass.map(col); let k = 0;
+  const N = 24000, im = new THREE.InstancedMesh(blade, mat, N), r = rngOf(33), base = PAL.grass.map(col), aZone = new Float32Array(N); let k = 0;
   for (let i = 0; i < N * 3 && k < N; i++) {
     const a = r() * Math.PI * 2, d = 4.5 + Math.pow(r(), 0.7) * 34, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.15;
     if (Math.abs(x) < GW + 0.4 && Math.abs(z) < GD + 0.4) continue;
     if (z > GD && Math.abs(x - pathX(z)) < 0.85) continue;
     dummy.position.set(x, heightAt(x, z) - 0.03, z); dummy.rotation.set((r() - 0.5) * 0.3, r() * 6.28, 0); const s = 0.45 + r() * 0.55; dummy.scale.set(1.2, s * (0.6 + r() * 0.6), 1.2); dummy.updateMatrix();
-    im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.08, (r() - 0.5) * 0.08)); k++;
+    aZone[k] = zoneAt(x, z); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, base[Math.floor(r() * base.length)].clone().offsetHSL(0, (r() - 0.5) * 0.08, (r() - 0.5) * 0.08)); k++;
   }
-  im.count = k; im.receiveShadow = true; outdoor.add(im);
+  blade.setAttribute('aZone', new THREE.InstancedBufferAttribute(aZone, 1)); im.count = k; im.receiveShadow = true; outdoor.add(im);
   // fleurs sauvages
   const F = SEASON === 'hiver' ? 0 : 900, fm = new THREE.InstancedMesh(GEO_BALL_SMALL(), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), Math.max(1, F)); let f = 0;
-  for (let i = 0; i < F * 3 && f < F; i++) { const a = r() * 6.28, d = 6 + r() * 24, x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(x) < GW + 0.5 && Math.abs(z) < GD + 0.5) continue; if (z > GD && Math.abs(x - pathX(z)) < 1) continue; if (fbm(x * 0.2, z * 0.2) < 0.5) continue;
+  for (let i = 0; i < F * 3 && f < F; i++) { const a = r() * 6.28, d = 6 + r() * 24, x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.abs(x) < GW + 0.5 && Math.abs(z) < GD + 0.5) continue; if (z > GD && Math.abs(x - pathX(z)) < 1) continue; if (zoneAt(x, z, 0.3) >= 0) continue; if (fbm(x * 0.2, z * 0.2) < 0.5) continue;
     dummy.position.set(x, heightAt(x, z) + 0.25 + r() * 0.2, z); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(0.035 + r() * 0.03); dummy.updateMatrix(); fm.setMatrixAt(f, dummy.matrix); fm.setColorAt(f++, col(PAL.flowers[Math.floor(r() * PAL.flowers.length)])); }
-  fm.count = f; outdoor.add(fm);
+  fm.count = f; outdoor.add(fm); ext.flowers = { im: fm, n: f, cur: 0.5, target: 0.5 };
 }
 function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
 // Chemin de dalles jusqu'à la porte, et la porte
 {
   const r = rngOf(44), n = 46, m = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.06, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), n);
   for (let i = 0; i < n; i++) { const z = GD + 0.5 + i * 0.55, x = pathX(z) + (i % 2 ? 0.22 : -0.22) + (r() - 0.5) * 0.12; dummy.position.set(x, heightAt(x, z) + 0.01, z); dummy.rotation.set(0, r() * 3, 0); dummy.scale.set(0.3 + r() * 0.08, 1, 0.24 + r() * 0.06); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#9a927e'), r, 0.1)); }
-  m.receiveShadow = true; outdoor.add(m);
+  m.receiveShadow = true; outdoor.add(m); ext.stones = { im: m, n, cur: 8, target: 8 };
   const doorM = new THREE.MeshStandardMaterial({ color: 0x2f4a3a, roughness: 0.6, metalness: 0.4 });
   for (const x of [-0.6, 0.6]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, 2.1, 0.07), doorM); post.position.set(x, 1.05, GD + 0.02); outdoor.add(post); }
   const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.27, 0.07, 0.07), doorM); lintel.position.set(0, 2.1, GD + 0.02); outdoor.add(lintel);
@@ -204,6 +213,47 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
   const m = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), stones.length);
   stones.forEach(([x, y, z, s], i) => { dummy.position.set(x, y, z); dummy.rotation.set(r() * 3, r() * 3, r() * 3); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); m.setMatrixAt(i, dummy.matrix); m.setColorAt(i, vary(col('#8a8474'), r, 0.12)); });
   m.castShadow = m.receiveShadow = true; outdoor.add(m);
+}
+// Potager : un carré en bois par catégorie, qui sort de terre quand la catégorie a assez servi, puis se remplit.
+function crop(cat, r) {
+  const g = new THREE.Group(), add = (geo, mat, x, y, z, sx, sy, sz) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy ?? sx, sz ?? sx); m.castShadow = true; g.add(m); return m; };
+  const ball = new THREE.IcosahedronGeometry(1, 1), cone = new THREE.ConeGeometry(1, 1, 6), stick = new THREE.CylinderGeometry(1, 1, 1, 5);
+  const leafM = (h) => new THREE.MeshStandardMaterial({ color: vary(col(h), r, 0.1), roughness: 0.8, flatShading: true });
+  if (cat === 'revision') { const pur = new THREE.MeshStandardMaterial({ color: vary(col('#8a6ac8'), r, 0.1), roughness: 0.7 }); add(ball, leafM('#7a9a7a'), 0, 0.08, 0, 0.14, 0.09); for (let i = 0; i < 7; i++) { const a = i * 0.9, d = 0.04 + r() * 0.05; add(stick, M.stem, Math.cos(a) * d, 0.2, Math.sin(a) * d, 0.006, 0.28); add(cone, pur, Math.cos(a) * d, 0.38, Math.sin(a) * d, 0.022, 0.11); } }
+  else if (cat === 'corps') { add(stick, M.wood, 0, 0.3, 0, 0.012, 0.6); add(ball, leafM('#3f7a32'), 0, 0.28, 0, 0.13, 0.22); const red = new THREE.MeshStandardMaterial({ color: 0xc8382a, roughness: 0.4 }); for (let i = 0; i < 4; i++) add(ball, red, (r() - 0.5) * 0.18, 0.15 + r() * 0.25, (r() - 0.5) * 0.18, 0.035); }
+  else if (cat === 'esprit') { const m = leafM('#8fc06a'); for (let i = 0; i < 5; i++) add(ball, m, (r() - 0.5) * 0.14, 0.06 + r() * 0.06, (r() - 0.5) * 0.14, 0.06 + r() * 0.03, 0.05); }
+  else if (cat === 'cuisine') { add(ball, leafM('#9ab87a'), 0, 0.1, 0, 0.16, 0.11); add(ball, leafM('#c8d8a0'), 0, 0.15, 0, 0.09, 0.08); }
+  else if (cat === 'boulot') { const m = leafM('#5a9a3a'); for (let i = 0; i < 5; i++) { const a = i * 1.26; const c = add(cone, m, Math.cos(a) * 0.03, 0.14, Math.sin(a) * 0.03, 0.03, 0.26); c.rotation.set(Math.sin(a) * 0.4, 0, Math.cos(a) * 0.4); } add(cone, new THREE.MeshStandardMaterial({ color: 0xe0782a, roughness: 0.6 }), 0, 0.01, 0, 0.035, 0.05).rotation.x = Math.PI; }
+  else { add(stick, M.stem, 0, 0.3, 0, 0.012, 0.6); const head = add(ball, new THREE.MeshStandardMaterial({ color: 0xf2c23a, roughness: 0.6 }), 0, 0.62, 0.02, 0.09, 0.03, 0.09); head.rotation.x = 1.2; add(ball, M.woodDark, 0, 0.62, 0.045, 0.04, 0.015, 0.04).rotation.x = 1.2; add(ball, leafM('#4f8a3a'), 0, 0.25, 0, 0.07, 0.03, 0.1); }
+  return g;
+}
+BEDS.forEach((b, bi) => {
+  const r = rngOf(900 + bi), g = new THREE.Group(), y = heightAt(b.x, b.z);
+  const plank = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d), M.wood); m.position.set(x, 0.15, z); m.castShadow = m.receiveShadow = true; g.add(m); };
+  plank(b.hx * 2 + 0.08, 0.08, 0, -b.hz); plank(b.hx * 2 + 0.08, 0.08, 0, b.hz); plank(0.08, b.hz * 2, -b.hx, 0); plank(0.08, b.hz * 2, b.hx, 0);
+  const soil = new THREE.Mesh(new THREE.BoxGeometry(b.hx * 2, 0.26, b.hz * 2), M.soil); soil.position.y = 0.13; soil.receiveShadow = true; g.add(soil);
+  const crops = [];
+  for (let i = 0; i < 10; i++) { const c = crop(BED_CATS[bi], r); c.position.set((i % 2 ? 0.25 : -0.25) + (r() - 0.5) * 0.06, 0.26, -b.hz + 0.24 + Math.floor(i / 2) * (b.hz * 2 - 0.48) / 4); c.rotation.y = r() * 6.28; c.scale.setScalar(0.001); g.add(c); crops.push(c); }
+  g.position.set(b.x, y - 0.32, b.z); g.visible = false; outdoor.add(g);
+  ext.beds.push({ g, crops, y, rise: 0, riseT: 0, grow: 0, growT: 0 });
+});
+// Seconde serre : arrive après un an de jours actifs.
+{
+  const s = SERRE2, g = new THREE.Group(), H = 1.5, R = 2.1;
+  const bar = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M.frame); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  for (const x of [-s.hx, s.hx]) for (const z of [-s.hz, s.hz]) bar(0.05, H, 0.05, x, H / 2, z);
+  for (const z of [-s.hz, 0, s.hz]) { bar(s.hx * 2, 0.05, 0.05, 0, H, z); bar(s.hx * 2, 0.05, 0.05, 0, 0.3, z); }
+  bar(0.05, 0.05, s.hz * 2, 0, R, 0);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(s.hx * 2, 0.3, s.hz * 2), M.stone); base.position.y = 0.15; base.receiveShadow = true; g.add(base);
+  const pane = (w, h, x, y, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M.glass); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); };
+  pane(s.hx * 2, H - 0.3, 0, (H + 0.3) / 2, -s.hz, 0); pane(s.hx * 2, H - 0.3, 0, (H + 0.3) / 2, s.hz, 0); pane(s.hz * 2, H - 0.3, -s.hx, (H + 0.3) / 2, 0, Math.PI / 2); pane(s.hz * 2, H - 0.3, s.hx, (H + 0.3) / 2, 0, Math.PI / 2);
+  const slope = Math.hypot(s.hx, R - H), ang = Math.atan2(R - H, s.hx);
+  for (const side of [-1, 1]) { const gp = new THREE.Group(), m = new THREE.Mesh(new THREE.PlaneGeometry(slope, s.hz * 2), M.glass); m.rotation.x = -Math.PI / 2; gp.add(m); gp.rotation.z = -side * ang; gp.position.set(side * s.hx / 2, (H + R) / 2, 0); g.add(gp);
+    const e = bar(slope, 0.05, 0.05, side * s.hx / 2, (H + R) / 2, -s.hz); e.rotation.z = side * -ang; const f = bar(slope, 0.05, 0.05, side * s.hx / 2, (H + R) / 2, s.hz); f.rotation.z = side * -ang; }
+  const lamp = new THREE.PointLight(0xffc070, 0, 4, 1.8); lamp.position.set(0, 1.2, 0); g.add(lamp); g.userData.light = lamp;
+  const r = rngOf(4242); for (let i = 0; i < 6; i++) { const c = crop(BED_CATS[i], r); c.position.set((i % 2 ? 0.55 : -0.55), 0.3, -1.0 + Math.floor(i / 2) * 1.0); c.scale.setScalar(1.6); g.add(c); }
+  g.position.set(s.x, heightAt(s.x, s.z) - 0.05, s.z); g.scale.setScalar(0.001); g.visible = false; outdoor.add(g);
+  ext.serre2 = { g, cur: 0, target: 0 };
 }
 // Arbres : conifères et feuillus aux couleurs de la saison, buissons
 {
@@ -310,7 +360,7 @@ function updateLife(a, t, dt, sd, hour) {
   const { rise } = sunTimes(), mf = Math.max(0, 1 - Math.abs(hour - (rise + 1.2)) / 2.2) * 0.55;
   for (const m of mist) { m.material.opacity = mf; m.visible = mf > 0.01; m.material.color.set(a.fog); }
   // maison : fenêtre et fumée
-  const night = 1 - dayF; windowMat.emissiveIntensity = 0.2 + night * 2.2; cottage.userData.light.intensity = night * 3;
+  const night = 1 - dayF; windowMat.emissiveIntensity = 0.2 + night * 2.2; cottage.userData.light.intensity = night * 3; ext.serre2.g.userData.light.intensity = night * 2.5 * ext.serre2.cur;
   for (const s of smoke) { s.t = (s.t + dt * 0.08) % 1; const k = s.t; s.sp.position.set(s.base.x + Math.sin(k * 6 + t * 0.3) * 0.3 + k * 1.2, s.base.y + k * 4, s.base.z - k * 0.6); s.sp.scale.setScalar(0.4 + k * 1.8); s.sp.material.opacity = (1 - k) * 0.45 * (0.6 + night * 0.4); s.sp.material.color.set(night > 0.5 ? '#8a8a90' : '#e6e2d7'); }
   // oiseaux
   for (const b of birds) { b.g.visible = dayF > 0.4; if (!b.g.visible) continue; b.a += b.v * dt; b.g.position.set(Math.cos(b.a) * b.rad, b.h + Math.sin(t * 0.5 + b.ph) * 0.8, Math.sin(b.a) * b.rad); b.g.rotation.y = -b.a; const f = Math.sin(t * 9 + b.ph) * 0.6; b.L.rotation.z = f; b.R.rotation.z = -f; }
@@ -549,6 +599,16 @@ const ernestSprite = (() => {
 
 // ---------- Données → scène ----------
 // Pure : ce que la serre doit montrer pour un état d'Ernest.
+// Dehors : le chemin s'allonge avec le total, un carré de potager par catégorie (dès 8 choses faites), la seconde serre après 365 jours actifs.
+export function extFromState(S, n, mood) {
+  const keys = Object.keys(S.days), counts = catCounts(S, keys);
+  return {
+    path: Math.min(1, n / 300),
+    beds: BED_CATS.map((c) => ((counts[c] || 0) >= 8 ? Math.min(1, ((counts[c] || 0) - 8) / 60) : -1)),
+    flowers: Math.max(0.15, Math.min(1, 0.35 + 0.4 * Math.min(1, n / 150) + (mood === 'high' ? 0.25 : mood === 'low' ? -0.15 : 0))),
+    serre2: activeDays(S, keys) >= 365,
+  };
+}
 export function modelFromState(S, today) {
   const ps = S.garden.plants || [];
   const plants = ps.filter((p) => p.kind === 'plant').slice(0, SLOTS.length).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
@@ -560,9 +620,10 @@ export function modelFromState(S, today) {
     plants, moss: Math.min(1400, mossN * 8 + Math.max(0, n - 30) * 3), vine: Math.min(1, n / 160),
     hanging: [20, 45, 80, 120].filter((k) => n >= k).length, bonsai: goalB ? { seed: goalB.seed, branches: goalB.branches || 0 } : null,
     shrooms: mood === 'low', mood: mood === 'low' ? 1 : mood === 'high' ? 4 : 3,
+    ...extFromState(S, n, mood),
   };
 }
-let model = { plants: [], moss: 0, vine: 0, hanging: 0, bonsai: null, shrooms: false, mood: 3 };
+let model = { plants: [], moss: 0, vine: 0, hanging: 0, bonsai: null, shrooms: false, mood: 3, path: 0, beds: [], flowers: 0.5, serre2: false };
 let pop = null;
 function applyModel(m) {
   model = m;
@@ -574,6 +635,10 @@ function applyModel(m) {
     L.target = 0.35 + 0.65 * p.g;
   });
   for (const [id, L] of live) if (!keep.has(id)) { greenhouse.remove(L.obj); live.delete(id); }
+  ext.stones.target = Math.round(8 + (ext.stones.n - 8) * (m.path || 0));
+  ext.flowers.target = m.flowers ?? 0.5;
+  ext.beds.forEach((b, i) => { const v = m.beds ? m.beds[i] : -1; b.riseT = v >= 0 ? 1 : 0; b.growT = v >= 0 ? 0.25 + 0.75 * v : 0; });
+  ext.serre2.target = m.serre2 ? 1 : 0;
   vines.forEach((v, i) => { v.target = Math.max(0, Math.min(1, m.vine * 1.25 - i * 0.08)); });
   moss.target = m.moss;
   hanging.forEach((h, i) => { h.target = i < m.hanging ? 1 : 0; });
@@ -642,6 +707,13 @@ function updateGrowth(dt, t) {
   for (const h of hanging) { h.cur = lerp(h.cur, h.target, k); h.g.visible = h.cur > 0.01; h.g.scale.setScalar(Math.max(0.001, h.cur)); const w = Math.sin(t * 1.3 + h.phase) * 0.03; h.g.rotation.z = w * 0.5; h.g.rotation.x = w * 0.3; }
   for (const v of vines) { v.cur = lerp(v.cur, v.target, k); const tri = Math.floor((v.idx / 3) * v.cur) * 3; v.mesh.geometry.setDrawRange(0, tri); v.im.count = Math.floor(v.n * v.cur); v.mesh.visible = v.cur > 0.01; }
   moss.cur = lerp(moss.cur, moss.target, k); moss.im.count = Math.round(moss.cur);
+  { const S = ext.stones; S.cur = lerp(S.cur, S.target, k * 0.6); S.im.count = Math.round(S.cur); const F = ext.flowers; F.cur = lerp(F.cur, F.target, k); F.im.count = Math.round(F.n * F.cur); }
+  ext.beds.forEach((b, i) => {
+    b.rise = lerp(b.rise, b.riseT, k * 0.7); b.grow = lerp(b.grow, b.riseT > 0 && b.rise > 0.9 ? b.growT : 0, k * 0.8);
+    b.g.visible = b.rise > 0.01; b.g.position.y = b.y - 0.32 + 0.32 * b.rise; zoneU.value[i] = b.rise;
+    b.crops.forEach((c, j) => { const s = Math.max(0.001, Math.min(1, b.grow * 11 - j) * (0.55 + 0.45 * b.grow)); c.scale.setScalar(s * 1.7); c.rotation.z = Math.sin(t * 1.4 + j + i) * 0.04; });
+  });
+  { const s2 = ext.serre2; s2.cur = lerp(s2.cur, s2.target, k * 0.5); s2.g.visible = s2.cur > 0.01; s2.g.scale.setScalar(Math.max(0.001, s2.cur)); zoneU.value[ZONES.length - 1] = s2.cur; }
   if (bonsaiObj) { const w = Math.sin(t * 0.9) * 0.006; bonsaiObj.rotation.z = w; }
 }
 
