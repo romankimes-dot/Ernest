@@ -218,3 +218,5 @@ h3{font-size:17px;color:var(--amber)}
 .jm small{color:var(--fg2);font-size:11px}
 .jj{flex-basis:100%}
 .jrow .t{cursor:pointer}
+
+.chip.paste{align-self:flex-start;color:var(--fg2)}

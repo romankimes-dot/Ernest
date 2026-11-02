@@ -7,7 +7,7 @@ import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpiso
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.7.1';
+const VERSION = '0.8.0';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -284,6 +284,7 @@ function viewToday() {
   }
   if (d.things.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
   if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
+  h += `<button class="chip paste" data-act="pasteBridge">${icon('arrow', 'sm')} Coller depuis une app de révision</button>`;
   const dn = doneOn(S, today).n; if (dn) h += `<div class="muted small">${dn} chose${dn > 1 ? 's' : ''} faite${dn > 1 ? 's' : ''} aujourd'hui · ${totalDone(S)} en tout.</div>`;
   return h;
 }
@@ -368,6 +369,7 @@ function action(act, ds, el, v) {
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'history': historySheet(); break;
+    case 'pasteBridge': pasteBridge(); break;
     case 'newSeries': captureSheet('series'); break;
     case 'jEdit': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (t) thingSheet(t, ds.day); break; }
     case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = say(S, 'semaine-grise', ernestEnv(S, today, plantNames())); if (t) bubble(t); } break; }
@@ -671,7 +673,7 @@ function settingsSheet() {
   <div class="muted small">Rappel du soir : iOS ne permet pas à Ernest d'envoyer une notification seul. Une alarme « ${s.ritualHour} h, Ernest » dans Horloge fait le travail.</div>
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
-  <div class="kv"><label>Pont (coller ce que Dec-Deonto, dec-revision ou le mémoire ont produit)</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
+  <div class="kv"><label>Pont : dans Deonto ou dec-revision, « Copier pour Ernest », puis colle ici</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
   <div class="btns"><button class="btn quiet" id="sHelp">${icon('help', 'sm')} La visite</button><button class="btn quiet" id="sIntro">${icon('leaf', 'sm')} L'arrivée d'Ernest</button></div>
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
@@ -696,6 +698,15 @@ function handleImport() {
   const p = decode(location.hash); if (!p) return;
   history.replaceState(null, '', location.pathname + location.search);
   importSheet(p);
+}
+// Coller le plan copié dans Deonto ou dec-revision (« Copier pour Ernest »).
+async function pasteBridge() {
+  let txt = '';
+  try { txt = await navigator.clipboard.readText(); } catch { txt = ''; }
+  const p = decode(txt);
+  if (p) { importSheet(p); return; }
+  settingsSheet();
+  setTimeout(() => { const t = $('#sBridge'); if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); } toast(txt ? "Ce qui est copié n'est pas un plan. Dans Deonto, touche « Copier pour Ernest », puis reviens." : 'Colle le plan ici (appui long, Coller), puis « Lire le pont ».', 5000); }, 150);
 }
 function importSheet(p) {
   const names = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoire: 'le mémoire' };
