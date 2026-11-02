@@ -95,7 +95,7 @@ h3{font-size:17px;color:var(--amber)}
 .carte p{margin:0;white-space:pre-line}
 .carte .src{font-size:12px;color:var(--fg2)}
 .carte.new{border-color:rgba(242,178,61,.4)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + var(--sab));background:var(--bg3);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;z-index:7;max-width:90vw;animation:pop .3s}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + var(--sab));z-index:12!important;background:var(--bg3);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;z-index:7;max-width:90vw;animation:pop .3s}
 .list-item{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--line)}
 .list-item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .list-item .due{font-size:12px;color:var(--fg2)}
@@ -245,3 +245,21 @@ body[data-tab="liste"] .serre,body[data-tab="semaine"] .serre,body[data-tab="car
 .sf-fps{position:absolute;right:12px;top:calc(var(--sat) + 12px);font:11px ui-monospace,monospace;color:var(--fg2);background:rgba(11,21,17,.6);padding:3px 7px;border-radius:6px;pointer-events:none}
 body:not([data-tab="today"]) #bulle{display:none!important}
 body:not([data-tab="today"]) #ernestWrap{transform:scale(.62);transform-origin:bottom right}
+/* Lot D : feuilles animées, toasts au-dessus, ligne faite opaque, détails repliés, barre « en cours » */
+.toast{z-index:12}
+.toast .undo{min-height:40px;padding:8px 10px}
+.sheet{transition:transform .2s ease}
+.sheet.closing{transform:translateY(110%)!important;opacity:.6}
+.thing.done{opacity:1}
+.thing.done .t,.thing.done .title,.thing.done b{opacity:.55}
+details.more summary{list-style:none;cursor:pointer;font-size:13px;color:var(--fg2);display:flex;align-items:center;gap:6px;padding:4px 0}
+details.more summary::-webkit-details-marker{display:none}
+details.more[open] summary{margin-bottom:6px}
+.runbar{position:fixed;left:12px;right:12px;bottom:calc(72px + var(--sab));z-index:6;display:flex;align-items:center;gap:10px;background:rgba(18,32,26,.96);border:1px solid var(--amber);border-radius:16px;padding:8px 8px 8px 14px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.runbar .rt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.runbar .rt small{display:block;color:var(--amber);font-size:12px;font-variant-numeric:tabular-nums}
+.runbar button{min-height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg3);font-size:13.5px}
+.runbar button.go{background:var(--amber);color:#1b1408;border-color:var(--amber);font-weight:700}
+body.running .fab{bottom:calc(136px + var(--sab))}
+.thing .go{min-width:44px;min-height:44px;display:grid;place-items:center}
+.thing .go.on{color:var(--fg)}

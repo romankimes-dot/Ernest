@@ -159,6 +159,7 @@ export function chooseLine(lines, ctx, env, said = {}) {
     if (w.jmax !== undefined && (env.j === null || env.j > w.jmax)) return false;
     if (w.dow && !w.dow.includes(env.dow)) return false;
     if (w.mood && w.mood !== env.mood) return false;
+    if (w.three && !env.three) return false; // « Trois » seulement si la journée comptait trois choses
     if (w.doneYesterday !== undefined && !!env.doneYesterday !== w.doneYesterday) return false;
     if (w.hasIdea && !env.hasIdea) return false;
     if (w.firstWeek && !env.firstWeek) return false;
@@ -175,7 +176,8 @@ export function chooseLine(lines, ctx, env, said = {}) {
 }
 
 export function fillLine(text, vars) {
-  return text.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null && vars[k] !== '' ? vars[k] : m));
+  const out = text.replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined && vars[k] !== null && vars[k] !== '' ? vars[k] : m));
+  return out.replace(/(^|[.!?…]\s+)([a-zà-ÿ])/g, (m, a, c) => a + c.toUpperCase()); // majuscule en début de phrase (« Coché. Le cactus »)
 }
 
 // Cartes : une carte jamais vue de la rareté voulue, familles pondérées ; null si tout est vu.

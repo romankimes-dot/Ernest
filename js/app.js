@@ -4,7 +4,7 @@ import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, 
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
 import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
-import { decode, merge, plantHistory } from './bridge.js';
+import { decode, merge, plantHistory, forgetDay } from './bridge.js';
 import { icon } from './icons.js';
 import * as SY from './sync.js';
 
@@ -129,7 +129,8 @@ function syncSection() {
   <div class="kv"><label>Code secret</label><input id="syTok" type="password" value="${esc(dec ? dec.token : '')}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   <button class="btn quiet" id="syGo">Connecter</button>`;
   return `<h3>Synchronisation</h3><div class="muted small">Connecté à ${esc(new URL(cfg.url).host)}. ${m.at ? `Dernière synchro : ${new Date(m.at).toLocaleString('fr-FR')}.` : 'Pas encore synchronisé.'}${m.error ? ` Dernier essai : ${esc(m.error)}.` : ''} Le plan de Deonto arrive tout seul.</div>
-  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
+  <div class="btns"><button class="btn quiet" id="syNow">Synchroniser</button><button class="btn quiet" id="syOff">Déconnecter</button></div>
+  <button class="btn quiet" id="syAgain">Recevoir à nouveau le plan du jour</button><div class="muted small">Ernest ne remet jamais une chose supprimée. Ce bouton reprend tout le plan d'aujourd'hui, même ce que tu avais supprimé.</div>${m.conflictAt ? `<button class="btn quiet" id="syBack">Reprendre la version de cet appareil d'avant le ${new Date(m.conflictAt).toLocaleString('fr-FR')}</button>` : ''}`;
 }
 function bindSync() {
   const go = $('#syGo');
@@ -138,6 +139,7 @@ function bindSync() {
     closeSheet(); toast('Connexion…'); runSync({ manual: true });
   });
   const now = $('#syNow'); if (now) now.addEventListener('click', () => { closeSheet(); runSync({ manual: true }); });
+  const again = $('#syAgain'); if (again) again.addEventListener('click', () => { forgetDay(S, today); save(); closeSheet(); runSync({ manual: true }); });
   const off = $('#syOff'); if (off) off.addEventListener('click', () => { SY.setConfig(null); closeSheet(); toast('Synchronisation arrêtée sur cet appareil.'); });
   const back = $('#syBack');
   if (back) back.addEventListener('click', () => { const p = store.restorePrev(); if (!p) { toast('Plus de copie.'); return; } store.snapshotPrev(S); S = p; SY.setMeta({ conflictAt: null }); save(); closeSheet(); gardenUpdate(); render(); toast('Version de cet appareil reprise.'); });
@@ -242,7 +244,7 @@ function greet() {
   else if (E.lastGreetDay && Math.round((new Date(today) - new Date(E.lastGreetDay)) / 86400000) >= 3) ctx = 'absence';
   else if (e.j !== null && e.j === -1 && !S.milestones['apres-examen']) { ctx = 'apres-examen'; S.milestones['apres-examen'] = today; }
   else if (E.lastGreetDay === today && E.lastGreetCtx === ctx) { if (Math.random() < 0.25) { const t = say(S, 'manies', e); if (t) bubble(t); save(); } return; }
-  else if (e.mood === 'low' && Math.random() < 0.5) ctx = 'semaine-grise';
+  else if (e.mood === 'low' && [0, 1, 2, 3, 4].filter((i) => { const m = dayOf(S, addDays(today, -i)).mood; return m !== null && m !== undefined && m <= 1; }).length >= 3 && Math.random() < 0.5) ctx = 'semaine-grise'; // « gris » seulement après plusieurs jours bas
   else if (e.j !== null && e.j >= 0 && e.j <= 30 && Math.random() < 0.45) ctx = 'jmoins';
   else if (e.dow === 0 && Math.random() < 0.5) ctx = 'dimanche';
   let t = say(S, ctx, e, extra);
@@ -257,24 +259,48 @@ function greet() {
 
 // ---------- Navigation ----------
 function switchTab(t) { tab = t; document.body.dataset.tab = t; setTimeout(() => { if (g3d) g3d.resize(); if (garden.resize) garden.resize(); }, 260); document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); render(); window.scrollTo(0, 0); }
+// Barre « en cours » : collée au-dessus des onglets, visible partout tant qu'une chose est chronométrée ou en pause
+function suspended() {
+  const d = dayOf(S, today), have = new Set(d.things.map((t) => t.title.trim().toLowerCase())), out = [];
+  for (let i = 1; i <= 3; i++) { const k = addDays(today, -i); for (const t of dayOf(S, k).things) if (!t.done && !t.prep && !t.moved && !have.has(t.title.trim().toLowerCase())) { have.add(t.title.trim().toLowerCase()); out.push({ k, t }); } }
+  return out;
+}
+function updateRunbar() {
+  const t = tracking() ? (dayOf(S, today).things.find((x) => !x.done && x.startedAt) || dayOf(S, today).things.find((x) => !x.done && x.spent)) : null;
+  let b = document.getElementById('runbar');
+  document.body.classList.toggle('running', !!t);
+  if (g3d && g3d.setLantern) g3d.setLantern(!!(t && t.startedAt));
+  if (!t) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'runbar'; b.className = 'runbar'; document.body.appendChild(b); }
+  b.innerHTML = `<div class="rt">${esc(t.title)}<small>${t.startedAt ? 'en cours' : 'en pause'} · <span class="timer">${elapsed(t)}</span></small></div>${t.startedAt ? `<button data-act="pause" data-id="${t.id}">${icon('pause', 'sm')} Pause</button>` : `<button data-act="start" data-id="${t.id}">${icon('play', 'sm')} Reprendre</button>`}<button class="go" data-act="done" data-id="${t.id}">${icon('check', 'sm')} Terminer</button>`;
+  b.querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', (ev) => { ev.stopPropagation(); action(el.dataset.act, el.dataset, el, $('#view')); }));
+}
 function render() {
-  S._light = moodAvg(S, today); gardenUpdate();
+  S._light = moodAvg(S, today); gardenUpdate(); updateRunbar();
   const v = $('#view');
   v.innerHTML = tab === 'today' ? viewToday() : tab === 'liste' ? viewListe() : tab === 'semaine' ? viewSemaine() : viewCarnet();
   bindView(v);
   if (historyOpen && !$('#sheet').hidden) { const y = $('#sheet').scrollTop; historySheet(); $('#sheet').scrollTop = y; }
 }
+// File de messages : un message n'en écrase plus un autre (sauf « Annuler », prioritaire)
+const TQ = []; let tBusy = false;
 function toast(msg, ms = 2600, undo = null) {
+  if (!undo && tBusy) { if (TQ.length < 4) TQ.push([msg, ms]); return; }
+  tBusy = !undo; showToast(msg, ms, undo);
+}
+function nextToast() { tBusy = false; const n = TQ.shift(); if (n) toast(n[0], n[1]); }
+function showToast(msg, ms, undo) {
   const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>${undo ? '<button class="undo">Annuler</button>' : ''}`; t.hidden = false; clearTimeout(t._t);
   if (undo) t.querySelector('.undo').addEventListener('click', () => { undo(); t.hidden = true; save(); render(); });
-  t._t = setTimeout(() => { t.hidden = true; }, undo ? Math.max(ms, 5000) : ms);
+  t._t = setTimeout(() => { t.hidden = true; if (!undo) setTimeout(nextToast, 180); }, undo ? Math.max(ms, 5000) : ms);
 }
-// Suppressions, toujours annulables
+// Suppressions, toujours annulables : une feuille morte tombe dans la serre, « Annuler » la fait remonter
+const leafDrop = () => { if (g3d && g3d.dropLeaf) g3d.dropLeaf(); }, leafBack = () => { if (g3d && g3d.restoreLeaf) g3d.restoreLeaf(); };
 function removeThing(id) {
   label('la suppression');
   const d = ensureDay(S, today), i = d.things.findIndex((x) => x.id === id); if (i < 0) return;
   const [t] = d.things.splice(i, 1); save(); render();
-  toast('Supprimée.', 5000, () => d.things.splice(i, 0, t));
+  leafDrop(); toast('Supprimée.', 5000, () => { d.things.splice(i, 0, t); leafBack(); });
 }
 function removeList(id) {
   label('la suppression');
@@ -282,12 +308,12 @@ function removeList(id) {
   const [l] = S.list.splice(i, 1);
   const d = ensureDay(S, today), placed = d.things.filter((t) => t.fromList === id && !t.done); d.things = d.things.filter((t) => !placed.includes(t));
   save(); render();
-  toast('Supprimée de la liste.', 5000, () => { S.list.splice(i, 0, l); d.things.push(...placed); });
+  leafDrop(); toast('Supprimée de la liste.', 5000, () => { S.list.splice(i, 0, l); d.things.push(...placed); leafBack(); });
 }
 function removeGoal(id) {
   label("le retrait de l'objectif");
   const g = S.goals.find((x) => x.id === id); if (!g) return; const prev = g.status; g.status = 'dropped'; save(); render();
-  toast('Objectif retiré.', 5000, () => { g.status = prev; });
+  leafDrop(); toast('Objectif retiré.', 5000, () => { g.status = prev; leafBack(); });
 }
 // Glisser une ligne vers la gauche pour la supprimer
 function bindSwipe(root) {
@@ -310,8 +336,15 @@ function bindSwipe(root) {
 const swipeWrap = (kind, id, html) => `<div class="swipe" data-swipe="${kind}|${id}"><div class="swipe-bg">${icon('trash')}<span>Supprimer</span></div>${html}</div>`;
 
 // ---------- Sheets ----------
-function openSheet(html) { $('#sheet').innerHTML = `<div class="handle"></div>${html}`; $('#sheet').hidden = false; $('#sheetBg').hidden = false; }
-function closeSheet() { $('#sheet').hidden = true; $('#sheetBg').hidden = true; historyOpen = false; }
+let closeT = null;
+function openSheet(html) { clearTimeout(closeT); const sh = $('#sheet'); sh.classList.remove('closing'); sh.style.transform = ''; sh.innerHTML = `<div class="handle"></div>${html}`; sh.hidden = false; $('#sheetBg').hidden = false; }
+function closeSheet() { const sh = $('#sheet'); historyOpen = false; if (sh.hidden) return; sh.classList.add('closing'); $('#sheetBg').hidden = true; clearTimeout(closeT); closeT = setTimeout(() => { sh.hidden = true; sh.classList.remove('closing'); sh.style.transform = ''; }, 200); }
+// glisser la feuille vers le bas pour la fermer (depuis la poignée ou quand la feuille est en haut de son défilement)
+(() => { let y0 = null, dy = 0; const sh = () => $('#sheet');
+  document.addEventListener('touchstart', (e) => { const s = sh(); if (!s || s.hidden || !s.contains(e.target)) return; if (e.target.closest('input,textarea,select')) return; if (s.scrollTop > 0 && !e.target.closest('.handle')) return; y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+  document.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = Math.max(0, e.touches[0].clientY - y0); if (dy > 6) sh().style.transform = `translateY(${dy}px)`; }, { passive: true });
+  document.addEventListener('touchend', () => { if (y0 === null) return; const s = sh(); y0 = null; if (dy > 90) closeSheet(); else s.style.transform = ''; dy = 0; });
+})();
 const chips = (sel, name = 'cat') => `<div class="chips" data-chips="${name}">${CATS.map((c) => `<button class="chip ${sel === c.id ? 'on' : ''}" data-v="${c.id}"><span class="dot" style="background:${c.couleur}"></span>${c.nom}</button>`).join('')}</div>`;
 function bindChips(root) {
   root.querySelectorAll('[data-chips]').forEach((g) => g.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => { const was = b.classList.contains('on'); g.querySelectorAll('.chip').forEach((x) => x.classList.remove('on')); if (!was || g.dataset.required) b.classList.add('on'); g.dispatchEvent(new CustomEvent('change', { detail: b.classList.contains('on') ? b.dataset.v : null })); })));
@@ -329,12 +362,15 @@ function viewToday() {
   let h = `<div class="row spread"><div><div class="eyebrow">${esc(fmtDay(today))}</div><h1>${!d.things.length ? 'Rien de posé.' : all ? 'Tout est fait.' : 'Ta journée.'}</h1></div>${j !== null && j >= 0 && j <= 60 ? `<div class="muted small" style="text-align:right">${esc(dl.label)}<br><b style="color:var(--amber)">J-${j}</b></div>` : ''}</div>`;
   h += moodBar(d);
   if (!standalone() && !S.ernest.installHint) h += `<div class="install"><b>Installer Ernest sur l'écran d'accueil</b><ol><li>Bouton Partager de Safari</li><li>« Sur l'écran d'accueil »</li><li>Ouvrir depuis l'icône (sinon Safari efface les données après 7 jours)</li></ol><button class="btn quiet" data-act="installOk">C'est fait, ou plus tard</button></div>`;
+  // après une absence : ce qui est resté en suspens ces trois derniers jours, proposé ici plutôt que caché dans l'historique
+  const susp = suspended();
+  if (susp.length && S.ernest.suspLater !== today) h += `<div class="card stack"><div><b>Resté en suspens</b><div class="muted small">${susp.map((x) => esc(x.t.title)).slice(0, 4).join(' · ')}${susp.length > 4 ? ' …' : ''}</div></div><div class="btns"><button class="btn" data-act="resumeSusp">${icon('sun', 'sm')} Reprendre aujourd'hui</button><button class="btn quiet" data-act="suspLater">Plus tard</button></div></div>`;
   if (!d.things.length) {
     const sug = suggestions(S, today).filter((s) => s.kind === 'list').slice(0, 3);
     h += `<div class="card amber stack">${sug.length ? `<div>Dans ta liste, pour aujourd'hui :</div>${sug.map((s, i) => `<label class="row"><input type="checkbox" checked data-sug="${i}" style="width:auto"> <span class="dot" style="background:${catOf(s.cat).couleur}"></span> ${esc(s.title)}</label>`).join('')}<button class="btn" data-act="acceptSug">Les placer dans ma journée</button>` : `<div class="muted">Une seule chose suffit pour commencer.</div>`}<button class="btn ${sug.length ? 'quiet' : ''}" data-act="addThing">${icon('plus', 'sm')} Poser une chose pour aujourd'hui</button></div>`;
   }
   let pending = 0; for (let i = 1; i <= 7; i++) pending += dayOf(S, addDays(today, -i)).things.filter((t) => !t.done).length;
-  if (pending) h += `<button class="card row spread" data-act="history" style="width:100%;text-align:left"><span class="row">${icon('history')}<span><b>${pending} chose${pending > 1 ? 's' : ''} en suspens ces derniers jours</b><br><span class="muted small">Les remettre à aujourd'hui ou les supprimer</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
+  if (pending && !(susp.length && S.ernest.suspLater !== today)) h += `<button class="card row spread" data-act="history" style="width:100%;text-align:left"><span class="row">${icon('history')}<span><b>${pending} chose${pending > 1 ? 's' : ''} en suspens ces derniers jours</b><br><span class="muted small">Les remettre à aujourd'hui ou les supprimer</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
   if (nowHour() < RITUAL_HOUR && !Object.values(S.days).some((x) => x.planned)) h += `<div class="card row" style="gap:12px">${icon('moon')}<div><b>Ce soir, dès 18 h</b><div class="muted small">Ernest t'aide à poser trois choses pour demain. C'est le cœur de l'app : le matin, tu sais par où commencer.</div></div></div>`;
   if (examDay() && nowHour() >= RITUAL_HOUR) h += `<div class="card row" style="gap:12px">${icon('moon')}<div><b>Soirée libre</b><div class="muted small">Pas de bilan ce soir. Ernest garde la serre, demain on verra.</div></div></div>`;
   else if (nowHour() >= RITUAL_HOUR && !dayOf(S, tomorrow).planned) h += `<button class="card amber row spread" data-act="ritual" style="width:100%;text-align:left"><span class="row">${icon('moon')}<span><b>Préparer demain</b><br><span class="muted small">Cinq minutes avec Ernest</span></span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
@@ -343,7 +379,8 @@ function viewToday() {
     if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => swipeWrap('thing', t.id, thingRow(t, t === firstUndone))).join('')}</div></div>`;
   }
   const cur = ordered.find((t) => !t.done && t.startedAt) || ordered.find((t) => !t.done && t.spent) || firstUndone;
-  if (cur && tracking()) {
+  if (cur && tracking() && !cur.startedAt && !cur.spent) h += `<button class="btn" data-act="start" data-id="${cur.id}">${icon('play', 'sm')} Démarrer : ${esc(cur.title)}</button>`;
+  if (false) {
     if (cur.startedAt) h += `<div class="btns"><button class="btn quiet" data-act="pause" data-id="${cur.id}">${icon('pause', 'sm')} Pause</button><button class="btn" data-act="done" data-id="${cur.id}">${icon('check', 'sm')} Terminer · <span class="timer">${elapsed(cur)}</span></button></div><div class="muted small center">En cours : ${esc(cur.title)}</div>`;
     else if (cur.spent) h += `<div class="btns"><button class="btn" data-act="start" data-id="${cur.id}">${icon('play', 'sm')} Reprendre · ${elapsed(cur)}</button><button class="btn quiet" data-act="done" data-id="${cur.id}">${icon('check', 'sm')} Terminer</button></div><div class="muted small center">En pause : ${esc(cur.title)}</div>`;
     else h += `<button class="btn" data-act="start" data-id="${cur.id}">${icon('play', 'sm')} Démarrer : ${esc(cur.title)}</button>`;
@@ -394,7 +431,7 @@ function helpCard() {
 }
 function thingRow(t, first) {
   const c = catOf(t.cat);
-  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? icon('check') : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${t.seriesId ? `<span class="rep-ic">${icon('repeat', 'sm')}</span>` : ''}${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(c.nom)}${t.done && t.real ? ` · ${fmtMin(t.real)}` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.spent && !t.done ? ` · en pause ${elapsed(t)}` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">${icon('open')}</button>` : ''}</div>`;
+  return `<div class="thing ${t.done ? 'done' : ''} ${first ? 'first' : ''}" data-thing="${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-label="Fait">${t.done ? icon('check') : ''}</button><div class="body" data-act="thingMenu" data-id="${t.id}"><div class="t">${t.seriesId ? `<span class="rep-ic">${icon('repeat', 'sm')}</span>` : ''}${esc(t.title)}</div><div class="s"><span class="dot" style="background:${c.couleur};display:inline-block;vertical-align:middle;margin-right:4px"></span>${esc(c.nom)}${t.done && t.real ? ` · ${fmtMin(t.real)}` : t.startedAt && !t.done ? ` · en cours ${elapsed(t)}` : t.spent && !t.done ? ` · en pause ${elapsed(t)}` : ''}${t.src ? ` · ${esc(t.src)}` : ''}</div></div>${t.link && !t.done ? `<button class="go" data-act="start" data-id="${t.id}" aria-label="Ouvrir">${icon('open')}</button>` : !t.done && tracking() ? (t.startedAt ? `<button class="go on" data-act="pause" data-id="${t.id}" aria-label="Pause">${icon('pause')}</button>` : `<button class="go" data-act="start" data-id="${t.id}" aria-label="Démarrer">${icon('play')}</button>`) : ''}</div>`;
 }
 const spentMs = (t) => (t.spent || 0) + (t.startedAt ? Date.now() - t.startedAt : 0);
 const tracking = () => S.settings.trackTime !== false;
@@ -411,6 +448,8 @@ function action(act, ds, el, v) {
   const thing = ds.id ? d.things.find((t) => t.id === ds.id) : null;
   label({ mood: "l'humeur", jListToggle: 'la coche', jListDel: 'la suppression', toggle: 'la coche', listToggle: 'la coche', listToday: "le passage dans la journée", start: 'le démarrage', pause: 'la pause', jToggle: 'la coche', jToday: "la remise à aujourd'hui", jDel: 'la suppression', ideaAct: "le tri de l'idée", goalMs: "l'étape", acceptSug: 'les choses posées' }[act] || null);
   switch (act) {
+    case 'resumeSusp': { label('la reprise'); const n = suspended(); for (const { t } of n) { t.moved = true; d.things.push({ ...t, id: uid(), done: false, startedAt: null, spent: 0, moved: false }); } d.planned = true; save(); render(); toast(`${n.length} chose${n.length > 1 ? 's' : ''} reprise${n.length > 1 ? 's' : ''}.`); break; }
+    case 'suspLater': S.ernest.suspLater = today; save(); render(); break;
     case 'installOk': S.ernest.installHint = true; save(); render(); break;
     case 'listToday': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; d.things.push({ id: uid(), title: l.text, cat: l.cat || 'perso', est: estimate(S, l.cat || 'perso'), slot: null, done: false, real: 0, fromList: l.id }); d.planned = true; save(); toast('Placée dans ta journée.'); render(); break; }
     case 'acceptSug': {
@@ -443,7 +482,7 @@ function action(act, ds, el, v) {
     case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; save(); toast('Décochée, de retour dans la liste.'); render(); break; }
     case 'jListDel': removeList(ds.id); break;
     case 'fam': carnetFam = ds.v; render(); break;
-    case 'goalMs': { const g = S.goals.find((x) => x.id === ds.id); const m = g && g.milestones[Number(ds.i)]; if (!m) return; m.done = !m.done; if (m.done) { m.doneAt = today; let p = S.garden.plants.find((x) => x.kind === 'bonsai' && x.goal === g.id); if (!p) { p = { id: uid(), cat: g.cat, day: today, seed: Math.floor(Math.random() * 1e9), kind: 'bonsai', goal: g.id, branches: 0 }; S.garden.plants.push(p); } p.branches = g.milestones.filter((x) => x.done).length; gardenWater(); } save(); render(); break; }
+    case 'goalMs': { const g = S.goals.find((x) => x.id === ds.id); const m = g && g.milestones[Number(ds.i)]; if (!m) return; m.done = !m.done; if (m.done) { m.doneAt = today; let p = S.garden.plants.find((x) => x.kind === 'bonsai' && x.goal === g.id); if (!p) { p = { id: uid(), cat: g.cat, day: today, seed: Math.floor(Math.random() * 1e9), kind: 'bonsai', goal: g.id, branches: 0 }; S.garden.plants.push(p); } p.branches = g.milestones.filter((x) => x.done).length; gardenWater(); const left = g.milestones.filter((x) => !x.done).length; toast(left ? `Étape faite. Le bonsaï prend une branche (${left} restante${left > 1 ? 's' : ''}).` : 'Dernière étape. Le bonsaï est complet.'); setErnest('arrose'); setTimeout(() => setErnest(), 2500); } save(); render(); break; }
     case 'goalEdit': goalSheet(S.goals.find((x) => x.id === ds.id)); break;
     case 'addGoal': goalSheet(); break;
     case 'review': reviewSheet(); break;
@@ -475,7 +514,7 @@ function markDone(t, real) {
   if (t.fromList) { const l = S.list.find((x) => x.id === t.fromList); if (l) { l.done = true; l.doneAt = t.doneAt; } }
   plant(t.cat, 'plant'); tickMilestone(t.title); gardenWater(); setErnest('arrose'); setTimeout(() => setErnest(), 2500);
   const d = dayOf(S, today), all = d.things.every((x) => x.done);
-  const e = ernestEnv(S, today, plantNames()); bubble(say(S, all ? 'coche.derniere' : 'coche', e));
+  const e = ernestEnv(S, today, plantNames()); e.three = d.things.length === 3; bubble(say(S, all ? 'coche.derniere' : 'coche', e));
   const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.');
   if (all) { const L = drawLong(S, today); if (L) toast(`Carnet : « ${L.titre || 'une histoire'} »`, 4000); }
   milestones(); save(); render();
@@ -601,13 +640,16 @@ function ritualSheet() {
   const undone = d.things.filter((t) => !t.done && !t.prep && t.slot !== 'soir'); // le soir et la veille d'examen ne se reportent pas
   const sug = suggestions(S, tomorrow);
   const bridgeSug = Object.values(S.bridges).flatMap((b) => []); // les ponts créent déjà leurs choses pour le bon jour
-  const rows = [0, 1, 2].map((i) => { const t = dt.things[i]; return { title: t ? t.title : '', cat: t ? t.cat : defCat(), est: t ? t.est : null, slot: t ? t.slot : null, id: t ? t.id : null, src: t ? t.src : null, link: t ? t.link : null }; });
+  const rows = [0, 1, 2].map((i) => { const t = dt.things[i]; return { title: t ? t.title : '', cat: t ? t.cat : defCat(), est: t ? t.est : null, slot: t ? t.slot : null, id: t ? t.id : null, src: t ? t.src : null, link: t ? t.link : null, fromList: t ? t.fromList : null }; });
+  // brouillon : un tap à côté ne perd rien de ce qui a été écrit
+  const dr = S.ritualDraft && S.ritualDraft.day === today ? S.ritualDraft : null;
+  if (dr) dr.rows.forEach((r, i) => { if (r && r.title && rows[i]) Object.assign(rows[i], r); });
   openSheet(`<div class="eyebrow">Le soir</div><h2>${esc(say(S, 'rituel.debut', e) || 'On prépare demain.')}</h2>
-  <div class="kv"><label>Qu'est-ce qui a compté aujourd'hui ?</label><input id="rJournal" value="${esc(d.journal || '')}" placeholder="Une ligne suffit" autocomplete="off"></div>
+  <div class="kv"><label>Qu'est-ce qui a compté aujourd'hui ?</label><input id="rJournal" value="${esc((dr && dr.journal) || d.journal || '')}" placeholder="Une ligne suffit" autocomplete="off"></div>
   <div class="kv"><label>Et toi, aujourd'hui</label><div class="moods">${[0, 1, 2, 3, 4].map((i) => `<button data-mood="${i}" class="${d.mood === i ? 'on' : ''}" aria-label="${moodLabel(i)}">${icon('m' + i)}<small>${moodLabel(i)}</small></button>`).join('')}</div></div>
   ${undone.length ? `<div class="kv"><label>Pas fait aujourd'hui</label><div class="stack" id="rUndone">${undone.map((t) => `<div class="list-item" data-u="${t.id}"><div class="t">${esc(t.title)}</div><button class="chip" data-uact="tomorrow">demain</button><button class="chip" data-uact="idea">idée</button><button class="chip" data-uact="drop">laisser</button></div>`).join('')}</div></div>` : ''}
   <div class="kv"><label>Les 3 de demain, ${esc(fmtDay(tomorrow))}</label>${sug.length ? `<div class="chips" id="rSug">${sug.map((s, i) => `<button class="chip" data-s="${i}"><span class="dot" style="background:${catOf(s.cat).couleur}"></span>${esc(s.title)} <span class="muted">· ${esc(s.why)}</span></button>`).join('')}</div>` : ''}
-  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off">${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}${r.src ? `<span class="muted small">${esc(r.src)}</span>` : ''}</div>`).join('')}</div></div>
+  <div class="stack" id="rRows">${rows.map((r, i) => `<div class="card stack" data-r="${i}"><input class="rT" placeholder="${['La première, celle qui compte', 'La deuxième', 'La troisième (facultative)'][i]}" value="${esc(r.title)}" autocomplete="off"><details class="more"><summary><span class="dot" style="background:${catOf(r.cat).couleur}"></span> ${esc(catOf(r.cat).nom)}${r.slot ? ' · ' + esc(BLOCKS[r.slot]) : ''} <span class="muted">· détails</span></summary>${chips(r.cat, 'cat' + i)}${blocksHtml(r.slot)}</details>${r.src ? `<span class="muted small">${esc(r.src)}</span>` : ''}</div>`).join('')}</div></div>
   <div class="muted small">${icon('moon', 'sm')} Coucher visé : ${esc((S.settings.bedtime || '22:30').replace(':', ' h '))}. Écrans posés une demi-heure avant.</div>
   <button class="btn" id="rSave">Bonne nuit</button>`);
   const sh = $('#sheet'); bindChips(sh);
@@ -615,25 +657,32 @@ function ritualSheet() {
   const slots = rows.map((r) => r.slot);
   sh.querySelectorAll('[data-r]').forEach((row) => { const i = Number(row.dataset.r); row.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slots[i] = slots[i] === b.dataset.b ? null : b.dataset.b; row.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slots[i])); })); });
   const uacts = {};
-  sh.querySelectorAll('[data-u]').forEach((row) => row.querySelectorAll('[data-uact]').forEach((b) => b.addEventListener('click', () => { uacts[row.dataset.u] = b.dataset.uact; row.querySelectorAll('[data-uact]').forEach((x) => x.classList.toggle('on', x === b)); if (b.dataset.uact === 'tomorrow') fillRow(d.things.find((t) => t.id === row.dataset.u)); })));
-  function fillRow(src) { const rs = [...sh.querySelectorAll('[data-r]')]; const free = rs.find((r) => !r.querySelector('.rT').value.trim()); if (!free) return; free.querySelector('.rT').value = src.title; const g = free.querySelector('[data-chips]'); g.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.v === src.cat)); }
-  sh.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => { const s = sug[Number(b.dataset.s)]; fillRow({ title: s.title, cat: s.cat, est: estimate(S, s.cat) }); b.classList.add('on'); }));
+  sh.querySelectorAll('[data-u]').forEach((row) => row.querySelectorAll('[data-uact]').forEach((b) => b.addEventListener('click', () => { uacts[row.dataset.u] = b.dataset.uact; row.querySelectorAll('[data-uact]').forEach((x) => x.classList.toggle('on', x === b)); if (b.dataset.uact === 'tomorrow') { const t = d.things.find((x) => x.id === row.dataset.u); if (t) fillRow({ title: t.title, cat: t.cat, fromList: t.fromList }); } })));
+  function fillRow(src) { const rs = [...sh.querySelectorAll('[data-r]')]; const norm = (x) => x.trim().toLowerCase();
+    if (rs.some((r) => norm(r.querySelector('.rT').value) === norm(src.title))) { toast('Déjà posée pour demain.'); return; }
+    const free = rs.find((r) => !r.querySelector('.rT').value.trim()); if (!free) { toast('Les trois places sont prises.'); return; }
+    const i = Number(free.dataset.r); free.querySelector('.rT').value = src.title; rows[i].fromList = src.fromList || null; const g = free.querySelector('[data-chips]'); g.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.v === src.cat)); syncSum(free); keepDraft(); }
+  function syncSum(row) { const c = catOf(chipValue(row, 'cat' + row.dataset.r) || defCat()), sl = slots[Number(row.dataset.r)]; const su = row.querySelector('summary'); if (su) su.innerHTML = `<span class="dot" style="background:${c.couleur}"></span> ${esc(c.nom)}${sl ? ' · ' + esc(BLOCKS[sl]) : ''} <span class="muted">· détails</span>`; }
+  function keepDraft() { S.ritualDraft = { day: today, journal: $('#rJournal').value, rows: [...sh.querySelectorAll('[data-r]')].map((r, i) => ({ title: r.querySelector('.rT').value, cat: chipValue(r, 'cat' + i) || defCat(), slot: slots[i], fromList: rows[i].fromList })) }; store.save(S); }
+  sh.addEventListener('input', keepDraft); sh.addEventListener('click', (ev) => { const r = ev.target.closest('[data-r]'); if (r && ev.target.closest('.chip,[data-b]')) setTimeout(() => { syncSum(r); keepDraft(); }); });
+  sh.addEventListener('focusin', (ev) => { if (ev.target.matches('input,textarea')) setTimeout(() => ev.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320); });
+  sh.querySelectorAll('[data-s]').forEach((b) => b.addEventListener('click', () => { const s = sug[Number(b.dataset.s)]; fillRow({ title: s.title, cat: s.cat, est: estimate(S, s.cat), fromList: s.kind === 'list' ? s.id : null }); b.classList.add('on'); }));
   $('#rSave').addEventListener('click', () => {
     label('le rituel du soir');
     d.journal = $('#rJournal').value.trim();
-    for (const [id, a] of Object.entries(uacts)) { const t = d.things.find((x) => x.id === id); if (!t) continue; if (a === 'idea') { S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); d.things = d.things.filter((x) => x !== t); } else if (a === 'drop') d.things = d.things.filter((x) => x !== t); }
+    for (const [id, a] of Object.entries(uacts)) { const t = d.things.find((x) => x.id === id); if (!t) continue; if (a === 'idea') { S.ideas.push({ id: uid(), text: t.title, at: new Date().toISOString(), status: 'inbox' }); d.things = d.things.filter((x) => x !== t); } else if (a === 'drop') { d.things = d.things.filter((x) => x !== t); const l = t.fromList && S.list.find((x) => x.id === t.fromList); if (l) l.due = null; } }
     const kept = dt.things.filter((t) => !rows.some((r) => r.id === t.id));
     const news = [];
-    sh.querySelectorAll('[data-r]').forEach((row, i) => { const title = row.querySelector('.rT').value.trim(); if (!title) return; const cat = chipValue(row, 'cat' + i) || defCat(); const prev = rows[i].id ? dt.things.find((t) => t.id === rows[i].id) : null; news.push({ ...(prev || { id: uid(), done: false, real: 0 }), title, cat, est: null, slot: slots[i], src: prev ? prev.src : null, link: prev ? prev.link : (uacts && null) }); });
-    for (const t of d.things.filter((x) => !x.done && uacts[x.id] === 'tomorrow')) { if (!news.some((n) => n.title === t.title)) news.push({ ...t, id: uid(), startedAt: null }); d.things = d.things.filter((x) => x !== t); }
-    dt.things = [...news, ...kept]; dt.planned = true;
+    sh.querySelectorAll('[data-r]').forEach((row, i) => { const title = row.querySelector('.rT').value.trim(); if (!title) return; const cat = chipValue(row, 'cat' + i) || defCat(); const prev = rows[i].id ? dt.things.find((t) => t.id === rows[i].id) : null; news.push({ ...(prev || { id: uid(), done: false, real: 0 }), title, cat, est: null, slot: slots[i], src: prev ? prev.src : null, link: prev ? prev.link : null, fromList: rows[i].fromList || (prev && prev.fromList) || null }); });
+    for (const t of d.things.filter((x) => !x.done && uacts[x.id] === 'tomorrow')) { if (!news.some((n) => n.title.trim().toLowerCase() === t.title.trim().toLowerCase())) news.push({ ...t, id: uid(), startedAt: null }); d.things = d.things.filter((x) => x !== t); }
+    dt.things = [...news, ...kept.filter((k) => !news.some((n) => n.title.trim().toLowerCase() === k.title.trim().toLowerCase()))]; dt.planned = true; S.ritualDraft = null;
+    if (g3d && g3d.plantSeeds) g3d.plantSeeds(news.length);
     const fin = say(S, 'rituel.fin', ernestEnv(S, today, plantNames()));
     save(); closeSheet(); render(); setErnest('dort'); setTimeout(() => setErnest(), 6000);
     const L = d.things.length && d.things.every((t) => t.done) ? drawLong(S, today) : null;
     if (L) { bubble(fin || 'Bonne nuit.'); setTimeout(() => cardSheet(L, true), 900); } else bubble(fin || 'Bonne nuit.');
     save();
   });
-  setTimeout(() => $('#rJournal').focus(), 50);
 }
 
 // ---------- Semaine ----------
@@ -695,7 +744,7 @@ function goalSheet(g) {
   const isNew = !g; g = g || { id: uid(), title: '', cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} };
   openSheet(`<h2>${isNew ? 'Un objectif' : 'Cet objectif'}</h2><input id="gTitle" value="${esc(g.title)}" placeholder="Quoi ?" autocomplete="off">${chips(g.cat)}<div class="grid2"><div class="kv"><label>Échéance</label><input type="date" id="gDue" value="${g.due || ''}"></div><div class="kv"><label>Horizon</label><select id="gHor"><option value="week" ${g.horizon === 'week' ? 'selected' : ''}>Semaine</option><option value="month" ${g.horizon === 'month' ? 'selected' : ''}>Mois ou plus</option></select></div></div><div class="kv"><label>Jalons, un par ligne</label><textarea id="gMs">${esc(g.milestones.map((m) => m.text).join('\n'))}</textarea></div><button class="btn" id="gSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="gDone">${icon('check', 'sm')} Atteint</button><button class="btn danger" id="gDel">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh);
-  $('#gSave').addEventListener('click', () => { g.title = $('#gTitle').value.trim(); if (!g.title) return; g.cat = chipValue(sh, 'cat') || 'perso'; g.due = $('#gDue').value || null; g.horizon = $('#gHor').value; const lines = $('#gMs').value.split('\n').map((x) => x.trim()).filter(Boolean); g.milestones = lines.map((text) => g.milestones.find((m) => m.text === text) || { text, done: false }); if (isNew) S.goals.push(g); save(); closeSheet(); render(); });
+  $('#gSave').addEventListener('click', () => { g.title = $('#gTitle').value.trim(); if (!g.title) { toast('Donne-lui un nom d\'abord.'); $('#gTitle').focus(); return; } g.cat = chipValue(sh, 'cat') || 'perso'; g.due = $('#gDue').value || null; g.horizon = $('#gHor').value; const lines = $('#gMs').value.split('\n').map((x) => x.trim()).filter(Boolean); const old = g.milestones; g.milestones = lines.map((text, i) => old.find((m) => m.text === text) || (old[i] ? { ...old[i], text } : { text, done: false })); if (isNew) S.goals.push(g); save(); closeSheet(); render(); toast(isNew ? 'Objectif posé. Un bonsaï attend sa première étape.' : 'Objectif mis à jour.'); });
   if (!isNew) { $('#gDone').addEventListener('click', () => { g.status = 'done'; g.doneAt = today; const c = drawRare(S, 'goal'); if (c) toast(`Carnet : « ${c.titre || ''} »`); save(); closeSheet(); render(); }); $('#gDel').addEventListener('click', () => { closeSheet(); removeGoal(g.id); }); }
 }
 function reviewSheet() {
@@ -758,7 +807,7 @@ function settingsSheet() {
   <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
-  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.bedtime = $('#sBed').value || '22:30'; s.autoRitual = $('#sAutoR').checked; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
+  $('#sSave').addEventListener('click', () => { setTimeout(() => toast('Réglages enregistrés.'), 50); s.prenom = $('#sName').value.trim(); s.bedtime = $('#sBed').value || '22:30'; s.autoRitual = $('#sAutoR').checked; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; s.trackTime = $('#sTrack').checked; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
   bindSync();
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });

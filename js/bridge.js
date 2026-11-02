@@ -65,3 +65,10 @@ export function plantHistory(state, payload) {
   }
   return n;
 }
+
+// « Recevoir à nouveau » : oublie ce qui a été reçu ce jour-là (et la dernière version du plan), pour tout reprendre.
+export function forgetDay(state, day) {
+  let n = 0;
+  for (const br of Object.values(state.bridges || {})) { if (br.days && br.days[day]) { delete br.days[day]; n++; } delete br.hash; }
+  return n;
+}
