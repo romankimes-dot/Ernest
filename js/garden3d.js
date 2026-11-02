@@ -656,6 +656,7 @@ export function modelFromState(S, today) {
 let model = { plants: [], moss: 0, vine: 0, hanging: 0, bonsai: null, shrooms: false, mood: 3, path: 0, beds: [], flowers: 0.5, serre2: false };
 let pop = null;
 function applyModel(m) {
+  const sig = JSON.stringify(m); if (sig === lastSig) return; lastSig = sig;
   model = m; poke();
   const keep = new Set();
   m.plants.forEach((p, i) => {
@@ -749,26 +750,45 @@ function updateGrowth(dt, t) {
 
 // ---------- Rendu ----------
 const clock = new THREE.Clock();
-let animUntil = 0; const poke = (ms = 3000) => { animUntil = performance.now() + ms; };
+// Bandeau : une image fixe, recalculée quand quelque chose change, et un nouvel angle toutes les demi-heures.
+let stillDirty = true, stillSlot = -1, lastSig = '';
+const poke = () => { stillDirty = true; if (renderer) renderer.shadowMap.needsUpdate = true; };
+const ANGLES = [
+  { pos: [1.2, 6.6, 11.8], t: [0, 0.6, 0.8] },    // plongée depuis la porte
+  { pos: [-9.5, 5.2, 7.5], t: [0, 0.8, 0] },      // trois quarts, côté chaumière
+  { pos: [10.5, 4.6, 6.5], t: [0, 0.9, -0.5] },   // trois quarts, côté mare
+  { pos: [0.6, 1.9, 5.4], t: [0, 0.95, -1.5] },   // dans l'allée, entre les tables
+  { pos: [-2.2, 7.5, -12], t: [0, 0.6, 0.5] },    // depuis le fond du jardin
+  { pos: [7.5, 3.2, 11], t: [-1.5, 0.9, 1] },     // depuis le potager
+];
 let mode = 'band', running = false, visible = true, last = 0, onFps = null, frames = 0, fpsT = 0;
-const BAND = { pos: new THREE.Vector3(1.2, 6.6, 11.8), target: new THREE.Vector3(0, 0.6, 0.8) }; // vue plongeante : toutes les tables visibles
 function frame(now) {
   if (!running) return;
   requestAnimationFrame(frame);
   if (!visible) return;
-  // Bandeau : rendu à la demande. 30 i/s pendant 3 s après un changement (croissance, humeur, heure), puis une image toutes les 4 s.
-  if (mode === 'band') { const active = now < animUntil; if (now - last < (active ? 33 : 4000)) return; if (!active) clock.getDelta(); }
-  last = now;
+  if (mode === 'band') { stillFrame(); return; }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
-  if (mode === 'band') {
-    camera.position.copy(BAND.pos); camera.lookAt(BAND.target); // vue fixe : aucun mouvement de caméra dans la bande
-  } else { controls.update(); const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
+  controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
+  if ((frames & 7) === 0) renderer.shadowMap.needsUpdate = true; // ombres recalculées une image sur huit
   updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t;
   for (let i = 0; i < flies.n; i++) { const [x, y, z, ph, sp] = flies.seed[i]; flies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.5; flies.pos[i * 3 + 1] = y + Math.sin(t * sp * 1.7 + ph * 2) * 0.25; flies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.8 + ph) * 0.5; }
   flies.pts.geometry.attributes.position.needsUpdate = true;
   ernestSprite.position.y = 0.4 + Math.sin(t * 1.6) * 0.012;
   renderer.render(scene, camera);
-  frames++; fpsT += dt; if (fpsT > 1) { if (onFps) onFps(Math.round(frames / fpsT)); frames = 0; fpsT = 0; }
+  frames++; const pn = performance.now(); if (!fpsT) fpsT = pn; if (pn - fpsT > 1000) { if (onFps) onFps(Math.round(frames * 1000 / (pn - fpsT))); frames = 0; fpsT = pn; }
+}
+// Image fixe du bandeau : tout est amené à son état final (ciel, croissance), puis une seule image.
+function stillFrame() {
+  const slot = Math.floor(Date.now() / 1800000);
+  if (!stillDirty && slot === stillSlot) return;
+  const a = ANGLES[((slot % ANGLES.length) + ANGLES.length) % ANGLES.length];
+  camera.position.set(...a.pos); camera.lookAt(...a.t);
+  if (camera.position.y < heightAt(camera.position.x, camera.position.z) + 0.9) camera.position.y = heightAt(camera.position.x, camera.position.z) + 0.9;
+  const t = 2.5; pop = null;
+  for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
+  windU.value = t; renderer.shadowMap.needsUpdate = true;
+  renderer.render(scene, camera);
+  stillDirty = false; stillSlot = slot;
 }
 function resize() {
   if (!renderer) return; const c = renderer.domElement, w = c.clientWidth || c.parentElement.clientWidth, h = c.clientHeight || c.parentElement.clientHeight;
@@ -781,7 +801,7 @@ export function webglOk() { try { const c = document.createElement('canvas'); re
 export function mount(canvas, opts = {}) {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
+  renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false; controls.minDistance = 2.2; controls.maxDistance = 19;
@@ -811,7 +831,7 @@ export const api = {
   update(S, today) { applyModel(modelFromState(S, today)); },
   setModel: applyModel,
   setTime(k) { amb.fixed = k; poke(); },
-  onFps(fn) { onFps = fn; },
+  onFps(fn) { onFps = fn; frames = 0; fpsT = 0; },
   water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
   stop() { running = false; }, start() { if (!running && renderer) { running = true; clock.getDelta(); requestAnimationFrame(frame); } },
   get camera() { return camera; }, get controls() { return controls; },

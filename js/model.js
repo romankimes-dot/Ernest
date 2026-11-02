@@ -139,7 +139,8 @@ export function suggestions(state, tomorrow) {
   const days = weekDays(tomorrow);
   const minsOn = !state.settings.minimumsFrom || tomorrow >= state.settings.minimumsFrom;
   // l'étape suivante de chaque objectif actif, l'échéance la plus proche d'abord
-  const goals = (state.goals || []).filter((g) => g.status === 'active').sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
+  const ex = state.settings.exam && state.settings.exam.slice(0, 10), beforeExam = !!ex && tomorrow <= ex; // avant l'examen : seulement les objectifs qui tombent avant lui
+  const goals = (state.goals || []).filter((g) => g.status === 'active' && (!beforeExam || (g.due && g.due <= ex))).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
   for (const g of goals) { const m = (g.milestones || []).find((x) => !x.done); if (m) out.push({ kind: 'goal', title: m.text, cat: g.cat || 'revision', why: g.title }); }
   for (const m of minsOn ? minimums(state, days) : []) {
     if (m.done < m.min) out.push({ kind: 'min', title: catOf(m.cat).nom, cat: m.cat, why: `${m.done} / ${m.min} cette semaine` });
