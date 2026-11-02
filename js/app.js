@@ -175,27 +175,64 @@ async function setupGarden3d() {
     const mod = await import('./garden3d.js');
     if (!mod.webglOk()) return;
     const c = $('#garden3d'); c.hidden = false;
-    g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today);
+    g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today); if (lastErnestSt) g3d.setErnest(lastErnestSt);
     $('#garden').hidden = true; garden.stop();
     c.addEventListener('click', openSerre);
     $('#serreClose').addEventListener('click', closeSerre);
   } catch (e) { g3d = null; $('#garden3d').hidden = true; $('#garden').hidden = false; garden.start(); }
 }
 function openSerre() {
-  if (!g3d) return;
+  if (!g3d || !$('#serreFull').hidden) return;
   const n = totalDone(S), pl = S.garden.plants.filter((p) => p.kind === 'plant').length;
   const hs = g3d.modelFromState ? g3d.modelFromState(S, today).houses : null, hn = (k) => (hs && hs[k] ? hs[k].n : 0);
-  $('#sfCap').innerHTML = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher. Le sélecteur en haut passe d'une serre à l'autre.</span>`;
+  serreCap = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher. Le sélecteur en haut passe d'une serre à l'autre ; Promenade pour marcher avec Ernest.</span>`;
+  houseN = hn;
   const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
   g3d.setMode('full');
-  const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.focus) g3d.focus(b.dataset.house); })); }
+  const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.walking) g3d.walkTo(b.dataset.house); else if (g3d.focus) g3d.focus(b.dataset.house); })); }
   if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
+  bindWalkUi(); setWalkUi(false);
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
   g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
 }
 function closeSerre() {
   $('#serre').prepend($('#garden3d')); $('#serreFull').hidden = true;
-  if (g3d) { g3d.onFps(null); g3d.setMode('band'); }
+  if (g3d) { g3d.walk(false); g3d.onFps(null); g3d.setMode('band'); }
+}
+// Promenade avec Ernest : bouton, vue 3e / 1re personne, joystick, légende du lieu.
+let serreCap = '', houseN = () => 0;
+const PLACE = { travail: 'Dans la serre Travail', bienetre: 'Dans la serre Bien-être', perso: 'Dans la serre Vie perso', chaumiere: 'Devant la chaumière' };
+function setWalkUi(on) {
+  const f = $('#serreFull'); f.classList.toggle('walking', on);
+  $('#sfWalk').textContent = on ? 'Regarder' : 'Promenade'; $('#sfWalk').classList.toggle('on', on);
+  $('#sfView').hidden = !on; $('#sfView').textContent = g3d && g3d.walkView === 'first' ? '3ᵉ personne' : '1ʳᵉ personne';
+  $('#sfJoy').hidden = !on;
+  const all = $('#sfPick [data-house="all"]'); if (all) all.textContent = on ? 'Chaumière' : 'Tout';
+  $('#sfPick').querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+  if (!on) { const a = $('#sfPick [data-house="all"]'); if (a) a.classList.add('on'); }
+  walkCap(null);
+}
+function walkCap(place) {
+  if (!f3dWalking()) { $('#sfCap').innerHTML = serreCap; return; }
+  const kb = matchMedia('(pointer: fine)').matches ? 'ZQSD ou flèches pour marcher' : 'Le joystick pour marcher';
+  const where = place && PLACE[place] ? `<b>${PLACE[place]}${houseN(place) ? ` · ${houseN(place)} plante${houseN(place) > 1 ? 's' : ''}` : ''}</b><br>` : '<b>Au jardin</b><br>';
+  $('#sfCap').innerHTML = `${where}<span>${kb}, glisse pour regarder. Touche une serre en haut : Ernest y va tout seul.</span>`;
+}
+const f3dWalking = () => !!(g3d && g3d.walking);
+function bindWalkUi() {
+  const w = $('#sfWalk'); if (w._b) return; w._b = 1;
+  w.addEventListener('click', (e) => { e.stopPropagation(); const on = !g3d.walking; g3d.walk(on); setWalkUi(on); });
+  $('#sfView').addEventListener('click', (e) => { e.stopPropagation(); g3d.walk(true, g3d.walkView === 'first' ? 'third' : 'first'); setWalkUi(true); });
+  g3d.onPlace((p) => walkCap(p));
+  // joystick : un disque, le pouce le tire jusqu'à son bord
+  const joy = $('#sfJoy'), knob = joy.querySelector('i'); let id = null;
+  const move = (e) => { const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2; let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
+    knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; g3d.walkInput(Math.abs(dx) < 0.12 ? 0 : dx, Math.abs(dy) < 0.12 ? 0 : -dy); };
+  const end = () => { id = null; knob.style.transform = ''; g3d.walkInput(0, 0); };
+  joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.setPointerCapture(id); move(e); });
+  joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
+  joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
+  joy.addEventListener('click', (e) => e.stopPropagation());
 }
 
 // ---------- Glisser vers le bas pour recharger ----------
@@ -238,11 +275,13 @@ async function refreshApp() {
 }
 
 // ---------- Ernest ----------
+let lastErnestSt = null;
 function plantNames() { return S.garden.plants.slice(-8).map(plantName); }
 function setErnest(force) {
   const d = dayOf(S, today); const allDone = d.things.length > 0 && d.things.every((t) => t.done);
   const st = force || stateFor(nowHour(), { allDone, sunday: dow(today) === 0 });
   $('#ernestWrap').innerHTML = ernestSvg(st);
+  lastErnestSt = st; if (g3d && g3d.setErnest) g3d.setErnest(st);
 }
 function bubble(text, long = false) {
   if (!text) return;

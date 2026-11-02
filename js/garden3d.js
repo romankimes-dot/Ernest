@@ -9,7 +9,7 @@
 // fait le jour, le soir et la nuit.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { svg as ernestSvg } from './ernest.js';
+import { createErnest } from './ernest3d.js';
 import { buildCottage } from './cottage3d.js';
 import { growth, totalDone, moodAvg, catCounts, catId, floraOf } from './model.js';
 
@@ -400,7 +400,7 @@ const zoneU = { value: new Array(ZONES.length).fill(0) };
 // Prairie : des milliers de brins qui ondulent (vent calculé dans le shader)
 const windU = { value: 0 };
 const ext = { beds: [] };
-let wallStones = [], bushLeafMat = null; const treeSpots = []; // pour les ombres portées douces (plus bas)
+let wallStones = [], bushLeafMat = null; const treeSpots = [], bushSpots = []; // pour les ombres portées douces (plus bas)
 {
   const blade = new THREE.BufferGeometry();
   blade.setAttribute('position', new THREE.Float32BufferAttribute([-0.03, 0, 0, 0.03, 0, 0, -0.02, 0.35, 0, 0.02, 0.35, 0, 0, 0.7, 0], 3));
@@ -561,7 +561,7 @@ BEDS.forEach((b, bi) => {
     treeSpots.push([x, z, conifer ? H * 0.34 : H * 0.42]);
   }
   // buissons : en touffes de plusieurs boules, surtout le long du muret (dehors), quelques-uns dedans
-  for (let i = 0; i < 64; i++) { const a = r() * 6.28, out = r() < 0.72, d = out ? 13.25 + r() * 1.4 : 10.9 + r() * 0.5, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.2; if ((z > 7 && Math.abs(x - pathX(z)) < 2.2) || inHouse(x, z, 1)) continue; bushes.push([x, heightAt(x, z), z, 0.34 + r() * 0.3, r()]); }
+  for (let i = 0; i < 64; i++) { const a = r() * 6.28, out = r() < 0.72, d = out ? 13.25 + r() * 1.4 : 10.9 + r() * 0.5, x = Math.cos(a) * d, z = Math.sin(a) * d * 1.2; if ((z > 7 && Math.abs(x - pathX(z)) < 2.2) || inHouse(x, z, 1)) continue; bushes.push([x, heightAt(x, z), z, 0.34 + r() * 0.3, r()]); bushSpots.push(bushes[bushes.length - 1]); }
   // dégradé vertical dans la géométrie : dessous assombri de 35 %, sommet un peu éclairci (multiplié par la couleur d'instance)
   // boule bosselée (houppiers, buissons) : un bruit de position, normales gardées lisses
   const lumpy = (g, amt, seed) => { const p = g.attributes.position, nr = g.attributes.normal, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).normalize(); const k = 1 + amt * (Math.sin(v.x * 5.1 + seed) * Math.sin(v.y * 4.3 + seed * 2) + 0.6 * Math.sin(v.z * 7.7 - v.x * 3.1 + seed)); nr.setXYZ(i, v.x, v.y, v.z); p.setXYZ(i, v.x * k, v.y * k, v.z * k); } return g; };
@@ -1019,17 +1019,170 @@ const flies = (() => {
   const mat = new THREE.PointsMaterial({ size: 0.12, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
   const pts = new THREE.Points(geo, mat); scene.add(pts); return { pts, seed, pos, mat, n };
 })();
-// ---------- Ernest, sur l'allée devant la serre Travail ----------
+// ---------- Ernest en 3D (js/ernest3d.js), sur l'allée devant la serre Travail ----------
+// En plein écran, on peut se promener avec lui (3e ou 1re personne) : joystick, clavier, ou un tap sur une serre et il
+// y va tout seul (chemin calculé autour des serres, de la chaumière et de la mare), puis arrose en arrivant.
 const ERNEST = { x: 0.38, z: DOOR_Z + 0.75, y: 0 }; ERNEST.y = heightAt(ERNEST.x, ERNEST.z);
-const ernestSprite = (() => {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
-  sp.scale.set(0.74, 0.77, 1); sp.position.set(ERNEST.x, 0.4 + ERNEST.y, ERNEST.z); scene.add(sp);
-  const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = 460; c.height = 480; c.getContext('2d').drawImage(img, 0, 0, 460, 480); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; sp.material.map = t; sp.material.needsUpdate = true; };
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ernestSvg('lanterne').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
-  // ombre au sol
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.set(ERNEST.x, ERNEST.y + 0.03, ERNEST.z); sh.scale.setScalar(0.9); scene.add(sh); sp.userData.shadow = sh;
-  return sp;
-})();
+const ernest = createErnest({ scale: 0.4, lanternShadow: false });
+ernest.root.position.set(ERNEST.x, ERNEST.y, ERNEST.z); ernest.root.rotation.y = 0.35; scene.add(ernest.root); ernest.attach(scene);
+let ernestState = 'attend'; const GRIP = ernest.parts.lantern.parent; // la main qui tient la lanterne
+const ERNEST_POSE = { attend: 'attend', arrose: 'arrose', assis: 'assis', dort: 'dort', salue: 'salue', lanterne: 'lanterne' };
+const groundAt = (x, z) => (inHouse(x, z, 0.05) ? 0.03 : heightAt(x, z));
+const houseAt = (x, z) => { for (const h of HOUSES) { const [lx, lz] = toLocal(h, x, z); if (Math.abs(lx) < HW && Math.abs(lz) < HD) return h.id; } return null; };
+
+// Obstacles. Murs : segments (serres, battant de porte ouvert, panneaux) ; tables : boîtes dans le repère de leur serre ;
+// chaumière, mare, buissons : cercles ; le muret : une ellipse dont on ne sort pas.
+const WALLS = [], TABLES = [], ROUND = [];
+for (const h of HOUSES) {
+  const seg = (x0, z0, x1, z1) => WALLS.push([toWorld(h, x0, 0, z0), toWorld(h, x1, 0, z1)]);
+  seg(-HW, -HD, -HW, HD); seg(HW, -HD, HW, HD); seg(-HW, -HD, HW, -HD); seg(-HW, HD, -0.62, HD); seg(0.62, HD, HW, HD);
+  seg(0.62, HD + 0.06, 0.62 + Math.cos(-0.3) * 1.12, HD + 0.06 - Math.sin(-0.3) * 1.12); // battant ouvert
+  { const c = Math.cos(0.22), sn = Math.sin(0.22); seg(-1.62 - 0.76 * c, HD + 0.75 + 0.76 * sn, -1.62 + 0.76 * c, HD + 0.75 - 0.76 * sn); } // panneau
+  for (const sd of [-1, 1]) TABLES.push({ h, x0: sd * TBX - 0.5, x1: sd * TBX + 0.5, z0: TZ0 - 0.04, z1: TZ1 + 0.04 });
+}
+ROUND.push([cottage.position.x + 0.1, cottage.position.z, 2.35], [7.2, -9.0, 1.85]);
+for (const [x, , z, sz] of bushSpots) if (Math.hypot(x / 12.5, z / 15) < 1) ROUND.push([x, z, sz * 1.1 + 0.1]);
+const closestOnSeg = (px, pz, a, b, out) => { const dx = b.x - a.x, dz = b.z - a.z, L = dx * dx + dz * dz; const t = L ? Math.max(0, Math.min(1, ((px - a.x) * dx + (pz - a.z) * dz) / L)) : 0; out[0] = a.x + dx * t; out[1] = a.z + dz * t; return out; };
+const _c = [0, 0];
+function collide(p, r = 0.24) {
+  for (let it = 0; it < 3; it++) {
+    for (const [a, b] of WALLS) { closestOnSeg(p.x, p.z, a, b, _c); const dx = p.x - _c[0], dz = p.z - _c[1], d = Math.hypot(dx, dz); if (d < r && d > 1e-6) { p.x = _c[0] + (dx / d) * r; p.z = _c[1] + (dz / d) * r; } }
+    for (const T of TABLES) { const [lx, lz] = toLocal(T.h, p.x, p.z); if (lx < T.x0 - r || lx > T.x1 + r || lz < T.z0 - r || lz > T.z1 + r) continue;
+      const cx = Math.max(T.x0, Math.min(T.x1, lx)), cz = Math.max(T.z0, Math.min(T.z1, lz)); let dx = lx - cx, dz = lz - cz, d = Math.hypot(dx, dz);
+      if (d < 1e-6) { const ex = Math.min(lx - T.x0, T.x1 - lx), ez = Math.min(lz - T.z0, T.z1 - lz); if (ex < ez) { dx = lx - (T.x0 + T.x1) / 2 > 0 ? 1 : -1; dz = 0; } else { dz = lz - (T.z0 + T.z1) / 2 > 0 ? 1 : -1; dx = 0; } d = 1; }
+      if (d < r) { const nx = cx + (dx / d) * r, nz = cz + (dz / d) * r, w = toWorld(T.h, nx, 0, nz); p.x = w.x; p.z = w.z; } }
+    for (const [x, z, R] of ROUND) { const dx = p.x - x, dz = p.z - z, d = Math.hypot(dx, dz), m = R + r; if (d < m && d > 1e-6) { p.x = x + (dx / d) * m; p.z = z + (dz / d) * m; } }
+    ext.beds.forEach((b, i) => { if (b.rise < 0.5) return; const B = BEDS[i], cx = Math.max(B.x - B.hx, Math.min(B.x + B.hx, p.x)), cz = Math.max(B.z - B.hz, Math.min(B.z + B.hz, p.z)), dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz); if (d < r && d > 1e-6) { p.x = cx + (dx / d) * r; p.z = cz + (dz / d) * r; } });
+    const e = Math.hypot(p.x / 11.7, p.z / (11.7 * 1.2)); if (e > 1) { p.x /= e; p.z /= e; } // le muret
+  }
+  return p;
+}
+// Le segment a→b traverse-t-il un mur ? (renvoie la fraction du premier choc, ou 1)
+function wallHit(ax, az, bx, bz) {
+  let best = 1; const rx = bx - ax, rz = bz - az;
+  for (const [a, b] of WALLS) { const sx = b.x - a.x, sz = b.z - a.z, den = rx * sz - rz * sx; if (Math.abs(den) < 1e-9) continue; const t = ((a.x - ax) * sz - (a.z - az) * sx) / den, u = ((a.x - ax) * rz - (a.z - az) * rx) / den; if (t >= 0 && t <= 1 && u >= 0 && u <= 1 && t < best) best = t; }
+  return best;
+}
+const roundHit = (ax, az, bx, bz, pad) => ROUND.some(([x, z, R]) => { closestOnSeg(x, z, { x: ax, z: az }, { x: bx, z: bz }, _c); return Math.hypot(x - _c[0], z - _c[1]) < R + pad; });
+const clearPath = (a, b) => wallHit(a.x, a.z, b.x, b.z) >= 1 && !roundHit(a.x, a.z, b.x, b.z, 0.2);
+// Graphe de passage : coins des serres (élargis), devant et derrière chaque porte, l'allée, le tour de la chaumière et de la mare.
+const NAV = [];
+for (const h of HOUSES) { for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) NAV.push(toWorld(h, x * (HW + 0.75), 0, z * (HD + 0.75))); NAV.push(toWorld(h, 0, 0, HD + 1.3), toWorld(h, 0, 0, HD - 0.6), toWorld(h, 0, 0, 0.2)); }
+for (const [x, z, R] of ROUND.slice(0, 2)) for (let i = 0; i < 8; i++) NAV.push(V(x + Math.cos(i * 0.785) * (R + 0.7), 0, z + Math.sin(i * 0.785) * (R + 0.7)));
+const COT_DOOR = (() => { const d = cottageB.door.clone().applyMatrix4(cottage.matrixWorld); d.addScaledVector(V(Math.sin(0.5), 0, Math.cos(0.5)), 1.3); d.y = 0; return d; })();
+function route(from, to) {
+  const nodes = [from, ...NAV.filter((n) => Math.hypot(n.x / 11.7, n.z / 14) < 1), to], N = nodes.length, dist = new Array(N).fill(Infinity), prev = new Array(N).fill(-1), done = new Array(N).fill(false);
+  dist[0] = 0;
+  for (let k = 0; k < N; k++) {
+    let u = -1; for (let i = 0; i < N; i++) if (!done[i] && (u < 0 || dist[i] < dist[u])) u = i;
+    if (u < 0 || dist[u] === Infinity) break; done[u] = true; if (u === N - 1) break;
+    for (let v = 0; v < N; v++) { if (done[v]) continue; const d = dist[u] + nodes[u].distanceTo(nodes[v]); if (d < dist[v] && clearPath(nodes[u], nodes[v])) { dist[v] = d; prev[v] = u; } }
+  }
+  if (prev[N - 1] < 0) return [to];
+  const out = []; for (let i = N - 1; i > 0; i = prev[i]) out.unshift(nodes[i].clone()); return out;
+}
+
+// Promenade : état, entrées (joystick, clavier, glisser pour regarder), caméras.
+const walk = { on: false, view: 'third', yaw: Math.PI, pitch: 0.32, dist: 2.7, distCur: 2.7, ix: 0, iz: 0, keys: new Set(), auto: null, speed: 0, pose: null, poseUntil: 0, onArrive: null, onPlace: null, place: undefined };
+const KEYS = { KeyW: [0, 1], KeyZ: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], KeyQ: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => { if (!walk.on || !KEYS[e.code] || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return; walk.keys.add(e.code); walk.auto = null; e.preventDefault(); });
+  window.addEventListener('keyup', (e) => walk.keys.delete(e.code));
+  window.addEventListener('blur', () => walk.keys.clear());
+}
+const tmpV = new THREE.Vector3(), camGoal = new THREE.Vector3();
+function lanternWanted() { return !!(amb.cur && amb.cur.lantern > 3); }
+function setFirstPerson(on) {
+  const L = ernest.parts.lantern;
+  if (on) { scene.add(camera); camera.add(L); L.position.set(0.17, -0.2, -0.55); L.quaternion.identity(); L.scale.setScalar(0.4 * 1.15); }
+  ernest.parts.model.traverse((o) => { if (o.isMesh) o.visible = !on; });
+  if (!on) { GRIP.add(L); L.position.set(0, 0, 0); L.scale.setScalar(1.15); }
+  // la lanterne garde ses propres réglages de visibilité (allumée ou rangée)
+  L.userData.swing.children.forEach((c) => { if (!c.isLight) c.visible = !!(L.userData.on); });
+}
+function updateWalk(dt, t) {
+  const p = ernest.root.position;
+  // entrée : clavier + joystick, dans le repère de la caméra
+  let ix = walk.ix, iz = walk.iz; for (const k of walk.keys) { ix += KEYS[k][0]; iz += KEYS[k][1]; }
+  const im = Math.hypot(ix, iz); if (im > 1) { ix /= im; iz /= im; }
+  const fx = Math.sin(walk.yaw), fz = Math.cos(walk.yaw);
+  let mx = fx * iz - fz * ix, mz = fz * iz + fx * ix, mag = Math.min(1, Math.hypot(ix, iz));
+  if (mag > 0.05) walk.auto = null;
+  else if (walk.auto) { // pilote automatique : de point en point
+    const w = walk.auto.pts[walk.auto.i], dx = w.x - p.x, dz = w.z - p.z, d = Math.hypot(dx, dz);
+    if (d < (walk.auto.i === walk.auto.pts.length - 1 ? 0.12 : 0.45)) { walk.auto.i++; if (walk.auto.i >= walk.auto.pts.length) { const fin = walk.auto; walk.auto = null; if (fin.face != null) walk.faceTo = fin.face; if (fin.pose) { walk.pose = fin.pose; walk.poseUntil = t + 3.2; } } }
+    else { mx = dx / d; mz = dz / d; mag = Math.min(1, d * 1.5 + 0.35); }
+    // la caméra se range doucement derrière lui
+    if (walk.auto && walk.view === 'third') { const h = Math.atan2(mx, mz); let dy = h - walk.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); walk.yaw += dy * Math.min(1, dt * 1.6); }
+  }
+  const target = mag * 1.15; walk.speed += (target - walk.speed) * Math.min(1, dt * 6);
+  if (walk.speed > 0.02) {
+    const ml = Math.hypot(mx, mz) || 1; tmpV.set(p.x + (mx / ml) * walk.speed * dt, 0, p.z + (mz / ml) * walk.speed * dt);
+    collide(tmpV); p.x = tmpV.x; p.z = tmpV.z;
+    if (walk.view === 'third' || walk.auto) { const h = Math.atan2(mx, mz); let dh = h - ernest.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); ernest.root.rotation.y += dh * Math.min(1, dt * 9); }
+    walk.pose = null; walk.faceTo = null;
+  } else if (walk.faceTo != null) { let dh = walk.faceTo - ernest.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); ernest.root.rotation.y += dh * Math.min(1, dt * 5); }
+  if (walk.view === 'first' && !walk.auto) ernest.root.rotation.y = walk.yaw;
+  p.y += (groundAt(p.x, p.z) - p.y) * Math.min(1, dt * 12);
+  ernest.setWalk(walk.speed / 0.75);
+  ernest.setPose(walk.pose && t < walk.poseUntil ? walk.pose : 'attend');
+  // lieu : pour la légende (« dans la serre Travail »)
+  const pl = houseAt(p.x, p.z) || (p.distanceTo(COT_DOOR) < 2.2 ? 'chaumiere' : null); if (pl !== walk.place) { walk.place = pl; if (walk.onPlace) walk.onPlace(pl); }
+  // caméra
+  if (walk.view === 'first') {
+    camera.position.set(p.x, p.y + 0.95, p.z);
+    tmpV.set(p.x + Math.sin(walk.yaw) * Math.cos(walk.pitch), p.y + 0.95 - Math.sin(walk.pitch), p.z + Math.cos(walk.yaw) * Math.cos(walk.pitch)); camera.lookAt(tmpV);
+    const L = ernest.parts.lantern, ph = t * 9.5; L.position.set(0.17 + Math.sin(ph * 0.5) * 0.008 * walk.speed, -0.2 + Math.abs(Math.cos(ph * 0.5)) * 0.012 * walk.speed, -0.55); L.rotation.set(Math.sin(ph * 0.5) * 0.08 * walk.speed, 0, Math.sin(t * 1.3) * 0.06);
+  } else {
+    const tg = tmpV.set(p.x, p.y + 0.72, p.z), cp = Math.cos(walk.pitch), sp = Math.sin(walk.pitch);
+    camGoal.set(tg.x - Math.sin(walk.yaw) * cp * walk.dist, tg.y + sp * walk.dist, tg.z - Math.cos(walk.yaw) * cp * walk.dist);
+    const hit = wallHit(tg.x, tg.z, camGoal.x, camGoal.z), dMax = hit < 1 ? Math.max(0.6, hit * walk.dist * cp - 0.3) / Math.max(0.2, cp) : walk.dist;
+    walk.distCur = dMax < walk.distCur ? dMax : walk.distCur + (dMax - walk.distCur) * Math.min(1, dt * 3);
+    camera.position.set(tg.x - Math.sin(walk.yaw) * cp * walk.distCur, tg.y + sp * walk.distCur, tg.z - Math.cos(walk.yaw) * cp * walk.distCur);
+    const gy = groundAt(camera.position.x, camera.position.z) + 0.25; if (camera.position.y < gy) camera.position.y = gy;
+    if (houseAt(camera.position.x, camera.position.z) && camera.position.y > 2.05) camera.position.y = 2.05;
+    camera.lookAt(tg.x, tg.y - 0.05, tg.z);
+  }
+}
+function setWalk(on, view) {
+  if (view) walk.view = view;
+  const wasFirst = walk.on && walk._fp;
+  walk.on = !!on && mode === 'full';
+  const fp = walk.on && walk.view === 'first';
+  if (fp !== !!wasFirst) { setFirstPerson(fp); walk._fp = fp; }
+  if (controls) controls.enabled = mode === 'full' && !walk.on;
+  if (walk.on) { fly = null; if (!walk.started) { walk.started = true; ernest.root.rotation.y = Math.PI; walk.faceTo = Math.PI; } walk.yaw = ernest.root.rotation.y; walk.pitch = walk.view === 'first' ? 0.08 : 0.3; walk.distCur = walk.dist; camera.fov = walk.view === 'first' ? 70 : 52; } // la première fois : dos à la caméra, face à la serre Travail
+  else { walk.ix = walk.iz = 0; walk.keys.clear(); walk.auto = null; walk.speed = 0; ernest.setWalk(0); ernest.setPose(ERNEST_POSE[ernestState] || 'attend'); camera.fov = 55; if (controls) { controls.target.copy(ernest.root.position).add(V(0, 0.6, 0)); controls.update(); } }
+  if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, walk.on && !DESK ? 1.5 : 2)); // promenade sur téléphone : un peu moins de pixels, une marche plus fluide
+  camera.updateProjectionMatrix(); resize(); poke();
+}
+function walkTo(id) {
+  if (!walk.on) return;
+  const p = ernest.root.position, from = V(p.x, 0, p.z);
+  let to, face = null, pose = 'arrose';
+  if (HB[id]) { const h = HB[id]; to = toWorld(h, 0, 0, -0.6); face = Math.atan2(-h.sin, -h.cos); } // au fond de l'allée, face aux bonsaïs
+  else { to = COT_DOOR.clone(); face = 0.5 + Math.PI; pose = 'salue'; }
+  walk.auto = { pts: route(from, to), i: 0, face, pose };
+}
+// Le regard : glisser sur la scène (hors joystick)
+function bindLook(canvas) {
+  let last = null, pinch = null; const pts = new Map();
+  canvas.addEventListener('pointerdown', (e) => { if (!walk.on) return; pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!walk.on || !pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) walk.dist = Math.max(1.3, Math.min(6, walk.dist * (pinch / d))); pinch = d; return; }
+    const dx = e.clientX - last[0], dy = e.clientY - last[1]; last = [e.clientX, e.clientY];
+    walk.yaw -= dx * 0.0065; walk.pitch = Math.max(walk.view === 'first' ? -0.7 : -0.1, Math.min(walk.view === 'first' ? 0.95 : 1.05, walk.pitch + dy * 0.005 * (walk.view === 'first' ? 1 : 1)));
+  });
+  const up = (e) => { pts.delete(e.pointerId); pinch = null; if (pts.size === 1) last = [...pts.values()][0]; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', (e) => { if (!walk.on) return; e.preventDefault(); walk.dist = Math.max(1.3, Math.min(6, walk.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
+}
+function updateErnest(dt, t, still) {
+  if (!walk.on) { ernest.setPose(ERNEST_POSE[ernestState] || 'attend'); }
+  const L = ernest.parts.lantern; L.userData.on = walk.on ? lanternWanted() : ernestState === 'lanterne' || (lanternWanted() && ernestState === 'attend');
+  ernest.update(dt, { lantern: L.userData.on, lanternK: 2.4, groundY: ernest.root.position.y, still });
+}
 
 // ---------- Halos sans bloom : sprites additifs autour des lumières ----------
 const glowTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,220,160,.95)'); g.addColorStop(0.22, 'rgba(255,184,96,.55)'); g.addColorStop(0.6, 'rgba(255,150,60,.16)'); g.addColorStop(1, 'rgba(255,140,50,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
@@ -1316,14 +1469,17 @@ function frame(now) {
     return;
   }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
-  if (fly) { const e = Math.min(1, (performance.now() - fly.s) / 1100), k = e < 0.5 ? 2 * e * e : 1 - (-2 * e + 2) ** 2 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k); if (e >= 1) fly = null; }
-  { const T = controls.target; T.x = Math.max(-10, Math.min(10, T.x)); T.z = Math.max(-9, Math.min(9, T.z)); T.y = Math.max(0.4, Math.min(2.2, T.y)); }
-  controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
-  if ((frames & 7) === 0) renderer.shadowMap.needsUpdate = true; // ombres recalculées une image sur huit
+  updateErnest(dt, t, false);
+  if (walk.on) updateWalk(dt, t);
+  else {
+    if (fly) { const e = Math.min(1, (performance.now() - fly.s) / 1100), k = e < 0.5 ? 2 * e * e : 1 - (-2 * e + 2) ** 2 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k); if (e >= 1) fly = null; }
+    { const T = controls.target; T.x = Math.max(-10, Math.min(10, T.x)); T.z = Math.max(-9, Math.min(9, T.z)); T.y = Math.max(0.4, Math.min(2.2, T.y)); }
+    controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
+  }
+  if ((frames & (walk.on ? (DESK ? 0 : 1) : 7)) === 0) renderer.shadowMap.needsUpdate = true; // ombres : une image sur huit, à chaque image (ou une sur deux) en promenade
   updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t; updateFx(nowS(), t);
   for (let i = 0; i < flies.n; i++) { const [x, y, z, ph, sp] = flies.seed[i]; flies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.5; flies.pos[i * 3 + 1] = y + Math.sin(t * sp * 1.7 + ph * 2) * 0.25; flies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.8 + ph) * 0.5; }
   flies.pts.geometry.attributes.position.needsUpdate = true;
-  ernestSprite.position.y = 0.4 + ERNEST.y + Math.sin(t * 1.6) * 0.012;
   draw();
   frames++; const pn = performance.now(); if (!fpsT) fpsT = pn; if (pn - fpsT > 1000) { if (onFps) onFps(Math.round(frames * 1000 / (pn - fpsT))); frames = 0; fpsT = pn; }
 }
@@ -1336,6 +1492,7 @@ function stillFrame() {
   if (camera.position.y < heightAt(camera.position.x, camera.position.z) + 0.9) camera.position.y = heightAt(camera.position.x, camera.position.z) + 0.9;
   const t = LIVE_BAND && bandT0 ? 2.5 + (performance.now() - bandT0) / 1000 : 2.5; pop = null; // bandeau vivant : le vent ne saute pas
   for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
+  for (let i = 0; i < 45; i++) updateErnest(1 / 30, t, true); // Ernest posé dans sa pose, sans clignement
   windU.value = t; updateFx(nowS(), t); renderer.shadowMap.needsUpdate = true; refreshEnv(true);
   draw();
   stillDirty = false; stillSlot = slot; if (!LIVE_BAND) bandT0 = 0;
@@ -1347,7 +1504,7 @@ function bandAnimFrame() {
   const t = 2.5 + (performance.now() - bandT0) / 1000;
   if ((bandFrames++ & 7) === 0) renderer.shadowMap.needsUpdate = true;
   pop = null;
-  updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t; updateFx(nowS(), t);
+  updateAmbience(dt, t); updateGrowth(dt, t); updateErnest(dt, t, false); windU.value = t; updateFx(nowS(), t);
   draw();
 }
 // ---------- Ordinateur : halo lumineux autour des lumières (bloom) et ombres plus douces ----------
@@ -1385,7 +1542,7 @@ export function mount(canvas, opts = {}) {
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 48; // la vue d'ensemble en portrait est à 47
   controls.maxPolarAngle = Math.PI * 0.49; controls.minPolarAngle = 0.25; controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
-  onFps = opts.onFps || null;
+  onFps = opts.onFps || null; bindLook(canvas);
   setMode(opts.mode || 'band');
   window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', () => { visible = document.visibilityState === 'visible'; if (visible) clock.getDelta(); });
@@ -1394,13 +1551,13 @@ export function mount(canvas, opts = {}) {
   return api;
 }
 export function setMode(m) {
+  if (m !== 'full' && walk.on) setWalk(false);
   mode = m;
   if (!renderer) return;
   controls.enabled = m === 'full';
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // bandeau net aussi : surtout une image fixe, le surcoût est faible
   if (ext.grass) ext.grass.im.count = m === 'full' ? ext.grass.n : Math.round(ext.grass.n * 0.3); // moins de brins dans le bandeau
   poke();
-  ernestSprite.visible = ernestSprite.userData.shadow.visible = m === 'full';
   if (m === 'full') { camera.fov = 55; resize(); const [p, t] = overview(); camera.position.copy(p); controls.target.copy(t); } // vue d'ensemble ; deux doigts pour glisser vers une serre
   else camera.fov = 40; // l'angle du bandeau fixe son propre fov (ANGLES)
   camera.updateProjectionMatrix(); controls.update(); resize();
@@ -1411,6 +1568,12 @@ export const api = {
   setModel: applyModel,
   setTime(k) { amb.fixed = k; poke(); },
   focus,
+  // Ernest : état du moment (attend, arrose, assis, dort, salue, lanterne) et promenade
+  setErnest(st) { if (st && st !== ernestState) { ernestState = st; poke(); } },
+  walk(on, view) { setWalk(on, view); }, walkTo, get walking() { return walk.on; }, get walkView() { return walk.view; },
+  walkInput(x, z) { walk.ix = x; walk.iz = z; },
+  onPlace(fn) { walk.onPlace = fn; walk.place = undefined; },
+  ernest,
   onFps(fn) { onFps = fn; frames = 0; fpsT = 0; },
   water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
   // Effets ponctuels ; en bandeau, chacun ouvre une fenêtre d'animation d'environ 2,5 s puis l'image fixe est refaite.

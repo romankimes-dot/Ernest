@@ -106,7 +106,7 @@
 
     // 1re personne : la lanterne tenue devant soi, comme dans un jeu (accrochée à la caméra, balancement de la marche)
     scene.add(camera);
-    const fpLantern = E.parts.lantern.clone(true); fpLantern.scale.setScalar(0.33 * 1.15); fpLantern.visible = false; camera.add(fpLantern);
+    const fpLantern = E.parts.lantern.clone(true); fpLantern.traverse((o) => { if (!o.isLight) o.visible = true; }); fpLantern.scale.setScalar(0.33 * 1.15); fpLantern.visible = false; camera.add(fpLantern);
     const fpLight = fpLantern.getObjectByProperty('isPointLight', true);
     // ---- Ambiances ----
     const TIMES = {

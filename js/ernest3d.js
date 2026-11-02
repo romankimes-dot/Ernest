@@ -125,7 +125,7 @@ function makeMaterials(TX) {
 }
 
 // ---------- Construction ----------
-export function createErnest({ scale = 0.33, castShadow = true } = {}) {
+export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = true } = {}) {
   const TX = makeTextures(), M = makeMaterials(TX);
   const root = new THREE.Group(); root.name = 'ernest';
   const model = new THREE.Group(); model.scale.setScalar(scale); root.add(model);
@@ -305,7 +305,7 @@ export function createErnest({ scale = 0.33, castShadow = true } = {}) {
     add(g, new THREE.CylinderGeometry(0.1, 0.105, 0.03, 6), M.brass, 0, -0.34, 0);
     add(g, new THREE.CylinderGeometry(0.014, 0.014, 0.05, 8), M.thread, 0, -0.3, 0);
     const fl = add(g, new THREE.SphereGeometry(0.022, 12, 10), M.flame, 0, -0.255, 0); fl.scale.set(1, 1.8, 1); fl.castShadow = false;
-    const light = new THREE.PointLight(0xffa850, 0, 3.2, 1.6); light.position.set(0, -0.25, 0); light.castShadow = true; light.shadow.mapSize.set(512, 512); light.shadow.bias = -0.002; light.shadow.radius = 4; g.add(light);
+    const light = new THREE.PointLight(0xffa850, 0, 3.2, 1.6); light.position.set(0, -0.25, 0); light.castShadow = lanternShadow; light.shadow.mapSize.set(512, 512); light.shadow.bias = -0.002; light.shadow.radius = 4; g.add(light);
     lantern.userData = { light, flame: fl, swing: g };
   }
   const can = new THREE.Group();
@@ -321,6 +321,7 @@ export function createErnest({ scale = 0.33, castShadow = true } = {}) {
     void bodyG; can.userData = { tip: V(0, 0.0, 0.47) };
   }
   lantern.scale.setScalar(1.15); can.scale.setScalar(1.35);
+  arms[1].grip.add(lantern); lantern.userData.swing.children.forEach((c) => { if (!c.isLight) c.visible = false; });
 
   // ---------- Animation : poses, marche, mouvement secondaire ----------
   const POSES = {
@@ -329,6 +330,7 @@ export function createErnest({ scale = 0.33, castShadow = true } = {}) {
     arrose: { sh: [[-0.2, 0, -0.35], [-1.15, 0.2, 0.3]], el: [-0.9, -0.15], torso: [0.1, 0.1, 0], head: [0.25, 0.2, 0], lid: 0.0, brow: 0.6, smile: 0.7, sit: 0, curl: 1, prop: 'can' },
     lanterne: { sh: [[0.05, 0, -0.22], [-0.85, 0, 0.18]], el: [-0.25, -0.7], torso: [0, 0.05, 0], head: [0.05, 0.25, 0.05], lid: 0.15, brow: 0.2, smile: 0.5, sit: 0, curl: 1, prop: 'lantern' },
     guide: { sh: [[0.05, 0, -0.22], [-1.25, 0, 0.12]], el: [-0.25, -0.35], torso: [0, 0, 0], head: [0, 0, 0], lid: 0.1, brow: 0.2, smile: 0.5, sit: 0, curl: 1, prop: 'lantern' },
+    assis: { sh: [[-0.3, 0, -0.15], [-0.3, 0, 0.15]], el: [-1.1, -1.1], torso: [-0.1, 0, 0], head: [-0.05, 0.15, 0.05], lid: 0.1, brow: 0.2, smile: 0.7, sit: 1, curl: 0.4, prop: null },
     dort: { sh: [[-0.25, 0, -0.12], [-0.25, 0, 0.12]], el: [-1.25, -1.25], torso: [-0.18, 0, 0], head: [0.42, 0, 0.18], lid: 1, brow: -0.3, smile: 0, sit: 1, curl: 0.6, prop: null },
   };
   const S = { sh: [[0, 0, 0], [0, 0, 0]], el: [0, 0], torso: [0, 0, 0], head: [0, 0, 0], lid: 0, brow: 0, smile: 0.4, sit: 0, curl: 0 };
@@ -354,8 +356,10 @@ export function createErnest({ scale = 0.33, castShadow = true } = {}) {
   function setProp(p) {
     if (p === propOn) return;
     const grip = arms[1].grip;
-    if (propOn === 'lantern') grip.remove(lantern); if (propOn === 'can') grip.remove(can);
-    if (p === 'lantern') grip.add(lantern); if (p === 'can') grip.add(can);
+    // la lanterne reste dans la scène (sa lumière aussi, à 0) : ajouter ou retirer une lumière recompilerait tous les shaders
+    lantern.userData.swing.children.forEach((c) => { if (!c.isLight) c.visible = p === 'lantern'; });
+    if (propOn === 'can') grip.remove(can);
+    if (p === 'can') grip.add(can);
     propOn = p;
   }
   function setPose(name) { if (POSES[name]) pose = name; }
@@ -425,7 +429,7 @@ export function createErnest({ scale = 0.33, castShadow = true } = {}) {
     zzz.forEach((z, i) => { const on = pose === 'dort' && S.sit > 0.6; const ph = ((t * 0.35 + i / 3) % 1); z.visible = on; if (!on) return; const p = head.localToWorld(V(0.25 + ph * 0.3, 1.0 + ph * 0.6, 0.2)); z.position.copy(p); z.scale.setScalar(0.06 + ph * 0.09); z.material.opacity = Math.sin(ph * Math.PI) * 0.9; });
 
     // clignements (et paupières de la pose)
-    nextBlink -= dt; if (nextBlink < 0) { blinkT = 0; nextBlink = 2 + Math.random() * 4; if (Math.random() < 0.2) nextBlink = 0.25; }
+    nextBlink -= dt; if (opts.still) { nextBlink = Math.max(nextBlink, 1); blinkT = -1; } if (nextBlink < 0) { blinkT = 0; nextBlink = 2 + Math.random() * 4; if (Math.random() < 0.2) nextBlink = 0.25; }
     let blink = 0; if (blinkT >= 0) { blinkT += dt; blink = Math.sin(clamp(blinkT / 0.16, 0, 1) * Math.PI); if (blinkT > 0.16) blinkT = -1; }
     const lidK = Math.max(S.lid, blink);
     for (const l of lids) l.rotation.x = lerpTo(-1.25, 1.62, lidK);
