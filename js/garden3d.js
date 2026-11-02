@@ -1079,9 +1079,9 @@ function applyModel(m) {
 
 // ---------- Ambiances ----------
 const TIMES = {
-  day: { top: '#7fb8d6', bottom: '#d9e6c8', fog: '#bcd6d0', fogNear: 22, fogFar: 80, hemiSky: '#cfe8f2', hemiGround: '#5b4a30', hemi: 1.15, sun: '#fff1d6', sunI: 2.6, sunPos: [6, 10, 5], lantern: 0.6, flies: 0, stars: 0, moon: 0, exposure: 1.0, rim: 0.32, rimCol: '#fff4dc', glass: 1, glow: 0, vig: 0.42 },
-  dusk: { top: '#2a3a5c', bottom: '#e0956a', fog: '#6b5a62', fogNear: 18, fogFar: 70, hemiSky: '#e0a080', hemiGround: '#3a2a22', hemi: 0.7, sun: '#ffb070', sunI: 1.4, sunPos: [-9, 3.5, 2], lantern: 5, flies: 0.5, stars: 0.3, moon: 0.4, exposure: 1.05, rim: 0.5, rimCol: '#ffb880', glass: 0.7, glow: 0.3, vig: 0.5 },
-  night: { top: '#0e2140', bottom: '#1f3352', fog: '#1c2a40', fogNear: 16, fogFar: 80, hemiSky: '#3f5c8c', hemiGround: '#101b2c', hemi: 0.6, sun: '#9fb8e0', sunI: 0.55, sunPos: [-6, 9, -6], lantern: 11, flies: 1, stars: 1, moon: 1, exposure: 0.9, rim: 0.42, rimCol: '#ffc27a', glass: 0.4, glow: 0.75, vig: 0.5 },
+  day: { top: '#7fb8d6', bottom: '#d9e6c8', fog: '#bcd6d0', fogNear: 22, fogFar: 80, hemiSky: '#cfe8f2', hemiGround: '#5b4a30', hemi: 1.15, sun: '#fff1d6', sunI: 2.6, sunPos: [6, 10, 5], lantern: 0.6, flies: 0, stars: 0, moon: 0, exposure: 1.0, rim: 0.32, rimCol: '#fff4dc', glass: 1, glow: 0, vig: 0.42, bloom: 0.12, bloomT: 0.95 },
+  dusk: { top: '#2a3a5c', bottom: '#e0956a', fog: '#6b5a62', fogNear: 18, fogFar: 70, hemiSky: '#e0a080', hemiGround: '#3a2a22', hemi: 0.7, sun: '#ffb070', sunI: 1.4, sunPos: [-9, 3.5, 2], lantern: 5, flies: 0.5, stars: 0.3, moon: 0.4, exposure: 1.05, rim: 0.5, rimCol: '#ffb880', glass: 0.7, glow: 0.3, vig: 0.5, bloom: 0.45, bloomT: 0.7 },
+  night: { top: '#0e2140', bottom: '#1f3352', fog: '#1c2a40', fogNear: 16, fogFar: 80, hemiSky: '#3f5c8c', hemiGround: '#101b2c', hemi: 0.6, sun: '#9fb8e0', sunI: 0.55, sunPos: [-6, 9, -6], lantern: 11, flies: 1, stars: 1, moon: 1, exposure: 0.9, rim: 0.42, rimCol: '#ffc27a', glass: 0.4, glow: 0.75, vig: 0.5, bloom: 0.55, bloomT: 0.55 },
 };
 const amb = { cur: null, to: null, fixed: null };
 // Heure réelle → ambiance, avec fondus à l'aube et au crépuscule.
@@ -1126,6 +1126,7 @@ function updateAmbience(dt, t) {
   moon.position.copy(sd).multiplyScalar(-60).setY(Math.max(18, -sd.y * 60)); flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
   if (renderer) renderer.toneMappingExposure = a.exposure * (0.9 + mood * 0.04);
   updateLife(a, t, dt, sd, hourSun);
+  if (bloom) { bloom.strength = a.bloom; bloom.threshold = a.bloomT; }
   refreshEnv(false);
   return a;
 }
@@ -1201,7 +1202,7 @@ function frame(now) {
   for (let i = 0; i < flies.n; i++) { const [x, y, z, ph, sp] = flies.seed[i]; flies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.5; flies.pos[i * 3 + 1] = y + Math.sin(t * sp * 1.7 + ph * 2) * 0.25; flies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.8 + ph) * 0.5; }
   flies.pts.geometry.attributes.position.needsUpdate = true;
   ernestSprite.position.y = 0.4 + ERNEST.y + Math.sin(t * 1.6) * 0.012;
-  renderer.render(scene, camera);
+  draw();
   frames++; const pn = performance.now(); if (!fpsT) fpsT = pn; if (pn - fpsT > 1000) { if (onFps) onFps(Math.round(frames * 1000 / (pn - fpsT))); frames = 0; fpsT = pn; }
 }
 // Image fixe du bandeau : tout est amené à son état final (ciel, croissance), puis une seule image.
@@ -1214,7 +1215,7 @@ function stillFrame() {
   const t = 2.5; pop = null;
   for (let i = 0; i < 14; i++) { updateAmbience(1, t); updateGrowth(1, t); }
   windU.value = t; updateFx(nowS(), t); renderer.shadowMap.needsUpdate = true; refreshEnv(true);
-  renderer.render(scene, camera);
+  draw();
   stillDirty = false; stillSlot = slot; bandT0 = 0;
 }
 // Une image animée du bandeau : la caméra reste celle de l'image fixe, le temps repart de celui de l'image fixe.
@@ -1225,11 +1226,28 @@ function bandAnimFrame() {
   if ((bandFrames++ & 7) === 0) renderer.shadowMap.needsUpdate = true;
   pop = null;
   updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t; updateFx(nowS(), t);
-  renderer.render(scene, camera);
+  draw();
+}
+// ---------- Ordinateur : halo lumineux autour des lumières (bloom) et ombres plus douces ----------
+// Réservé à l'ordinateur (pointeur fin, pas de mobile) : sur téléphone, la batterie passe avant. Chargé à la demande.
+const DESK = typeof window !== 'undefined' && window.matchMedia && matchMedia('(pointer: fine) and (min-width: 900px)').matches && !/iPhone|iPad|Android/i.test(navigator.userAgent);
+let composer = null, bloom = null;
+const draw = () => (composer ? composer.render() : renderer.render(scene, camera));
+async function setupPost() {
+  try {
+    const base = '../vendor/jsm/postprocessing/';
+    const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all(['EffectComposer', 'RenderPass', 'UnrealBloomPass', 'OutputPass'].map((f) => import(`${base}${f}.js`)));
+    const sz = renderer.getDrawingBufferSize(new THREE.Vector2());
+    const c = new EffectComposer(renderer, new THREE.WebGLRenderTarget(sz.x, sz.y, { type: THREE.HalfFloatType, samples: 4 }));
+    c.addPass(new RenderPass(scene, camera));
+    bloom = new UnrealBloomPass(new THREE.Vector2(sz.x, sz.y), 0.4, 0.55, 0.8); c.addPass(bloom);
+    c.addPass(new OutputPass());
+    composer = c; resize();
+  } catch { composer = null; bloom = null; }
 }
 function resize() {
   if (!renderer) return; const c = renderer.domElement, w = c.clientWidth || c.parentElement.clientWidth, h = c.clientHeight || c.parentElement.clientHeight;
-  if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); vignette.material.uniforms.uAsp.value = w / h; poke();
+  if (!w || !h) return; renderer.setSize(w, h, false); if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); } camera.aspect = w / h; camera.updateProjectionMatrix(); vignette.material.uniforms.uAsp.value = w / h; poke();
 }
 
 // ---------- API ----------
@@ -1239,6 +1257,7 @@ export function mount(canvas, opts = {}) {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
+  if (DESK) { renderer.shadowMap.type = THREE.VSMShadowMap; sun.shadow.radius = 5; sun.shadow.blurSamples = 12; setupPost(); } // ordinateur : pénombre large et douce
   renderer.toneMapping = THREE.CustomToneMapping; // ACES + saturation et contraste (voir « Étalonnage » en tête)
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 48; // la vue d'ensemble en portrait est à 47
