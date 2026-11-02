@@ -30,8 +30,10 @@ export function merge(state, payload, today) {
     if (!t || !t.title) continue;
     const day = /^\d{4}-\d{2}-\d{2}$/.test(t.day || '') ? t.day : today;
     const d = ensureDay(state, day);
-    // déjà reçue une fois pour ce jour (même supprimée depuis) : jamais remise
-    if (d.things.some((x) => x.title === t.title && x.src === payload.src) || (br.days[day] || []).includes(t.title)) continue;
+    // déjà là : le moment proposé est repris si aucun n'est choisi ; déjà reçue pour ce jour (même supprimée) : jamais remise
+    const ex = d.things.find((x) => x.title === t.title && x.src === payload.src);
+    if (ex) { if (!ex.slot && t.slot && !ex.done) ex.slot = t.slot; continue; }
+    if ((br.days[day] || []).includes(t.title)) continue;
     d.things.push({ id: uid(), title: String(t.title).slice(0, 120), cat: t.cat || 'revision', est: Number(t.est) || 30, slot: t.slot || null, src: payload.src, link: t.link || null, note: t.note || null, done: false, real: 0 });
     (br.days[day] = br.days[day] || []).push(t.title);
     r.things++;
