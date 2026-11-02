@@ -33,9 +33,9 @@ scene.add(sun);
 // ---------- Ciel, étoiles, sol extérieur ----------
 const skyMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
-  uniforms: { top: { value: col('#0a1a2a') }, bottom: { value: col('#10251f') } },
+  uniforms: { top: { value: col('#0a1a2a') }, bottom: { value: col('#10251f') }, sunDir: { value: new THREE.Vector3(0, 1, 0) }, glow: { value: col('#ffd9a0') }, glowK: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y*1.4+0.15,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, h),1.0); }',
+  fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform vec3 sunDir; uniform vec3 glow; uniform float glowK; varying vec3 vP; void main(){ float h = clamp(vP.y*1.4+0.15,0.0,1.0); vec3 c = mix(bottom, top, h); float g = max(dot(normalize(vP), normalize(sunDir)), 0.0); c += glow * (pow(g, 12.0) * 0.9 + pow(g, 3.0) * 0.25) * glowK; c += glow * pow(1.0 - abs(vP.y), 6.0) * 0.18 * glowK; gl_FragColor = vec4(c, 1.0); }',
 });
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(95, 24, 12), skyMat));
 const starsGeo = new THREE.BufferGeometry(); { const r = rngOf(7), p = []; for (let i = 0; i < 500; i++) { const th = r() * Math.PI * 2, ph = r() * 1.3; p.push(70 * Math.sin(ph) * Math.cos(th), 70 * Math.cos(ph) + 4, 70 * Math.sin(ph) * Math.sin(th)); } starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); }
@@ -228,6 +228,97 @@ function GEO_BALL_SMALL() { return new THREE.IcosahedronGeometry(1, 0); }
   const um = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true }), bushes.length);
   bushes.forEach(([x, y, z, s, v], i) => { dummy.position.set(x, y, z); dummy.rotation.set(v, v * 4, 0); dummy.scale.set(s * 1.3, s * 0.8, s); dummy.updateMatrix(); um.setMatrixAt(i, dummy.matrix); um.setColorAt(i, vary(col(SEASON === 'automne' ? '#7a6a3a' : '#3f6a3a'), rngOf(i), 0.15)); });
   for (const m of [tm, cm, bm, um]) { m.castShadow = true; m.receiveShadow = true; outdoor.add(m); }
+}
+
+
+// ---------- Ciel et vie du dehors ----------
+const skyLife = { sunDir: new THREE.Vector3(0, 1, 0) };
+const softTex = (draw, w = 128, h = 128) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+// soleil : un halo
+const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,250,235,1)'); g.addColorStop(0.18, 'rgba(255,236,190,.95)'); g.addColorStop(0.4, 'rgba(255,200,120,.25)'); g.addColorStop(1, 'rgba(255,200,120,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }), transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
+sunSprite.scale.setScalar(22); scene.add(sunSprite);
+// nuages : des taches douces qui dérivent
+const cloudTex = softTex((x, w, h) => { const r = rngOf(8); for (let i = 0; i < 14; i++) { const cx = w * (0.15 + r() * 0.7), cy = h * (0.45 + (r() - 0.5) * 0.3), rr = h * (0.18 + r() * 0.2); const g = x.createRadialGradient(cx, cy, 0, cx, cy, rr); g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); } }, 256, 128);
+const clouds = [];
+{ const r = rngOf(12); for (let i = 0; i < 16; i++) { const m = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, fog: false, opacity: 0.8 }); const sp = new THREE.Sprite(m); const a = r() * Math.PI * 2, d = 45 + r() * 30, sc = 18 + r() * 22; sp.scale.set(sc, sc * 0.45, 1); sp.position.set(Math.cos(a) * d, 20 + r() * 16, Math.sin(a) * d); clouds.push({ sp, a, d, v: 0.004 + r() * 0.006 }); scene.add(sp); } }
+// brume du matin : des voiles bas
+const mist = [];
+{ const tex = softTex((x, w, h) => { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+  const r = rngOf(14); for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 })); const a = r() * 6.28, d = 14 + r() * 18; sp.position.set(Math.cos(a) * d, 0.8 + r() * 1.2, Math.sin(a) * d); sp.scale.set(16 + r() * 10, 3 + r() * 2, 1); mist.push(sp); scene.add(sp); } }
+
+// La maison d'Ernest : pierre, toit, fenêtre qui s'allume le soir, cheminée qui fume
+const cottage = new THREE.Group(); scene.add(cottage);
+const windowMat = new THREE.MeshStandardMaterial({ color: 0x2a2116, emissive: 0xffb85c, emissiveIntensity: 0.2 });
+{
+  const stoneM = new THREE.MeshStandardMaterial({ color: 0x9a907c, roughness: 1, flatShading: true }), roofM = new THREE.MeshStandardMaterial({ color: 0x6b3a2a, roughness: 0.9, flatShading: true }), woodM = M.woodDark;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.7, 2.1), stoneM); body.position.y = 0.85; cottage.add(body);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 1.85, 1.2, 4, 1), roofM); roof.rotation.y = Math.PI / 4; roof.scale.set(1.15, 1, 0.95); roof.position.y = 2.25; cottage.add(roof);
+  const chim = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.1, 0.32), stoneM); chim.position.set(0.7, 2.6, -0.4); cottage.add(chim);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.05, 0.06), woodM); door.position.set(-0.55, 0.53, 1.06); cottage.add(door);
+  for (const x of [0.55]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.42, 0.06), windowMat); w.position.set(x, 1.05, 1.06); cottage.add(w); const sill = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.06, 0.14), woodM); sill.position.set(x, 0.82, 1.1); cottage.add(sill); }
+  const side = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.45), windowMat); side.position.set(1.31, 1.05, 0.2); cottage.add(side);
+  const winLight = new THREE.PointLight(0xffb070, 0, 5, 1.8); winLight.position.set(0.5, 1.1, 1.5); cottage.add(winLight); cottage.userData.light = winLight;
+  // tas de bois et banc
+  for (let i = 0; i < 9; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.6, 6), M.bark); l.rotation.x = Math.PI / 2; l.position.set(-1.6 + (i % 3) * 0.15, 0.08 + Math.floor(i / 3) * 0.13, -0.3 + (i % 2) * 0.05); cottage.add(l); }
+  cottage.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const cx = -8.6, cz = -6.2; cottage.position.set(cx, heightAt(cx, cz), cz); cottage.rotation.y = 0.75;
+}
+const smoke = [];
+{ const tex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(230,226,215,.7)'); g.addColorStop(1, 'rgba(230,226,215,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
+  const base = new THREE.Vector3(0.7, 3.2, -0.4); cottage.updateMatrixWorld(); base.applyMatrix4(cottage.matrixWorld);
+  for (let i = 0; i < 12; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })); smoke.push({ sp, t: i / 12, base }); scene.add(sp); } }
+// La mare : eau, nénuphars, roseaux
+{
+  const px = 7.6, pz = -3.8, py = heightAt(px, pz);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(1.7, 32), new THREE.MeshStandardMaterial({ color: 0x2f5f6a, roughness: 0.08, metalness: 0.65 })); water.rotation.x = -Math.PI / 2; water.scale.set(1, 0.7, 1); water.position.set(px, py + 0.02, pz); water.receiveShadow = true; scene.add(water);
+  const r = rngOf(15), pads = new THREE.InstancedMesh(new THREE.CircleGeometry(0.16, 10, 0.3, Math.PI * 1.85), new THREE.MeshStandardMaterial({ color: 0x4f8a4a, roughness: 0.7, side: THREE.DoubleSide }), 7);
+  for (let i = 0; i < 7; i++) { dummy.position.set(px + (r() - 0.5) * 2, py + 0.04, pz + (r() - 0.5) * 1.2); dummy.rotation.set(-Math.PI / 2, 0, r() * 6); dummy.scale.setScalar(0.8 + r() * 0.6); dummy.updateMatrix(); pads.setMatrixAt(i, dummy.matrix); }
+  scene.add(pads);
+  const reeds = new THREE.InstancedMesh(new THREE.ConeGeometry(0.02, 1, 3), new THREE.MeshStandardMaterial({ color: 0x6b7a3a, roughness: 1 }), 60);
+  for (let i = 0; i < 60; i++) { const a = r() * 6.28; dummy.position.set(px + Math.cos(a) * (1.6 + r() * 0.35), py + 0.4, pz + Math.sin(a) * (1.1 + r() * 0.3)); dummy.rotation.set((r() - 0.5) * 0.3, 0, (r() - 0.5) * 0.3); dummy.scale.set(1, 0.6 + r() * 0.7, 1); dummy.updateMatrix(); reeds.setMatrixAt(i, dummy.matrix); }
+  scene.add(reeds);
+}
+// Oiseaux le jour
+const birds = [];
+{ const wingG = new THREE.BufferGeometry(); wingG.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -0.08, 0, 0, 0.1, 0.42, 0, 0.02], 3)); wingG.computeVertexNormals();
+  const mat = new THREE.MeshBasicMaterial({ color: 0x2a2a2a, side: THREE.DoubleSide });
+  const r = rngOf(16); for (let i = 0; i < 9; i++) { const g = new THREE.Group(); const L = new THREE.Mesh(wingG, mat), R = new THREE.Mesh(wingG, mat); R.scale.x = -1; g.add(L, R); scene.add(g); birds.push({ g, L, R, a: r() * 6.28, rad: 14 + r() * 14, h: 9 + r() * 7, v: 0.12 + r() * 0.08, ph: r() * 6 }); } }
+// Papillons le jour
+const flutters = [];
+{ const wg = new THREE.PlaneGeometry(0.09, 0.07); wg.translate(0.045, 0, 0);
+  const r = rngOf(17), cols = SEASON === 'automne' ? ['#d9a03a', '#c9772e', '#f4efe6'] : ['#f2d24a', '#9ec8f0', '#f4efe6', '#e86f8a'];
+  for (let i = 0; i < (SEASON === 'hiver' ? 0 : 12); i++) { const m = new THREE.MeshBasicMaterial({ color: col(cols[i % cols.length]), side: THREE.DoubleSide }); const g = new THREE.Group(); const L = new THREE.Mesh(wg, m), R = new THREE.Mesh(wg, m); R.rotation.y = Math.PI; g.add(L, R); scene.add(g);
+    const a = r() * 6.28, d = 5 + r() * 6; flutters.push({ g, L, R, cx: Math.cos(a) * d, cz: Math.sin(a) * d * 1.1, ph: r() * 10, sp: 0.4 + r() * 0.4 }); } }
+// Lucioles du dehors
+const outFlies = (() => {
+  const n = 80, pos = new Float32Array(n * 3), seed = [], r = rngOf(18);
+  for (let i = 0; i < n; i++) { const a = r() * 6.28, d = 5 + r() * 9; seed.push([Math.cos(a) * d, 0.3 + r() * 1.4, Math.sin(a) * d * 1.15, r() * 10, 0.2 + r() * 0.4]); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.14, map: softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,240,170,1)'); g.addColorStop(0.3, 'rgba(242,190,61,.6)'); g.addColorStop(1, 'rgba(242,178,61,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  scene.add(pts); return { pts, pos, seed, n };
+})();
+
+function updateLife(a, t, dt, sd, hour) {
+  const dayF = Math.max(0, Math.min(1, (sd.y + 0.05) * 5));
+  // soleil et lune
+  sunSprite.position.copy(sd).multiplyScalar(80); sunSprite.material.opacity = Math.max(0, Math.min(1, (sd.y + 0.08) * 6)); sunSprite.visible = sunSprite.material.opacity > 0.01;
+  sunSprite.material.color.set(sd.y < 0.15 ? '#ffb070' : '#fff1d6');
+  // nuages : teinte selon l'heure
+  const tint = col(a.top).lerp(col('#ffffff'), 0.35 + dayF * 0.55); if (sd.y > -0.1 && sd.y < 0.2) tint.lerp(col('#ffb48a'), 0.45);
+  for (const c of clouds) { c.a += c.v * dt; c.sp.position.x = Math.cos(c.a) * c.d; c.sp.position.z = Math.sin(c.a) * c.d; c.sp.material.color.copy(tint); c.sp.material.opacity = 0.35 + dayF * 0.5; }
+  // brume du matin, de l'aube à 10 h
+  const { rise } = sunTimes(), mf = Math.max(0, 1 - Math.abs(hour - (rise + 1.2)) / 2.2) * 0.55;
+  for (const m of mist) { m.material.opacity = mf; m.visible = mf > 0.01; m.material.color.set(a.fog); }
+  // maison : fenêtre et fumée
+  const night = 1 - dayF; windowMat.emissiveIntensity = 0.2 + night * 2.2; cottage.userData.light.intensity = night * 3;
+  for (const s of smoke) { s.t = (s.t + dt * 0.08) % 1; const k = s.t; s.sp.position.set(s.base.x + Math.sin(k * 6 + t * 0.3) * 0.3 + k * 1.2, s.base.y + k * 4, s.base.z - k * 0.6); s.sp.scale.setScalar(0.4 + k * 1.8); s.sp.material.opacity = (1 - k) * 0.45 * (0.6 + night * 0.4); s.sp.material.color.set(night > 0.5 ? '#8a8a90' : '#e6e2d7'); }
+  // oiseaux
+  for (const b of birds) { b.g.visible = dayF > 0.4; if (!b.g.visible) continue; b.a += b.v * dt; b.g.position.set(Math.cos(b.a) * b.rad, b.h + Math.sin(t * 0.5 + b.ph) * 0.8, Math.sin(b.a) * b.rad); b.g.rotation.y = -b.a; const f = Math.sin(t * 9 + b.ph) * 0.6; b.L.rotation.z = f; b.R.rotation.z = -f; }
+  // papillons
+  for (const f of flutters) { f.g.visible = dayF > 0.5; if (!f.g.visible) continue; const k = t * f.sp + f.ph; const x = f.cx + Math.sin(k) * 1.4 + Math.sin(k * 2.3) * 0.4, z = f.cz + Math.cos(k * 0.8) * 1.2; f.g.position.set(x, heightAt(x, z) + 0.45 + Math.sin(k * 3) * 0.25, z); f.g.rotation.y = k; const w = Math.sin(t * 18 + f.ph) * 1.1; f.L.rotation.y = w; f.R.rotation.y = Math.PI - w; }
+  // lucioles du dehors
+  outFlies.pts.material.opacity = a.flies; outFlies.pts.visible = a.flies > 0.02;
+  if (outFlies.pts.visible) { for (let i = 0; i < outFlies.n; i++) { const [x, y, z, ph, sp] = outFlies.seed[i]; outFlies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.8; outFlies.pos[i * 3 + 1] = heightAt(x, z) + y + Math.sin(t * sp * 1.6 + ph) * 0.3; outFlies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.7 + ph) * 0.8; } outFlies.pts.geometry.attributes.position.needsUpdate = true; }
 }
 
 // ---------- Géométries de feuilles ----------
@@ -498,30 +589,43 @@ const TIMES = {
 };
 const amb = { cur: null, to: null, fixed: null };
 // Heure réelle → ambiance, avec fondus à l'aube et au crépuscule.
+const DAYLEN = [8.4, 9.9, 11.8, 13.6, 15.2, 16.1, 15.7, 14.3, 12.5, 10.7, 9.1, 8.2];
+const NOON = [12.9, 13.1, 13.2, 13.9, 13.8, 13.9, 14.1, 14.0, 13.8, 13.6, 12.7, 12.8];
+function sunTimes(d = new Date()) { const m = d.getMonth(), L = DAYLEN[m], n = NOON[m]; return { rise: n - L / 2, set: n + L / 2, maxEl: [0.36, 0.48, 0.66, 0.85, 1.0, 1.1, 1.06, 0.95, 0.78, 0.58, 0.42, 0.33][m] }; }
+function sunDirAt(h) {
+  const { rise, set, maxEl } = sunTimes(), t = (h - rise) / (set - rise), el = Math.sin(Math.PI * Math.max(-0.15, Math.min(1.15, t))) * maxEl - (t < 0 || t > 1 ? 0.25 : 0), az = Math.PI * t;
+  return new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), -Math.sin(az) * Math.cos(el) - 0.35).normalize();
+}
 function timeFor(h) {
+  const { rise, set } = sunTimes();
   const mix = (a, b, t) => { const o = {}; for (const k of Object.keys(a)) o[k] = typeof a[k] === 'number' ? lerp(a[k], b[k], t) : Array.isArray(a[k]) ? a[k].map((v, i) => lerp(v, b[k][i], t)) : '#' + col(a[k]).lerp(col(b[k]), t).getHexString(); return o; };
   const T = TIMES;
-  if (h < 5.5 || h >= 22) return T.night;
-  if (h < 7) return mix(T.night, T.dusk, (h - 5.5) / 1.5);
-  if (h < 8.5) return mix(T.dusk, T.day, (h - 7) / 1.5);
-  if (h < 17.5) return T.day;
-  if (h < 19.5) return mix(T.day, T.dusk, (h - 17.5) / 2);
-  return mix(T.dusk, T.night, (h - 19.5) / 2.5);
+  if (h < rise - 1.2 || h >= set + 1.6) return T.night;
+  if (h < rise) return mix(T.night, T.dusk, (h - rise + 1.2) / 1.2);
+  if (h < rise + 1.2) return mix(T.dusk, T.day, (h - rise) / 1.2);
+  if (h < set - 1.2) return T.day;
+  if (h < set) return mix(T.day, T.dusk, (h - set + 1.2) / 1.2);
+  return mix(T.dusk, T.night, (h - set) / 1.6);
 }
 const nowHour = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
 function updateAmbience(dt, t) {
-  amb.to = amb.fixed ? TIMES[amb.fixed] : timeFor(nowHour());
+  const { set } = sunTimes(), hourSun = amb.fixed ? { day: 13.2, dusk: set - 0.25, night: 23 }[amb.fixed] : nowHour();
+  amb.to = amb.fixed ? TIMES[amb.fixed] : timeFor(hourSun);
   if (!amb.cur) amb.cur = JSON.parse(JSON.stringify(amb.to));
   const a = amb.cur, b = amb.to, k = Math.min(1, dt * 2.5);
   for (const key of Object.keys(b)) { if (typeof b[key] === 'number') a[key] = lerp(a[key], b[key], k); else if (Array.isArray(b[key])) a[key] = a[key].map((v, i) => lerp(v, b[key][i], k)); else a[key] = '#' + col(a[key]).lerp(col(b[key]), k).getHexString(); }
   const mood = model.mood, m = 0.75 + mood * 0.09;
   skyMat.uniforms.top.value.set(a.top); skyMat.uniforms.bottom.value.set(a.bottom); scene.fog.color.set(a.fog);
   hemi.color.set(a.hemiSky); hemi.groundColor.set(a.hemiGround); hemi.intensity = a.hemi * m;
-  sun.color.set(a.sun); sun.intensity = a.sunI * m; sun.position.set(...a.sunPos);
+  const sd = sunDirAt(hourSun); skyLife.sunDir.copy(sd);
+  sun.color.set(a.sun); sun.intensity = a.sunI * m;
+  if (sd.y > 0.02) sun.position.copy(sd).multiplyScalar(16); else sun.position.set(...a.sunPos);
+  skyMat.uniforms.sunDir.value.copy(sd); skyMat.uniforms.glowK.value = Math.max(0, Math.min(1, (sd.y + 0.12) * 4)); skyMat.uniforms.glow.value.set(sd.y < 0.18 ? '#ff9a5a' : '#ffe2b0');
   for (const l of lanterns) l.light.intensity = a.lantern * (0.8 + mood * 0.08) * (0.95 + Math.sin(t * 7 + l.g.position.z) * 0.03);
   M.bulb.emissiveIntensity = 0.4 + a.lantern * 0.3;
-  flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
+  moon.position.copy(sd).multiplyScalar(-60).setY(Math.max(18, -sd.y * 60)); flies.mat.opacity = a.flies; stars.material.opacity = a.stars * 0.85; moon.material.opacity = a.moon; moon.material.transparent = true; moon.visible = a.moon > 0.02;
   if (renderer) renderer.toneMappingExposure = a.exposure * (0.9 + mood * 0.04);
+  updateLife(a, t, dt, sd, hourSun);
   return a;
 }
 
@@ -553,8 +657,7 @@ function frame(now) {
   last = now;
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
   if (mode === 'band') {
-    const a = Math.sin(t * 0.06) * 0.14, r = BAND.pos.z - BAND.target.z;
-    camera.position.set(BAND.target.x + Math.sin(a) * r, BAND.pos.y + Math.sin(t * 0.09) * 0.08, BAND.target.z + Math.cos(a) * r); camera.lookAt(BAND.target);
+    camera.position.copy(BAND.pos); camera.lookAt(BAND.target); // vue fixe : aucun mouvement de caméra dans la bande
   } else { controls.update(); const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
   updateAmbience(dt, t); updateGrowth(dt, t); windU.value = t;
   for (let i = 0; i < flies.n; i++) { const [x, y, z, ph, sp] = flies.seed[i]; flies.pos[i * 3] = x + Math.sin(t * sp + ph) * 0.5; flies.pos[i * 3 + 1] = y + Math.sin(t * sp * 1.7 + ph * 2) * 0.25; flies.pos[i * 3 + 2] = z + Math.cos(t * sp * 0.8 + ph) * 0.5; }
