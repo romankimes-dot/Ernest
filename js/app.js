@@ -7,8 +7,8 @@ import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpiso
 import { decode, merge } from './bridge.js';
 import { icon } from './icons.js';
 
-const VERSION = '0.3.0';
-let S, today, tab = 'today', garden, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
+const VERSION = '0.4.0';
+let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const save = () => store.save(S);
@@ -25,7 +25,8 @@ const fmtDay = (k) => new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekd
 async function init() {
   S = store.load(); today = dayKey();
   S._light = moodAvg(S, today);
-  garden = new Garden($('#garden')); garden.update(S, today); garden.start();
+  garden = new Garden($('#garden')); gardenUpdate(); garden.start();
+  setupGarden3d();
   document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('#fab').addEventListener('click', () => captureSheet(tab === 'liste' ? 'list' : tab === 'semaine' ? 'goal' : 'today'));
   $('#btnSettings').addEventListener('click', settingsSheet);
@@ -48,11 +49,38 @@ async function init() {
 
 function onReturn() {
   const k = dayKey();
-  if (k !== today) { today = k; S._light = moodAvg(S, today); garden.update(S, today); greet(); render(); return; }
+  if (k !== today) { today = k; S._light = moodAvg(S, today); gardenUpdate(); greet(); render(); return; }
   const running = dayOf(S, today).things.find((t) => t.startedAt && !t.done && t.link);
   if (running && Date.now() - running.startedAt > 3 * 60000 && !running._asked) { running._asked = true; const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'retour', e) || 'Te revoilà.'); save(); doneSheet(running); }
   else greet();
   render();
+}
+
+// ---------- La serre : 3D si possible, 2D sinon ----------
+function gardenUpdate() { garden.update(S, today); if (g3d) g3d.update(S, today); }
+function gardenWater() { garden.water(); if (g3d) g3d.water(); }
+async function setupGarden3d() {
+  if (S.settings.garden3d === false) return;
+  try {
+    const mod = await import('./garden3d.js');
+    if (!mod.webglOk()) return;
+    const c = $('#garden3d'); c.hidden = false;
+    g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today);
+    $('#garden').hidden = true; garden.stop();
+    c.addEventListener('click', openSerre);
+    $('#serreClose').addEventListener('click', closeSerre);
+  } catch (e) { g3d = null; $('#garden3d').hidden = true; $('#garden').hidden = false; garden.start(); }
+}
+function openSerre() {
+  if (!g3d) return;
+  const n = totalDone(S), pl = S.garden.plants.filter((p) => p.kind === 'plant').length;
+  $('#sfCap').innerHTML = `<b>${pl} plante${pl > 1 ? 's' : ''}</b> · ${n} chose${n > 1 ? 's' : ''} faite${n > 1 ? 's' : ''}<br><span>Glisse pour tourner, pince pour approcher.</span>`;
+  const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
+  g3d.setMode('full');
+}
+function closeSerre() {
+  $('#serre').prepend($('#garden3d')); $('#serreFull').hidden = true;
+  if (g3d) g3d.setMode('band');
 }
 
 // ---------- Glisser vers le bas pour recharger ----------
@@ -62,7 +90,7 @@ function pullToRefresh() {
   const TH = 70; let y0 = null, d = 0, busy = false;
   const reset = () => { ind.style.transition = 'transform .25s, opacity .25s'; ind.style.transform = 'translate(-50%, -48px)'; ind.style.opacity = '0'; ind.classList.remove('ready'); d = 0; };
   window.addEventListener('touchstart', (e) => {
-    y0 = (busy || window.scrollY > 0 || !$('#sheet').hidden || e.touches.length > 1) ? null : e.touches[0].clientY;
+    y0 = (busy || window.scrollY > 0 || !$('#sheet').hidden || !$('#serreFull').hidden || e.touches.length > 1) ? null : e.touches[0].clientY;
     ind.style.transition = 'none';
   }, { passive: true });
   window.addEventListener('touchmove', (e) => {
@@ -127,7 +155,7 @@ function greet() {
 // ---------- Navigation ----------
 function switchTab(t) { tab = t; document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); render(); window.scrollTo(0, 0); }
 function render() {
-  S._light = moodAvg(S, today); garden.update(S, today);
+  S._light = moodAvg(S, today); gardenUpdate();
   const v = $('#view');
   v.innerHTML = tab === 'today' ? viewToday() : tab === 'liste' ? viewListe() : tab === 'semaine' ? viewSemaine() : viewCarnet();
   bindView(v);
@@ -213,7 +241,8 @@ const TOUR = [
   ['moon', 'Le soir', "À partir de 18 h, « Préparer demain » : une ligne sur ta journée, ton humeur, puis trois choses pour demain, souvent prises dans la liste."],
   ['plus', 'Le bouton +', "Il attrape tout, de partout. Tu choisis où ça va : aujourd'hui, la liste, une idée, ou un objectif avec ses étapes."],
   ['hand', 'Modifier, supprimer', "Touche une ligne pour la modifier, la reporter à demain ou la supprimer. Glisse-la vers la gauche pour la supprimer d'un geste. Tu peux toujours annuler."],
-  ['week', 'Semaine et carnet', "Le dimanche, on regarde ce qui a poussé et on avance les objectifs. Le carnet garde les cartes gagnées et ce qu'Ernest t'a dit."],
+  ['week', 'Semaine', "Jour par jour, ce qui est fait et ce qui est resté en suspens : le soleil le remet à aujourd'hui, la corbeille le supprime. Le dimanche, on regarde ce qui a poussé et on avance les objectifs."],
+  ['carnet', 'Carnet et serre', "Le carnet garde les cartes gagnées et ce qu'Ernest t'a dit. Touche la serre pour l'ouvrir en grand et la parcourir au doigt."],
 ];
 function tourSheet(i = 0) {
   const [ic, t, txt] = TOUR[i], last = i === TOUR.length - 1;
@@ -267,9 +296,12 @@ function action(act, ds, el, v) {
     case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; } else { l.done = true; l.doneAt = new Date().toISOString(); plant(l.cat || 'perso', 'moss'); const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
     case 'listEdit': listSheet(S.list.find((x) => x.id === ds.id)); break;
     case 'ideaAct': { const i = S.ideas.find((x) => x.id === ds.id); if (!i) return; if (ds.v === 'todo') { S.list.push({ id: uid(), text: i.text, cat: null, due: null, done: false, at: new Date().toISOString() }); i.status = 'done'; } else if (ds.v === 'keep') i.status = 'kept'; else if (ds.v === 'drop') i.status = 'dropped'; else if (ds.v === 'goal') { S.goals.push({ id: uid(), title: i.text, cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} }); i.status = 'done'; } save(); render(); break; }
+    case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) t.real = 0; save(); render(); break; }
+    case 'jToday': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); d.things.push({ ...t, startedAt: null }); d.planned = true; save(); toast('Remise dans ta journée.'); render(); break; }
+    case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
     case 'fam': carnetFam = ds.v; render(); break;
-    case 'goalMs': { const g = S.goals.find((x) => x.id === ds.id); const m = g && g.milestones[Number(ds.i)]; if (!m) return; m.done = !m.done; if (m.done) { m.doneAt = today; let p = S.garden.plants.find((x) => x.kind === 'bonsai' && x.goal === g.id); if (!p) { p = { id: uid(), cat: g.cat, day: today, seed: Math.floor(Math.random() * 1e9), kind: 'bonsai', goal: g.id, branches: 0 }; S.garden.plants.push(p); } p.branches = g.milestones.filter((x) => x.done).length; garden.water(); } save(); render(); break; }
+    case 'goalMs': { const g = S.goals.find((x) => x.id === ds.id); const m = g && g.milestones[Number(ds.i)]; if (!m) return; m.done = !m.done; if (m.done) { m.doneAt = today; let p = S.garden.plants.find((x) => x.kind === 'bonsai' && x.goal === g.id); if (!p) { p = { id: uid(), cat: g.cat, day: today, seed: Math.floor(Math.random() * 1e9), kind: 'bonsai', goal: g.id, branches: 0 }; S.garden.plants.push(p); } p.branches = g.milestones.filter((x) => x.done).length; gardenWater(); } save(); render(); break; }
     case 'goalEdit': goalSheet(S.goals.find((x) => x.id === ds.id)); break;
     case 'addGoal': goalSheet(); break;
     case 'review': reviewSheet(); break;
@@ -297,7 +329,7 @@ function doneSheet(t) {
 function markDone(t, real) {
   t.done = true; t.real = real; t.doneAt = new Date().toISOString(); t.startedAt = null;
   if (t.fromList) { const l = S.list.find((x) => x.id === t.fromList); if (l) { l.done = true; l.doneAt = t.doneAt; } }
-  plant(t.cat, 'plant'); garden.water(); setErnest('arrose'); setTimeout(() => setErnest(), 2500);
+  plant(t.cat, 'plant'); gardenWater(); setErnest('arrose'); setTimeout(() => setErnest(), 2500);
   const d = dayOf(S, today), all = d.things.every((x) => x.done);
   const e = ernestEnv(S, today, plantNames()); bubble(say(S, all ? 'coche.derniere' : 'coche', e));
   const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.');
@@ -438,6 +470,7 @@ function viewSemaine() {
   const cats = CATS.filter((c) => counts[c.id] || mins.some((m) => m.cat === c.id));
   if (cats.length) h += `<div class="bars">${cats.map((c) => { const m = mins.find((x) => x.cat === c.id); const n = counts[c.id] || 0; return `<div><span>${c.nom}</span><i style="width:${Math.round((n / max) * 100)}%;background:${c.couleur}"></i><span class="muted">${n}${m && minsOn ? ` / ${m.min}` : ''}</span></div>`; }).join('')}</div>`;
   if (!minsOn) h += `<div class="muted small">Les minimums doux démarrent le ${new Date(S.settings.minimumsFrom + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. D'ici là, seule la révision compte.</div>`;
+  h += journalHtml();
   const reviewed = S.weeks[wk] && S.weeks[wk].reviewedAt;
   h += `<button class="btn ${dow(today) === 0 && !reviewed ? '' : 'ghost'}" data-act="review">${reviewed ? 'Revoir le point de la semaine' : 'Faire le point de la semaine'}</button>`;
   const goals = S.goals.filter((g) => g.status === 'active').sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
@@ -446,6 +479,21 @@ function viewSemaine() {
   h += goals.length ? `<div class="stack">${goals.map((g) => { const c = catOf(g.cat), left = g.due ? Math.round((new Date(g.due) - new Date(today)) / 86400000) : null; const done = g.milestones.filter((m) => m.done).length; return `<div class="goal"><div class="row spread" data-act="goalEdit" data-id="${g.id}"><div class="row"><span class="dot" style="background:${c.couleur}"></span><b>${esc(g.title)}</b></div><span class="muted small">${g.due ? (left >= 0 ? `J-${left}` : 'passé') : g.horizon === 'week' ? 'semaine' : ''}</span></div>${g.milestones.map((m, i) => `<div class="ms ${m.done ? 'done' : ''}" data-act="goalMs" data-id="${g.id}" data-i="${i}"><span class="check">${m.done ? icon('check', 'sm') : ''}</span><span>${esc(m.text)}${m.due ? ` <span class="small">· ${new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>` : ''}</span></div>`).join('')}${g.milestones.length ? `<div class="muted small">${done} / ${g.milestones.length} jalons${g.reviews && g.reviews[wk] ? ` · ${g.reviews[wk]}` : ''}</div>` : ''}</div>`; }).join('')}</div>` : `<div class="muted">Aucun objectif. Un court, un moyen, ça suffit.</div>`;
   if (Date.now() - (S.lastExportAt || 0) > 7 * 86400000 && totalDone(S) > 3) h += `<button class="card row spread" data-act="export" style="width:100%;text-align:left"><span>Sauvegarder la serre<br><span class="muted small">Tout est sur ce téléphone. Un export par semaine, par sécurité.</span></span><span style="color:var(--amber)">${icon('arrow')}</span></button>`;
   return h;
+}
+// Journal : les sept derniers jours, ce qui est fait et ce qui ne l'est pas.
+function journalHtml() {
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const k = addDays(today, -i), d = dayOf(S, k);
+    const listDone = S.list.filter((l) => l.done && l.doneAt && l.doneAt.slice(0, 10) === k);
+    if (!d.things.length && !listDone.length) continue;
+    const done = d.things.filter((t) => t.done).length + listDone.length, open = d.things.filter((t) => !t.done).length;
+    const label = i === 0 ? "Aujourd'hui" : i === 1 ? 'Hier' : new Date(k + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' });
+    out.push(`<div class="jday"><div class="row spread"><b class="cap">${esc(label)}</b><span class="muted small">${done} fait${done > 1 ? 's' : ''}${open ? ` · ${open} en suspens` : ''}</span></div>
+    ${d.things.map((t) => `<div class="jrow ${t.done ? 'done' : ''}"><button class="check sm" data-act="jToggle" data-day="${k}" data-id="${t.id}" aria-label="${t.done ? 'Annuler' : 'Fait'}">${t.done ? icon('check') : ''}</button><span class="dot" style="background:${catOf(t.cat).couleur}"></span><span class="t">${esc(t.title)}</span>${t.done ? `<span class="muted small">${t.real ? `${t.real} min` : ''}</span>` : `${i ? `<button class="mini" data-act="jToday" data-day="${k}" data-id="${t.id}" aria-label="Remettre à aujourd'hui">${icon('sun')}</button>` : ''}<button class="mini" data-act="jDel" data-day="${k}" data-id="${t.id}" aria-label="Supprimer">${icon('trash')}</button>`}</div>`).join('')}
+    ${listDone.map((l) => `<div class="jrow done"><span class="check sm">${icon('check')}</span><span class="dot" style="background:${l.cat ? catOf(l.cat).couleur : 'var(--fg2)'}"></span><span class="t">${esc(l.text)}</span><span class="muted small">liste</span></div>`).join('')}</div>`);
+  }
+  return out.length ? `<div class="row spread" style="margin-top:6px"><h2>Jour par jour</h2></div><div class="muted small">Ce qui est fait reste coché. Ce qui ne l'est pas : le soleil le remet à aujourd'hui, la corbeille le supprime. Une coche se retire d'un toucher.</div><div class="stack">${out.join('')}</div>` : '';
 }
 function goalSheet(g) {
   const isNew = !g; g = g || { id: uid(), title: '', cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} };
@@ -503,15 +551,16 @@ function settingsSheet() {
   <div class="row"><div class="kv" style="flex:1"><label>Prénom</label><input id="sName" value="${esc(s.prenom)}"></div><div class="kv" style="flex:1"><label>Rituel du soir à partir de</label><input id="sHour" type="number" min="17" max="23" value="${s.ritualHour}"></div></div>
   <div class="row"><div class="kv" style="flex:1"><label>Prochain examen</label><input id="sExam" type="date" value="${s.exam || ''}"></div><div class="kv" style="flex:1"><label>Son nom</label><input id="sExamL" value="${esc(s.examLabel)}"></div></div>
   <div class="kv"><label>Minimums doux par semaine (0 = aucun), actifs à partir du</label><div class="row"><input id="sMinFrom" type="date" value="${s.minimumsFrom || ''}"></div><div class="chips">${CATS.map((c) => `<span class="chip"><span class="dot" style="background:${c.couleur}"></span>${c.nom} <input data-min="${c.id}" type="number" min="0" max="14" value="${s.minimums[c.id] || 0}" style="width:48px;padding:2px 6px;border-radius:8px"></span>`).join('')}</div></div>
+  <label class="row" style="gap:10px"><input type="checkbox" id="s3d" style="width:auto" ${s.garden3d !== false ? 'checked' : ''}> Serre en 3D <span class="muted small">(sinon la serre dessinée, plus légère)</span></label>
   <div class="muted small">Rappel du soir : iOS ne permet pas à Ernest d'envoyer une notification seul. Une alarme « ${s.ritualHour} h, Ernest » dans Horloge fait le travail.</div>
   <button class="btn" id="sSave">Enregistrer</button>
   <h3>Sauvegarde</h3><div class="btns"><button class="btn quiet" id="sExport">Exporter</button><button class="btn quiet" id="sImport">Importer</button></div>
   <div class="kv"><label>Pont (coller ce que Dec-Deonto, dec-revision ou le mémoire ont produit)</label><textarea id="sBridge" placeholder="#import=… ou JSON"></textarea><button class="btn quiet" id="sBridgeGo">Lire le pont</button></div>
   <div class="btns"><button class="btn quiet" id="sHelp">${icon('help', 'sm')} La visite</button><button class="btn quiet" id="sIntro">${icon('leaf', 'sm')} L'arrivée d'Ernest</button></div>
-  <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} Voir la serre en 3D (maquette)</a>
+  <a class="btn quiet" href="./serre3d.html">${icon('cube', 'sm')} La serre à quatre stades (démonstration)</a>
   <button class="btn danger" id="sReset">${icon('trash', 'sm')} Tout effacer</button>
   <div class="muted small">Ernest ${VERSION} · ${totalDone(S)} choses faites · ${S.garden.plants.length} plantes</div>`);
-  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
+  $('#sSave').addEventListener('click', () => { s.prenom = $('#sName').value.trim(); s.ritualHour = Number($('#sHour').value) || 21; s.exam = $('#sExam').value || null; s.examLabel = $('#sExamL').value.trim() || 'Examen'; s.minimumsFrom = $('#sMinFrom').value || null; const was3d = s.garden3d !== false; s.garden3d = $('#s3d').checked; if (was3d !== s.garden3d) { save(); location.reload(); return; } document.querySelectorAll('[data-min]').forEach((i) => { s.minimums[i.dataset.min] = Number(i.value) || 0; }); save(); closeSheet(); render(); });
   $('#sExport').addEventListener('click', exportSheet);
   $('#sImport').addEventListener('click', () => { openSheet(`<h2>Importer</h2><textarea id="impText" placeholder="Coller l'export JSON" style="min-height:140px"></textarea><button class="btn" id="impGo">Remplacer par cet export</button><div class="muted small">L'état actuel est gardé en copie.</div>`); $('#impGo').addEventListener('click', () => { const ns = store.importJSON($('#impText').value); if (!ns) { toast('Illisible.'); return; } store.snapshotPrev(S); S = ns; save(); closeSheet(); render(); toast('Importé.'); }); });
   $('#sBridgeGo').addEventListener('click', () => { const p = decode($('#sBridge').value); if (!p) { toast('Pont illisible.'); return; } importSheet(p); });

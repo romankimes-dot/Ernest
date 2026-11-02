@@ -12,7 +12,7 @@
     :root{--bg:#0b1511;--bg2:#12201a;--fg:#efe6d2;--fg2:#a9b5a3;--amber:#f2b23d;--line:#243b31;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0;height:100%;background:#08131c;color:var(--fg);font-family:-apple-system,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
-    canvas{display:block;width:100%;height:100%;touch-action:none}
+    canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
     button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
     .ic{width:20px;height:20px;vertical-align:-4px}
     .top{position:fixed;left:0;right:0;top:0;padding:calc(var(--sat) + 10px) max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(rgba(8,19,28,.75),rgba(8,19,28,0));pointer-events:none}
