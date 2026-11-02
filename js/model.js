@@ -1,15 +1,33 @@
 // Fonctions pures : dates, semaines, estimations, comptes, choix des répliques et des cartes.
 // Aucune dépendance au DOM ni au stockage ; testées dans tests/model.test.js.
 
+// Trois catégories, une par serre. Les anciennes (révision, corps…) sont converties à la lecture.
 export const CATS = [
-  { id: 'revision', nom: 'Révision', couleur: '#f2b23d' },
-  { id: 'corps', nom: 'Corps', couleur: '#5fae6d' },
-  { id: 'esprit', nom: 'Esprit', couleur: '#6fb3c9' },
-  { id: 'cuisine', nom: 'Cuisine', couleur: '#c7772a' },
-  { id: 'boulot', nom: 'Boulot', couleur: '#efe6d2' },
-  { id: 'perso', nom: 'Perso', couleur: '#a9b5a3' },
+  { id: 'travail', nom: 'Travail', couleur: '#f2b23d' },
+  { id: 'bienetre', nom: 'Bien-être', couleur: '#5fae6d' },
+  { id: 'perso', nom: 'Vie perso', couleur: '#8fb3d9' },
 ];
-export const catOf = (id) => CATS.find((c) => c.id === id) || CATS[5];
+export const OLD_CATS = { revision: 'travail', boulot: 'travail', corps: 'bienetre', esprit: 'bienetre', cuisine: 'bienetre', perso: 'perso' };
+export const catId = (c) => (CATS.some((x) => x.id === c) ? c : OLD_CATS[c] || 'perso');
+export const catOf = (id) => CATS.find((c) => c.id === catId(id));
+// Végétaux de chaque serre : un mélange cohérent, choisi par la graine de la plante (le même partout : 3D, 2D, Ernest).
+export const FLORA = {
+  travail: [['ficus', 'le ficus'], ['broadleaf', 'le caoutchouc'], ['lavender', 'la lavande'], ['lavender', 'la lavande'], ['fern', 'la fougère']],
+  bienetre: [['succulent', 'la plante grasse'], ['cactus', 'le cactus'], ['thyme', 'le thym'], ['basil', 'le basilic'], ['rosemary', 'le romarin'], ['mossy', 'la mousse']],
+  perso: [['wildflowers', 'les fleurs des champs'], ['wildflowers', 'les fleurs des champs'], ['flowering', 'le géranium'], ['violet', 'la violette'], ['tallgrass', 'les hautes herbes']],
+};
+export const floraOf = (p) => { const l = FLORA[catId(p.cat)]; const h = Math.imul((p.seed >>> 0) ^ 0x9e3779b9, 0x85ebca6b) >>> 0; return l[h % l.length]; };
+// Convertit un état ancien (six catégories) vers les trois serres. Sans effet sur un état déjà converti.
+export function migrateCats(state) {
+  const fix = (o) => { if (o && o.cat !== undefined && o.cat !== null && !CATS.some((x) => x.id === o.cat)) o.cat = catId(o.cat); };
+  const each = (a) => { if (Array.isArray(a)) a.forEach(fix); };
+  if (state.days && typeof state.days === 'object') for (const d of Object.values(state.days)) each(d && d.things);
+  for (const k of ['list', 'goals', 'series']) each(state[k]);
+  each((state.garden || {}).plants);
+  const m = (state.settings || {}).minimums;
+  if (m && Object.keys(m).some((k) => !CATS.some((x) => x.id === k))) { const n = {}; for (const [k, v] of Object.entries(m)) { const c = catId(k); n[c] = Math.max(n[c] || 0, Number(v) || 0); } state.settings.minimums = n; }
+  return state;
+}
 
 const pad = (n) => String(n).padStart(2, '0');
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -121,8 +139,8 @@ export function examPrep(state, k) {
   if (state.milestones[key]) return false;
   const bed = (state.settings.bedtime || '22:30').replace(':', ' h '), L = state.settings.examLabel || "l'examen";
   const items = k === ex
-    ? [[`${L} : partir tôt, convocation, pièce d'identité, eau, montre`, 'revision', 'matin'], ['Midi au calme, manger léger, ne pas refaire les sujets', 'corps', 'midi'], ['Soirée libre, sans bilan', 'perso', 'soir']]
-    : [['Vérifier convocation, trajet et horaires', 'perso', 'matin'], ['Relecture légère, rien de nouveau', 'revision', 'aprem'], [`Écrans posés, coucher à ${bed}`, 'corps', 'soir']];
+    ? [[`${L} : partir tôt, convocation, pièce d'identité, eau, montre`, 'travail', 'matin'], ['Midi au calme, manger léger, ne pas refaire les sujets', 'bienetre', 'midi'], ['Soirée libre, sans bilan', 'perso', 'soir']]
+    : [['Vérifier convocation, trajet et horaires', 'perso', 'matin'], ['Relecture légère, rien de nouveau', 'travail', 'aprem'], [`Écrans posés, coucher à ${bed}`, 'bienetre', 'soir']];
   const d = ensureDay(state, k);
   for (const [title, cat, slot] of items) if (!d.things.some((t) => t.title === title)) d.things.push({ id: uid(), title, cat, slot, est: 0, done: false, real: 0, prep: true });
   state.milestones[key] = true; return true;
@@ -141,12 +159,12 @@ export function suggestions(state, tomorrow) {
   // l'étape suivante de chaque objectif actif, l'échéance la plus proche d'abord
   const ex = state.settings.exam && state.settings.exam.slice(0, 10), beforeExam = !!ex && tomorrow <= ex; // avant l'examen : seulement les objectifs qui tombent avant lui
   const goals = (state.goals || []).filter((g) => g.status === 'active' && (!beforeExam || (g.due && g.due <= ex))).sort((a, b) => (a.due || '9') < (b.due || '9') ? -1 : 1);
-  for (const g of goals) { const m = (g.milestones || []).find((x) => !x.done); if (m) out.push({ kind: 'goal', title: m.text, cat: g.cat || 'revision', why: g.title }); }
+  for (const g of goals) { const m = (g.milestones || []).find((x) => !x.done); if (m) out.push({ kind: 'goal', title: m.text, cat: catId(g.cat || 'travail'), why: g.title }); }
   for (const m of minsOn ? minimums(state, days) : []) {
     if (m.done < m.min) out.push({ kind: 'min', title: catOf(m.cat).nom, cat: m.cat, why: `${m.done} / ${m.min} cette semaine` });
   }
   for (const h of organize(state, tomorrow, { max: 4 }).filter((x) => x.kind === 'habit')) if (!out.some((o) => norm(o.title) === norm(h.title))) out.push({ kind: 'habit', title: h.title, cat: h.cat, why: 'ton habitude' });
-  if (!minsOn) out.push({ kind: 'walk', title: 'Marche de 20 minutes', cat: 'corps', why: 'facultatif, pour souffler' });
+  if (!minsOn) out.push({ kind: 'walk', title: 'Marche de 20 minutes', cat: 'bienetre', why: 'facultatif, pour souffler' });
   return out.slice(0, 7);
 }
 
@@ -302,7 +320,7 @@ export function organize(state, k, { max = 3, dismissed = {} } = {}) {
   const minsOn = !state.settings.minimumsFrom || k >= state.settings.minimumsFrom;
   if (minsOn) for (const [cat, min] of Object.entries(state.settings.minimums || {})) {
     if (!min) continue; let last = null; for (let i = 0; i < 6 && !last; i++) if (doneOn(state, addDays(k, -i)).things.some((t) => t.cat === cat)) last = i;
-    if (last === null && !d.things.some((t) => t.cat === cat)) { const o = obs.filter((x) => x.cat === cat).sort((a, b) => b.n - a.n)[0]; out.push({ id: `bal:${cat}:${k}`, kind: 'habit', title: o ? o.title : (cat === 'corps' ? 'Marche de 20 minutes' : 'Lire 20 minutes'), cat, slot: o ? (top(o.slots) || [null])[0] : null, text: `Rien en ${catOf(cat).nom} depuis six jours. ${o ? `« ${o.title} », comme d'habitude ?` : 'Une petite chose ?'}`, yes: 'Le poser' }); }
+    if (last === null && !d.things.some((t) => t.cat === cat)) { const o = obs.filter((x) => x.cat === cat).sort((a, b) => b.n - a.n)[0]; out.push({ id: `bal:${cat}:${k}`, kind: 'habit', title: o ? o.title : (cat === 'bienetre' ? 'Marche de 20 minutes' : 'Vingt minutes pour toi'), cat, slot: o ? (top(o.slots) || [null])[0] : null, text: `Rien en ${catOf(cat).nom} depuis six jours. ${o ? `« ${o.title} », comme d'habitude ?` : 'Une petite chose ?'}`, yes: 'Le poser' }); }
   }
   return out.filter((x) => !dismissed[x.id]).slice(0, max);
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums } from '../js/model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, isoWeek, weekDays, addDays, doneOn, activeDays, estimate, moodAvg, sortList, suggestions, chooseLine, fillLine, pickCard, growth, catCounts, minimums, catOf, CATS } from '../js/model.js';
 import { defaultState, hydrate } from '../js/store.js';
 
 const st = () => { const s = defaultState(); s.days['2026-11-03'] = { things: [{ id: 'a', title: 'x', cat: 'revision', done: true, real: 80 }, { id: 'b', title: 'y', cat: 'corps', done: false }], journal: '', mood: 1, planned: true }; return s; };
@@ -18,7 +18,7 @@ test('faits, jours actifs, comptes', () => {
   assert.equal(doneOn(s, '2026-11-03').n, 2);
   assert.equal(activeDays(s, weekDays('2026-11-03')), 1);
   assert.deepEqual(catCounts(s, ['2026-11-03']), { revision: 1, perso: 1 });
-  assert.deepEqual(minimums(s, ['2026-11-03']), [{ cat: 'corps', min: 4, done: 0 }, { cat: 'esprit', min: 3, done: 0 }]);
+  assert.deepEqual(minimums(s, ['2026-11-03']), [{ cat: 'bienetre', min: 5, done: 0 }]);
 });
 test('estimation : médiane arrondie à 5, défaut sinon', () => {
   const s = st();
@@ -38,7 +38,7 @@ test('tri de la liste et suggestions', () => {
   const s = st(); s.list = l; s.settings.minimumsFrom = null;
   const sug = suggestions(s, '2026-11-04');
   assert.equal(sug[0].title, 'd'); assert.equal(sug[0].why, 'pour demain');
-  assert.ok(sug.some((x) => x.kind === 'min' && x.cat === 'corps'));
+  assert.ok(sug.some((x) => x.kind === 'min' && x.cat === 'bienetre'));
   s.days['2026-11-03'].things.push({ id: 'z', title: 'd', cat: 'perso', done: false, fromList: 4 });
   assert.ok(!suggestions(s, '2026-11-04').some((x) => x.id === 4), 'déjà placée');
 });
@@ -66,7 +66,13 @@ test('croissance : jours actifs depuis la plantation, plafonnée à 7', () => {
 });
 test('hydratation tolérante', () => {
   const h = hydrate({ days: {}, settings: { minimums: { corps: 2 } }, list: 'nope' });
-  assert.equal(h.settings.minimums.corps, 2); assert.equal(h.settings.minimums.esprit, 3); assert.deepEqual(h.list, []);
+  assert.equal(h.settings.minimums.bienetre, 2); assert.equal(h.settings.minimums.corps, undefined); assert.deepEqual(h.list, []);
+});
+test('trois catégories : les six anciennes converties à la lecture', () => {
+  const h = hydrate({ days: { '2026-11-02': { things: [{ id: 'a', title: 'x', cat: 'revision' }, { id: 'b', title: 'y', cat: 'cuisine' }] } }, goals: [{ id: 'g', cat: 'boulot', milestones: [] }], garden: { plants: [{ id: 'p', cat: 'esprit', seed: 1, kind: 'plant' }] }, settings: { minimums: { corps: 4, esprit: 3 } } });
+  assert.deepEqual(h.days['2026-11-02'].things.map((t) => t.cat), ['travail', 'bienetre']);
+  assert.equal(h.goals[0].cat, 'travail'); assert.equal(h.garden.plants[0].cat, 'bienetre'); assert.deepEqual(h.settings.minimums, { bienetre: 4 });
+  assert.equal(catOf('corps').id, 'bienetre'); assert.equal(catOf('inconnue').id, 'perso'); assert.equal(CATS.length, 3);
 });
 
 test('séries : placées une fois par jour dû, jamais recréées', () => {

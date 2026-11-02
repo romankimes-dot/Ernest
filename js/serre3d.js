@@ -1,12 +1,12 @@
 // Page de démonstration : les trois serres 3D (js/garden3d.js) avec des données fictives à quatre stades.
 import G, { HOUSE_OF, HOUSE_IDS, SLOTS_PER_HOUSE } from './garden3d.js';
 
-const CATS = ['revision', 'corps', 'esprit', 'cuisine', 'boulot', 'perso'];
+const CATS = ['travail', 'bienetre', 'perso'];
 // Même forme que modelFromState : { houses: { travail, bienetre, perso }, shrooms, mood, path, beds, flowers }.
 const BONSAI = [{}, { travail: [[77, 1]] }, { travail: [[77, 3]], bienetre: [[91, 2]] }, { travail: [[77, 6], [78, 3]], bienetre: [[91, 5]], perso: [[55, 4]] }];
 function fake(stage) {
   const n = [3, 30, 100, 250][stage];
-  const all = Array.from({ length: Math.min(n, 3 * SLOTS_PER_HOUSE) }, (_, i) => ({ id: 'd' + i, cat: CATS[(i * 7 + (i >> 2)) % 6], seed: 1000 + i * 7919, g: stage === 0 ? 0.3 : Math.min(1, 0.4 + (n - i) / 40) }));
+  const all = Array.from({ length: Math.min(n, 3 * SLOTS_PER_HOUSE) }, (_, i) => ({ id: 'd' + i, cat: CATS[(i * 7 + (i >> 2)) % 3], seed: 1000 + i * 7919, g: stage === 0 ? 0.3 : Math.min(1, 0.4 + (n - i) / 40) }));
   const houses = {};
   for (const id of HOUSE_IDS) {
     const plants = all.filter((p) => HOUSE_OF[p.cat] === id).slice(-SLOTS_PER_HOUSE), hn = Math.round(n * plants.length / Math.max(1, all.length));

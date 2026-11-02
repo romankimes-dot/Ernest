@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { svg as ernestSvg } from './ernest.js';
 import { buildCottage } from './cottage3d.js';
-import { growth, totalDone, moodAvg, catCounts } from './model.js';
+import { growth, totalDone, moodAvg, catCounts, catId, floraOf } from './model.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -141,13 +141,13 @@ M.glass.customProgramCacheKey = () => 'glassFresnel';
 // chemin. Coordonnées locales d'une serre : porte vers +z, origine au centre du sol.
 const HW = 2.6, HD = 4.2, HH = 2.2, HR = 3.35; // demi-largeur, demi-profondeur, hauteur des murs, faîtage
 const HOUSES = [
-  { id: 'travail', name: 'Travail', cats: ['revision', 'boulot'], x: 0, z: -2.6, ry: 0 },
-  { id: 'bienetre', name: 'Bien-être', cats: ['corps', 'esprit', 'cuisine'], x: 7.1, z: -0.3, ry: -0.32 },
+  { id: 'travail', name: 'Travail', cats: ['travail'], x: 0, z: -2.6, ry: 0 },
+  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'], x: 7.1, z: -0.3, ry: -0.32 },
   { id: 'perso', name: 'Vie perso', cats: ['perso'], x: -7.1, z: -0.3, ry: 0.32 },
 ];
 export const HOUSE_IDS = HOUSES.map((h) => h.id);
-export const HOUSE_OF = { revision: 'travail', boulot: 'travail', corps: 'bienetre', esprit: 'bienetre', cuisine: 'bienetre', perso: 'perso' };
-const houseOf = (cat) => HOUSE_OF[cat] || 'perso'; // sans catégorie : la vie perso, comme catOf()
+export const HOUSE_OF = { travail: 'travail', bienetre: 'bienetre', perso: 'perso' }; // une catégorie = une serre
+const houseOf = (cat) => catId(cat); // sans catégorie : la vie perso, comme catOf()
 const HB = {};
 for (const h of HOUSES) { const g = new THREE.Group(); g.position.set(h.x, 0, h.z); g.rotation.y = h.ry; g.updateMatrixWorld(true); scene.add(g); HB[h.id] = Object.assign(h, { g, cos: Math.cos(h.ry), sin: Math.sin(h.ry) }); }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -324,7 +324,8 @@ const PAL = {
 const outdoor = new THREE.Group(); scene.add(outdoor);
 // Étape 4 : le potager, un carré par catégorie, entre les serres et le portail (Travail au milieu, Bien-être à droite,
 // Vie perso et Cuisine à gauche, près de la chaumière). L'herbe s'efface sous eux quand ils apparaissent.
-const BED_CATS = ['revision', 'corps', 'esprit', 'cuisine', 'boulot', 'perso'];
+const BED_LOOK = ['revision', 'corps', 'esprit', 'cuisine', 'boulot', 'perso']; // aspect des cultures de chaque carré
+const BED_CATS = ['travail', 'bienetre', 'bienetre', 'bienetre', 'travail', 'perso']; // serre qui fait pousser le carré
 const BEDS = [[-3.4, 9.4], [5.4, 8.8], [7.4, 7.8], [-7.4, 7.8], [3.4, 9.4], [-5.4, 8.8]].map(([x, z]) => ({ x, z, hx: 0.6, hz: 1.15 }));
 const ZONES = BEDS;
 const zoneAt = (x, z, m = 0.12) => ZONES.findIndex((b) => Math.abs(x - b.x) < b.hx + m && Math.abs(z - b.z) < b.hz + m);
@@ -426,7 +427,7 @@ BEDS.forEach((b, bi) => {
   plank(b.hx * 2 + 0.08, 0.08, 0, -b.hz); plank(b.hx * 2 + 0.08, 0.08, 0, b.hz); plank(0.08, b.hz * 2, -b.hx, 0); plank(0.08, b.hz * 2, b.hx, 0);
   const soil = new THREE.Mesh(new THREE.BoxGeometry(b.hx * 2, 0.26, b.hz * 2), M.soil); soil.position.y = 0.13; soil.receiveShadow = true; g.add(soil);
   const crops = [];
-  for (let i = 0; i < 10; i++) { const c = crop(BED_CATS[bi], r); c.position.set((i % 2 ? 0.25 : -0.25) + (r() - 0.5) * 0.06, 0.26, -b.hz + 0.24 + Math.floor(i / 2) * (b.hz * 2 - 0.48) / 4); c.rotation.y = r() * 6.28; c.scale.setScalar(0.001); g.add(c); crops.push(c); }
+  for (let i = 0; i < 10; i++) { const c = crop(BED_LOOK[bi], r); c.position.set((i % 2 ? 0.25 : -0.25) + (r() - 0.5) * 0.06, 0.26, -b.hz + 0.24 + Math.floor(i / 2) * (b.hz * 2 - 0.48) / 4); c.rotation.y = r() * 6.28; c.scale.setScalar(0.001); g.add(c); crops.push(c); }
   g.position.set(b.x, y - 0.32, b.z); g.visible = false; outdoor.add(g);
   ext.beds.push({ g, crops, y, rise: 0, riseT: 0, grow: 0, growT: 0 });
 });
@@ -731,12 +732,7 @@ const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildf
 
 // ---------- Emplacements (coordonnées locales, les mêmes dans chaque serre) ----------
 // Chaque catégorie a son allure : une espèce tirée parmi les siennes, à partir de la graine de la plante.
-const SPECIES_BY_CAT = {
-  revision: ['lavender', 'lavender', 'violet'], boulot: ['ficus', 'broadleaf'],
-  corps: ['succulent', 'cactus'], esprit: ['fern', 'fern', 'mossy'], cuisine: ['thyme', 'basil', 'rosemary'],
-  perso: ['wildflowers', 'tallgrass'],
-};
-const speciesOf = (p) => { const l = SPECIES_BY_CAT[p.cat] || SPECIES_BY_CAT.perso; return l[Math.floor(rngOf((p.seed ^ 0x5bd1e995) >>> 0)() * l.length)]; };
+const speciesOf = (p) => floraOf(p)[0]; // mélange de végétaux propre à chaque serre (model.js, FLORA)
 const SLOTS = [];
 { const t = [];
   for (const s of [1, -1]) for (let i = 0; i < 6; i++) for (const row of [0, 1]) t.push({ x: s * (TBX - 0.2 + row * 0.42), z: TZ1 - 0.45 - i * 0.92 + row * 0.35, y: TY + 0.03, i, row, s, floor: false });
@@ -965,7 +961,7 @@ export function extFromState(S, n, mood) {
   const keys = Object.keys(S.days), counts = catCounts(S, keys);
   return {
     path: Math.min(1, n / 300),
-    beds: BED_CATS.map((c) => ((counts[c] || 0) >= 8 ? Math.min(1, ((counts[c] || 0) - 8) / 60) : -1)),
+    beds: BED_CATS.map((c, i) => { const k = BED_CATS.slice(0, i).filter((x) => x === c).length, v = (counts[c] || 0) - 8 - 40 * k; return v >= 0 ? Math.min(1, v / 60) : -1; }), // 1er carré à 8, puis un de plus tous les 40
     flowers: Math.max(0.15, Math.min(1, 0.35 + 0.4 * Math.min(1, n / 150) + (mood === 'high' ? 0.25 : mood === 'low' ? -0.15 : 0))),
   };
 }
@@ -1107,6 +1103,18 @@ const ANGLES = [
 const angleWorld = (a) => { if (!a.house) return { pos: V(...a.pos), t: V(...a.t) }; const h = HB[a.house]; return { pos: toWorld(h, a.pos[0], a.pos[1], a.pos[2]), t: toWorld(h, a.t[0], a.t[1], a.t[2]) }; };
 let forcedAngle = null; // pour la page de démonstration
 let mode = 'band', running = false, visible = true, last = 0, onFps = null, frames = 0, fpsT = 0;
+// Sélecteur de serre : la caméra glisse vers une serre (vue de trois quarts, porte en face) ou vers l'ensemble.
+let fly = null;
+// vue d'ensemble : plus haute et plus loin en portrait, pour que les trois serres tiennent dans l'écran
+const overview = () => (camera.aspect < 1 ? [new THREE.Vector3(1.2, 15.5, 29), new THREE.Vector3(0, 0.4, -4)] : [new THREE.Vector3(2.2, 11.5, 19.5), new THREE.Vector3(0, 0.6, -1.8)]);
+function focus(id) {
+  if (!renderer) return;
+  let p1, t1;
+  const h = HB[id];
+  if (!h) { const [p, t] = overview(); p1 = p; t1 = t; }
+  else { h.g.updateMatrixWorld(true); p1 = new THREE.Vector3(1.8, 3.4, HD + 6.2).applyMatrix4(h.g.matrixWorld); t1 = new THREE.Vector3(0, 0.9, -0.4).applyMatrix4(h.g.matrixWorld); }
+  fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1, t1, s: performance.now() };
+}
 function frame(now) {
   if (!running) return;
   requestAnimationFrame(frame);
@@ -1118,6 +1126,7 @@ function frame(now) {
     return;
   }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+  if (fly) { const e = Math.min(1, (performance.now() - fly.s) / 1100), k = e < 0.5 ? 2 * e * e : 1 - (-2 * e + 2) ** 2 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k); if (e >= 1) fly = null; }
   { const T = controls.target; T.x = Math.max(-10, Math.min(10, T.x)); T.z = Math.max(-9, Math.min(9, T.z)); T.y = Math.max(0.4, Math.min(2.2, T.y)); }
   controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
   if ((frames & 7) === 0) renderer.shadowMap.needsUpdate = true; // ombres recalculées une image sur huit
@@ -1165,7 +1174,7 @@ export function mount(canvas, opts = {}) {
   renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.type = THREE.PCFShadowMap; // + radius : bords d'ombre fondus
   renderer.toneMapping = THREE.CustomToneMapping; // ACES + saturation et contraste (voir « Étalonnage » en tête)
   controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 30;
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 38;
   controls.maxPolarAngle = Math.PI * 0.49; controls.minPolarAngle = 0.25; controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
   onFps = opts.onFps || null;
   setMode(opts.mode || 'band');
@@ -1183,7 +1192,7 @@ export function setMode(m) {
   if (ext.grass) ext.grass.im.count = m === 'full' ? ext.grass.n : Math.round(ext.grass.n * 0.3); // moins de brins dans le bandeau
   poke();
   ernestSprite.visible = ernestSprite.userData.shadow.visible = m === 'full';
-  if (m === 'full') { camera.position.set(2.2, 11.5, 19.5); controls.target.set(0, 0.6, -1.8); camera.fov = 55; } // vue d'ensemble ; deux doigts pour glisser vers une serre
+  if (m === 'full') { camera.fov = 55; resize(); const [p, t] = overview(); camera.position.copy(p); controls.target.copy(t); } // vue d'ensemble ; deux doigts pour glisser vers une serre
   else camera.fov = 40; // l'angle du bandeau fixe son propre fov (ANGLES)
   camera.updateProjectionMatrix(); controls.update(); resize();
 }
@@ -1192,6 +1201,7 @@ export const api = {
   update(S, today) { applyModel(modelFromState(S, today)); },
   setModel: applyModel,
   setTime(k) { amb.fixed = k; poke(); },
+  focus,
   onFps(fn) { onFps = fn; frames = 0; fpsT = 0; },
   water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
   // Effets ponctuels ; en bandeau, chacun ouvre une fenêtre d'animation d'environ 2,5 s puis l'image fixe est refaite.

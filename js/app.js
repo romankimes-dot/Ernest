@@ -178,9 +178,11 @@ function openSerre() {
   if (!g3d) return;
   const n = totalDone(S), pl = S.garden.plants.filter((p) => p.kind === 'plant').length;
   const hs = g3d.modelFromState ? g3d.modelFromState(S, today).houses : null, hn = (k) => (hs && hs[k] ? hs[k].n : 0);
-  $('#sfCap').innerHTML = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher, deux doigts pour passer d'une serre à l'autre.</span>`;
+  $('#sfCap').innerHTML = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher. Le sélecteur en haut passe d'une serre à l'autre.</span>`;
   const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
   g3d.setMode('full');
+  const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.focus) g3d.focus(b.dataset.house); })); }
+  if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
   g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
 }
@@ -644,7 +646,7 @@ function listSheet(l) {
 const RITUAL_HOUR = 18; // le rituel du soir s'affiche dès 18 h, toujours
 const examDay = () => !!S.settings.exam && S.settings.exam.slice(0, 10) === today;
 const examAhead = () => !!S.settings.exam && S.settings.exam.slice(0, 10) >= today;
-const defCat = () => (examAhead() ? 'revision' : 'perso'); // jusqu'à l'examen, la révision par défaut
+const defCat = () => (examAhead() ? 'travail' : 'perso'); // jusqu'à l'examen, le travail (la révision) par défaut
 // cocher l'étape d'objectif qui porte ce titre (une chose posée depuis une suggestion d'étape)
 function tickMilestone(title) {
   for (const g of S.goals.filter((x) => x.status === 'active')) { const i = g.milestones.findIndex((m) => !m.done && m.text === title); if (i < 0) continue;
@@ -716,7 +718,7 @@ function viewSemaine() {
   const tm = timeByCat(S, days), tTot = Object.values(tm).reduce((a, b) => a + b, 0);
   if (cats.length) h += `<div class="bars">${cats.map((c) => { const m = mins.find((x) => x.cat === c.id); const n = counts[c.id] || 0; return `<div><span>${c.nom}</span><i style="width:${Math.round((n / max) * 100)}%;background:${c.couleur}"></i><span class="muted">${n}${m && minsOn ? ` / ${m.min}` : ''}${tracking() && tm[c.id] ? ` · ${fmtMin(tm[c.id])}` : ''}</span></div>`; }).join('')}</div>`;
   if (tracking() && tTot) h += `<div class="card row spread"><span class="row">${icon('history')}<span>Temps mesuré cette semaine</span></span><b>${fmtMin(tTot)}</b></div>`;
-  if (!minsOn) h += `<div class="muted small">Les minimums doux démarrent le ${new Date(S.settings.minimumsFrom + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. D'ici là, seule la révision compte.</div>`;
+  if (!minsOn) h += `<div class="muted small">Les minimums doux démarrent le ${new Date(S.settings.minimumsFrom + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}. D'ici là, seul le travail compte.</div>`;
   h += journalHtml();
   const reviewed = S.weeks[wk] && S.weeks[wk].reviewedAt;
   h += `<button class="btn ${dow(today) === 0 && !reviewed ? '' : 'ghost'}" data-act="review">${reviewed ? 'Revoir le point de la semaine' : 'Faire le point de la semaine'}</button>`;

@@ -1,15 +1,17 @@
 // Les serres en 2D (canvas) : trois serres côte à côte, comme en 3D (Travail, Bien-être, Vie perso), plantes
 // procédurales par graine, croissance par jours actifs, cycle jour/nuit sur l'heure réelle, lumière réglée par
 // l'humeur. Repli quand la 3D est coupée.
-import { growth } from './model.js';
+import { growth, catId, floraOf } from './model.js';
 
-const ROWS = { revision: 0, corps: 1, esprit: 2, cuisine: 3, boulot: 4, perso: 5 };
 export const HOUSES2D = [
-  { id: 'travail', name: 'Travail', cats: ['revision', 'boulot'] },
-  { id: 'bienetre', name: 'Bien-être', cats: ['corps', 'esprit', 'cuisine'] },
+  { id: 'travail', name: 'Travail', cats: ['travail'] },
+  { id: 'bienetre', name: 'Bien-être', cats: ['bienetre'] },
   { id: 'perso', name: 'Vie perso', cats: ['perso'] },
 ];
-const houseOf = (cat) => (HOUSES2D.find((h) => h.cats.includes(cat)) || HOUSES2D[2]).id;
+const houseOf = (cat) => catId(cat);
+// aspect 2D d'une plante : d'après son végétal (le même mélange par serre qu'en 3D)
+const LOOK = { ficus: 'boulot', broadleaf: 'boulot', lavender: 'revision', fern: 'esprit', mossy: 'esprit', succulent: 'corps', cactus: 'corps', thyme: 'cuisine', basil: 'cuisine', rosemary: 'cuisine', wildflowers: 'perso', flowering: 'perso', violet: 'revision', tallgrass: 'perso' };
+const lookOf = (p) => LOOK[floraOf(p)[0]] || 'perso';
 const rnd = (seed) => { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 
 // ---- Générateurs : (ctx, x, y, taille 0..1, rng, t) ----
@@ -133,8 +135,8 @@ export class Garden {
       const pl = mine.filter((p) => p.kind !== 'moss' && p.kind !== 'bonsai'), moss = mine.filter((p) => p.kind === 'moss');
       const bons = mine.filter((p) => p.kind === 'bonsai' && (!goals || !p.goal || (goals.find((g) => g.id === p.goal) || {}).status === 'active')).sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, 2);
       const per = Math.max(2, Math.floor((sw - 16) / 15)), onTable = pl.slice(-per), nFloor = Math.max(0, per - bons.length * 2), onFloor = nFloor ? pl.slice(-per * 2, -per).slice(-nFloor) : [];
-      const draw = (p, x, y, kind) => { const r = rnd(p.seed), gr = (0.35 + 0.65 * growth(p, st, this.today)) * (p === last && pulse ? 1 + pulse * .15 : 1), c = COLS[p.cat] || COLS.perso;
-        if (kind === 'moss') mousse(ctx, x, y, gr, r, t, c); else if (kind === 'bonsai') bonsai(ctx, x, y, gr, r, t, c, p.branches || 0); else (GEN[p.cat] || herbacee)(ctx, x, y, gr * .8, r, t, c); };
+      const draw = (p, x, y, kind) => { const r = rnd(p.seed), gr = (0.35 + 0.65 * growth(p, st, this.today)) * (p === last && pulse ? 1 + pulse * .15 : 1), c = COLS[lookOf(p)] || COLS.perso;
+        if (kind === 'moss') mousse(ctx, x, y, gr, r, t, c); else if (kind === 'bonsai') bonsai(ctx, x, y, gr, r, t, c, p.branches || 0); else (GEN[lookOf(p)] || herbacee)(ctx, x, y, gr * .8, r, t, c); };
       ctx.save(); ctx.beginPath(); ctx.rect(x0, top, sw, H - top); ctx.clip();
       for (let i = 0; i < Math.min(moss.length, 4); i++) draw(moss[moss.length - 1 - i], x0 + 10 + i * (sw - 20) / 4, floor, 'moss');
       onTable.forEach((p, i) => draw(p, x0 + 10 + (i + .5) * (sw - 20) / per, table - 1, 'plant'));
@@ -161,4 +163,3 @@ function lerp(a, b, t) {
   return `rgb(${Math.round(pa[0] + (pb[0] - pa[0]) * k)},${Math.round(pa[1] + (pb[1] - pa[1]) * k)},${Math.round(pa[2] + (pb[2] - pa[2]) * k)})`;
 }
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-export const CAT_ROWS = ROWS;
