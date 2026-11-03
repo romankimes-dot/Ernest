@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ernest · trois choses par jour</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Trois choses par jour, une serre qui pousse, un gobelin qui raconte. Sans compte, hors ligne, sur ton iPhone.">
+  <meta name="theme-color" content="#0b1511">
+  <meta property="og:title" content="Ernest">
+  <meta property="og:description" content="Trois choses par jour. Une serre qui pousse. Un gobelin qui ne juge rien.">
+  <meta property="og:image" content="https://romankimes-dot.github.io/Ernest/img/og.jpg">
+  <meta property="og:url" content="https://romankimes-dot.github.io/Ernest/decouvrir.html">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./css/decouvrir.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js" } }</script>
+</head>
+<body>
+
+<!-- 1. Accueil : la serre 3D en direct, au soir, pleine pousse -->
+<section class="hero" id="hero">
+  <canvas id="serre" aria-hidden="true"></canvas>
+  <div class="hero-shade"></div>
+  <div class="hero-txt">
+    <h1>Ernest</h1>
+    <p class="tagline">Trois choses par jour.<br>Une serre qui pousse.</p>
+    <div class="ctas"><a class="btn" href="./index.html">Ouvrir Ernest</a><a class="btn o" href="#installer">Installer</a></div>
+  </div>
+  <div class="ernest-spot hero-e">
+    <div class="bubble" id="heroBubble">Bonsoir. Entre, la bouilloire est sur le feu. Elle siffle faux.</div>
+    <button class="ernest" id="heroErnest" aria-label="Toucher Ernest"><img src="./img/ernest-salue.jpg" alt="Ernest, le gobelin jardinier, salue" width="720" height="720"></button>
+  </div>
+  <button class="seed" data-seed="0" style="left:46%;bottom:9%" aria-label="Une graine dorée"></button>
+  <a class="scroll-hint" href="#essaie" aria-label="Descendre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></a>
+</section>
+
+<!-- 2. Mini-démo : chaque case cochée fait pousser un pot -->
+<section class="play" id="essaie">
+  <h2>Essaie. Coche.</h2>
+  <p class="sub">Une chose faite = une plante.</p>
+  <div class="game">
+    <ul class="todo" id="todo">
+      <li><button class="t" data-i="0"><span class="box"></span><span class="lbl">Réviser la TVA</span><small>Travail</small></button></li>
+      <li><button class="t" data-i="1"><span class="box"></span><span class="lbl">Courir 20 min</span><small>Bien-être</small></button></li>
+      <li><button class="t" data-i="2"><span class="box"></span><span class="lbl">Appeler Papy</span><small>Vie perso</small></button></li>
+    </ul>
+    <div class="garden">
+      <div class="pots" id="pots">
+        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
+          <g class="plant">
+            <path d="M80 130C78 90 70 60 50 40" stroke="#3f8a5c" stroke-width="5" fill="none"/><path d="M80 130c2-40 10-70 34-92" stroke="#3f8a5c" stroke-width="5" fill="none"/>
+            <ellipse cx="44" cy="40" rx="26" ry="14" fill="#6cbb74" transform="rotate(-30 44 40)"/><ellipse cx="118" cy="38" rx="28" ry="14" fill="#5fae6d" transform="rotate(25 118 38)"/>
+            <ellipse cx="62" cy="80" rx="22" ry="11" fill="#8fc98f" transform="rotate(-40 62 80)"/><ellipse cx="102" cy="76" rx="22" ry="11" fill="#6cbb74" transform="rotate(35 102 76)"/>
+            <g class="flower"><circle cx="80" cy="22" r="10" fill="#f2b23d"/><circle cx="80" cy="22" r="4.5" fill="#c7772a"/></g>
+          </g>
+          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
+          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
+        </svg>
+        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
+          <g class="plant">
+            <path d="M80 128c-4-30-18-58-40-74M80 128c0-34 0-64 0-92M80 128c4-30 18-58 40-74" stroke="#2f6b48" stroke-width="4" fill="none"/>
+            <g fill="#5fae6d"><ellipse cx="46" cy="62" rx="16" ry="7" transform="rotate(30 46 62)"/><ellipse cx="58" cy="84" rx="15" ry="6" transform="rotate(25 58 84)"/><ellipse cx="114" cy="62" rx="16" ry="7" transform="rotate(-30 114 62)"/><ellipse cx="102" cy="84" rx="15" ry="6" transform="rotate(-25 102 84)"/></g>
+            <g fill="#8fc98f"><ellipse cx="70" cy="46" rx="14" ry="6" transform="rotate(50 70 46)"/><ellipse cx="90" cy="46" rx="14" ry="6" transform="rotate(-50 90 46)"/><ellipse cx="80" cy="30" rx="6" ry="12"/></g>
+          </g>
+          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
+          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
+        </svg>
+        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
+          <g class="plant">
+            <path d="M80 128c0-24 0-40 0-52" stroke="#3f8a5c" stroke-width="5"/>
+            <circle cx="56" cy="84" r="20" fill="#6cbb74"/><circle cx="104" cy="82" r="20" fill="#5fae6d"/><circle cx="80" cy="62" r="22" fill="#8fc98f"/>
+            <g class="flower"><circle cx="62" cy="70" r="5" fill="#e98aa0"/><circle cx="98" cy="66" r="5" fill="#e98aa0"/><circle cx="82" cy="48" r="5" fill="#efe6d2"/></g>
+          </g>
+          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
+          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
+        </svg>
+      </div>
+      <div class="ernest-spot play-e">
+        <div class="bubble" id="playBubble">Trois cases. Je regarde, c'est tout.</div>
+        <button class="ernest" id="playErnest" aria-label="Toucher Ernest"><img src="./img/ernest-salue.jpg" alt="" width="720" height="720" id="playImg"></button>
+      </div>
+    </div>
+  </div>
+  <button class="seed" data-seed="1" style="right:6%;top:14%" aria-label="Une graine dorée"></button>
+</section>
+
+<!-- 3. Carrousel des cartes -->
+<section class="cards-sec" id="cartes">
+  <h2>Les cartes à gagner</h2>
+  <p class="sub">Une chose faite sur deux en ouvre une. Tape pour retourner.</p>
+  <div class="track-wrap">
+    <div class="track" id="track"></div>
+    <button class="arrow l" id="prev" aria-label="Précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+    <button class="arrow r" id="next" aria-label="Suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+  <div class="dots" id="dots"></div>
+  <button class="seed" data-seed="2" style="right:12%;top:9%" aria-label="Une graine dorée"></button>
+</section>
+
+<!-- 4. Le soir tombe -->
+<section class="dusk-sec">
+  <h2>Le soir tombe.</h2>
+  <p class="sub">La serre suit ton heure réelle. Glisse.</p>
+  <div class="dn" id="dn">
+    <img src="./img/ernest-salue.jpg" alt="Ernest au coucher du soleil" width="720" height="720">
+    <img class="night" id="night" src="./img/ernest-lanterne.jpg" alt="Ernest la nuit, avec sa lanterne" width="720" height="720">
+    <span class="lab l">18 h</span><span class="lab r">22 h</span>
+    <div class="handle" id="handle"><b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 7-5 5 5 5M15 7l5 5-5 5"/></svg></b></div>
+    <input type="range" id="dnRange" min="0" max="100" value="50" aria-label="Heure du soir">
+  </div>
+</section>
+
+<!-- 5. Les graines dorées -->
+<section class="hunt" id="graines">
+  <h2 id="huntTitle">Il en manque trois.</h2>
+  <p class="sub" id="huntSub">Trois graines dorées sont cachées sur cette page.</p>
+  <div class="counter" id="counter"><i></i><i></i><i></i></div>
+  <button class="btn o" id="rareAgain" hidden>Revoir la carte rare</button>
+</section>
+
+<!-- 6. Installer -->
+<section class="inst-sec" id="installer">
+  <h2>Sur ton iPhone en 3 gestes</h2>
+  <p class="sub">Sans compte. Hors ligne. Gratuit.</p>
+  <ol class="steps">
+    <li><span class="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 4.8-4.8 2.2 2.2-4.8z"/></svg></span>Ouvrir Ernest dans Safari</li>
+    <li><span class="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M7 10.5H6a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-7a1.5 1.5 0 0 0-1.5-1.5h-1"/></svg></span>Partager</li>
+    <li><span class="n"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg></span>Sur l'écran d'accueil</li>
+  </ol>
+  <a class="btn big" href="./index.html">Ouvrir Ernest</a>
+  <p class="quote">« Allez. Moi je reste ici avec les pots. »</p>
+</section>
+
+<div class="hud" id="hud" hidden><i></i><span id="hudN">0/3</span></div>
+<div class="toast" id="toast" hidden></div>
+<dialog class="rare-dlg" id="rareDlg">
+  <div class="rare-card">
+    <span class="rare-tag">Carte rare</span>
+    <span class="k" id="rareK"></span>
+    <h3 id="rareT"></h3>
+    <p id="rareX"></p>
+    <p class="src" id="rareS"></p>
+    <form method="dialog"><button class="btn">Garder</button></form>
+  </div>
+</dialog>
+
+<script type="module" src="./js/decouvrir.js"></script>
+</body>
+</html>

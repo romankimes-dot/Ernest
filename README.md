@@ -4,6 +4,8 @@ Trois choses par jour, une serre qui pousse, un gobelin qui raconte. Application
 
 Adresse : https://romankimes-dot.github.io/Ernest/ (GitHub Pages, branche `main`, dossier racine).
 
+Page de présentation : https://romankimes-dot.github.io/Ernest/decouvrir.html (`decouvrir.html`, `css/decouvrir.css`, `js/decouvrir.js`, images dans `img/`) : serre 3D en direct au soir, mini-démo (trois cases, trois pots), carrousel de cartes tirées des vraies données, curseur jour/nuit, trois graines dorées cachées (carte rare).
+
 ## La boucle
 - **Aujourd'hui** : les choses posées la veille (trois au plus, la première en évidence), Démarrer / Terminer avec le temps réel, la liste des entrées datées du jour. Si rien n'est posé, Ernest propose et un tap suffit.
 - **Le soir** (bandeau « Préparer demain » à partir de 18 h) : une ligne sur la journée, l'humeur en un tap, le sort des choses non faites (demain, idée, laisser), puis les 3 de demain avec catégorie, moment (matin, midi, après-midi, soir) et durée estimée d'après tes durées réelles. Ernest y propose aussi une petite chose Bien-être ou Vie perso, dans la serre la moins fournie de la semaine (à prendre, changer ou laisser).

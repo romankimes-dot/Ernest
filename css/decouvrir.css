@@ -1,0 +1,179 @@
+/* Page de présentation (decouvrir.html) : même palette que l'app. */
+:root{
+  --bg:#0b1511;--bg2:#12201a;--bg3:#182a21;--fg:#efe6d2;--fg2:#a9b5a3;--amber:#f2b23d;--amber2:#c7772a;--line:#243b31;
+  --display:Georgia,"Times New Roman",serif;--body:-apple-system,system-ui,"Segoe UI",sans-serif;
+  --gut:max(16px,env(safe-area-inset-left,0px));
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+h2{font-size:clamp(28px,5vw,40px);line-height:1.1}
+.sub{color:var(--fg2);margin:8px 0 28px}
+section{position:relative;padding:72px var(--gut);max-width:1180px;margin:0 auto}
+svg{display:block}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 24px;border-radius:999px;background:var(--amber);color:#1a1306;font-weight:700;text-decoration:none;border:1px solid var(--amber);transition:transform .15s}
+.btn:active{transform:scale(.96)}
+.btn.o{background:rgba(11,21,17,.5);color:var(--fg);font-weight:500;backdrop-filter:blur(6px)}
+.btn.big{padding:16px 34px;font-size:18px}
+
+/* ---- Bulle et Ernest ---- */
+.ernest-spot{position:relative}
+.ernest{display:block;border-radius:50%;overflow:hidden;border:3px solid rgba(242,178,61,.5);box-shadow:0 0 50px rgba(242,178,61,.3);transition:transform .2s}
+.ernest img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.3);transform-origin:50% 56%}
+.ernest:active{transform:scale(.95)}
+.ernest.hop{animation:hop .5s ease-out}
+@keyframes hop{30%{transform:translateY(-12px) rotate(-3deg)}60%{transform:translateY(0) rotate(2deg)}}
+.bubble{position:absolute;z-index:4;background:var(--fg);color:#1b1a14;font-family:var(--display);font-style:italic;font-size:17px;line-height:1.35;padding:12px 16px;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.35);width:min(280px,70vw)}
+.bubble::after{content:"";position:absolute;bottom:-10px;right:44px;border:10px solid transparent;border-top-color:var(--fg);border-bottom:0}
+.bubble.pop{animation:bpop .35s cubic-bezier(.2,1.4,.5,1)}
+@keyframes bpop{from{opacity:0;transform:translateY(8px) scale(.94)}}
+
+/* ---- 1. Accueil ---- */
+.hero{max-width:none;height:100svh;min-height:560px;padding:0;overflow:hidden;background:#20160f url(../img/serre-soir.jpg) center 30%/cover}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 1.2s;touch-action:pan-y}
+.hero canvas.on{opacity:1}
+.hero-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(11,21,17,.8),rgba(11,21,17,.15) 55%,rgba(11,21,17,0)),linear-gradient(transparent 62%,var(--bg))}
+.hero-txt{position:absolute;z-index:2;left:max(56px,var(--gut));top:22vh;pointer-events:none}
+.hero-txt .ctas{pointer-events:auto;display:flex;gap:10px;flex-wrap:wrap}
+.hero h1{font-size:clamp(64px,11vw,108px);line-height:.95;text-shadow:0 4px 30px rgba(0,0,0,.5)}
+.tagline{font-family:var(--display);font-size:clamp(21px,3vw,27px);margin:14px 0 28px;text-shadow:0 2px 16px rgba(0,0,0,.6)}
+.hero-e{position:absolute;z-index:3;right:max(56px,var(--gut));bottom:12vh}
+.hero-e .ernest{width:clamp(150px,26vw,320px);aspect-ratio:1}
+.hero-e .bubble{right:65%;bottom:92%}
+.scroll-hint{position:absolute;z-index:3;left:50%;bottom:18px;width:34px;height:34px;margin-left:-17px;color:var(--fg2);animation:bob 2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(6px)}}
+
+/* ---- Graines dorées ---- */
+.seed{position:absolute;z-index:6;width:22px;height:28px;background:radial-gradient(circle at 40% 35%,#fff3b0,#f2b23d 45%,#a36d12);border-radius:50%/60% 60% 40% 40%;box-shadow:0 0 14px #f2b23d,0 0 30px rgba(242,178,61,.6);animation:glint 2.8s ease-in-out infinite}
+.seed::before{content:"";position:absolute;inset:-14px}
+@keyframes glint{50%{box-shadow:0 0 6px #f2b23d,0 0 12px rgba(242,178,61,.3);transform:translateY(-3px)}}
+.seed.got{animation:got .7s ease-in forwards;pointer-events:none}
+@keyframes got{40%{transform:scale(1.8) translateY(-20px)}to{transform:scale(0) translateY(-60px);opacity:0}}
+
+/* ---- 2. Mini-démo ---- */
+.game{display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:40px;align-items:end}
+.todo{list-style:none;margin:0;padding:16px;background:var(--bg2);border:1px solid var(--line);border-radius:20px}
+.todo li+li{margin-top:8px}
+.t{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;font-size:17px;background:#0e1a15;text-align:left;transition:background .2s}
+.t:hover{background:#13231b}
+.box{width:28px;height:28px;border-radius:9px;border:2px solid var(--amber);flex:none;position:relative;transition:background .2s}
+.t.done .box{background:var(--amber)}
+.t.done .box::after{content:"";position:absolute;left:8px;top:3px;width:7px;height:13px;border:solid #1a1306;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.lbl{transition:color .2s}
+.t.done .lbl{text-decoration:line-through;color:var(--fg2)}
+.t small{margin-left:auto;font-size:11px;padding:3px 8px;border-radius:999px;background:#1d3128;color:var(--fg2);white-space:nowrap}
+.garden{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-height:280px}
+.pots{display:flex;gap:10px;align-items:flex-end;flex:1;justify-content:center}
+.pot{width:clamp(80px,12vw,130px);height:auto;overflow:visible}
+.pot .plant{transform-box:fill-box;transform-origin:50% 100%;transform:scale(0);transition:transform .9s cubic-bezier(.3,1.6,.5,1)}
+.pot.grown .plant{transform:scale(1)}
+.pot .flower{transform-box:fill-box;transform-origin:50% 50%;transform:scale(0);transition:transform .5s .7s cubic-bezier(.3,1.8,.5,1)}
+.pot.grown .flower{transform:scale(1)}
+.pot .grain{transition:opacity .3s}
+.pot.grown .grain{opacity:0}
+.pot.grown{animation:sway 4s ease-in-out 1s infinite}
+@keyframes sway{50%{transform:rotate(1.2deg)}}
+.play-e .ernest{width:clamp(120px,16vw,180px);aspect-ratio:1}
+.play-e .bubble{right:30%;bottom:104%;width:min(240px,62vw)}
+.leaf{position:fixed;z-index:20;width:14px;height:8px;border-radius:50% 0;background:#6cbb74;pointer-events:none;animation:leaf 1.6s ease-out forwards}
+@keyframes leaf{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+
+/* ---- 3. Cartes ---- */
+.track-wrap{position:relative}
+.track{display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:12px var(--gut) 24px;margin:0 calc(-1 * var(--gut));scrollbar-width:none;overscroll-behavior-x:contain}
+.track::-webkit-scrollbar{display:none}
+.card{flex:none;width:min(270px,76vw);height:360px;scroll-snap-align:center;perspective:1100px;text-align:left}
+.card .in{position:relative;width:100%;height:100%;transition:transform .7s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+.card.flip .in{transform:rotateY(180deg)}
+.card.spin .in{animation:spin .9s cubic-bezier(.3,1.2,.5,1)}
+@keyframes spin{from{transform:rotateY(-540deg) scale(.8)}}
+.card .f,.card .b{position:absolute;inset:0;border-radius:20px;padding:20px;display:flex;flex-direction:column;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4);overflow:hidden}
+.card .b{transform:rotateY(180deg);overflow-y:auto;overflow-wrap:anywhere}
+.card .k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.card h3{font-size:24px;margin:10px 0;line-height:1.15}
+.card p{font-size:14px;margin:0;opacity:.92}
+.card .b p{font-size:13.5px;line-height:1.5}
+.card .src{margin-top:12px;font-size:11px;opacity:.6}
+.card .ic{margin-top:auto;align-self:flex-end;width:54px;height:54px;opacity:.9}
+.card .rare{position:absolute;top:12px;right:14px;background:var(--amber);color:#1a1306;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+.c-profession{--c1:#3d2a14;--c2:#1f150a;--cl:#6b4a22}
+.c-botanique{--c1:#20402c;--c2:#0f2116;--cl:#3b6b4a}
+.c-feuilleton{--c1:#2a2f4a;--c2:#141729;--cl:#444c7a}
+.c-blagues{--c1:#4a2a2a;--c2:#241313;--cl:#7a4444}
+.c-tips{--c1:#2b3a3f;--c2:#141e21;--cl:#4a6670}
+.card .f,.card .b{background:linear-gradient(160deg,var(--c1),var(--c2));border:1px solid var(--cl)}
+.c-mystere .f{background:#1a1611;border:1.5px dashed #6b5a3a;align-items:center;justify-content:center;text-align:center}
+.c-mystere .q{font-family:var(--display);font-size:72px;color:var(--amber);line-height:1}
+.c-mystere .f small{color:var(--fg2);margin-top:8px}
+.arrow{position:absolute;top:50%;margin-top:-34px;width:46px;height:46px;border-radius:50%;background:rgba(18,32,26,.9);border:1px solid var(--line);display:none;place-items:center}
+.arrow svg{width:22px;height:22px}
+.arrow.l{left:-8px}.arrow.r{right:-8px}
+@media (hover:hover) and (pointer:fine){.arrow{display:grid}}
+.dots{display:flex;gap:8px;justify-content:center}
+.dots i{width:9px;height:9px;border-radius:9px;background:var(--line);transition:width .3s,background .3s}
+.dots i.on{background:var(--amber);width:26px}
+
+/* ---- 4. Le soir tombe ---- */
+.dn{position:relative;border-radius:24px;overflow:hidden;aspect-ratio:16/9;max-height:520px;width:100%;border:1px solid var(--line);user-select:none;-webkit-user-select:none}
+.dn img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 62%}
+.dn .night{clip-path:inset(0 0 0 50%)}
+.dn .lab{position:absolute;bottom:14px;font-size:13px;background:rgba(0,0,0,.5);padding:5px 12px;border-radius:999px;pointer-events:none}
+.dn .lab.l{left:14px}.dn .lab.r{right:14px}
+.handle{position:absolute;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:var(--amber);pointer-events:none}
+.handle b{position:absolute;top:50%;left:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:var(--amber);color:#1a1306;display:grid;place-items:center;box-shadow:0 0 30px rgba(242,178,61,.7)}
+.handle svg{width:26px;height:26px}
+.dn input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;touch-action:pan-y}
+
+/* ---- 5. Graines ---- */
+.hunt{text-align:center;max-width:none;background:radial-gradient(ellipse at center,#1d2a16,var(--bg) 70%)}
+.counter{display:flex;justify-content:center;gap:16px;margin-bottom:24px}
+.hunt .btn{margin:0 auto}
+.counter i{width:30px;height:40px;border-radius:50%/60% 60% 40% 40%;background:#1d3128;border:2px dashed #3b5a4a;transition:all .4s}
+.counter i.on{background:radial-gradient(circle at 40% 35%,#fff3b0,#f2b23d 45%,#a36d12);border-color:transparent;box-shadow:0 0 14px #f2b23d,0 0 30px rgba(242,178,61,.6);transform:scale(1.1)}
+.hud{position:fixed;z-index:30;left:var(--gut);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;padding:8px 14px 8px 10px;border-radius:999px;background:rgba(18,32,26,.92);border:1px solid var(--line);font-size:14px;animation:bpop .4s}
+.hud i{width:14px;height:18px;border-radius:50%/60% 60% 40% 40%;background:radial-gradient(circle at 40% 35%,#fff3b0,#f2b23d 45%,#a36d12)}
+.toast{position:fixed;z-index:30;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(420px,calc(100vw - 32px));background:var(--fg);color:#1b1a14;font-family:var(--display);font-style:italic;padding:12px 16px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.4);animation:bpop .35s}
+.rare-dlg{border:0;padding:0;background:none;max-width:min(420px,calc(100vw - 32px));color:var(--fg)}
+.rare-dlg::backdrop{background:rgba(5,10,8,.75);backdrop-filter:blur(4px)}
+.rare-card{position:relative;background:linear-gradient(160deg,#3d2a14,#1a1208);border:1px solid var(--amber);border-radius:22px;padding:26px 22px 22px;max-height:80vh;overflow-y:auto;box-shadow:0 0 60px rgba(242,178,61,.35);animation:bpop .5s}
+.rare-tag{display:inline-block;background:var(--amber);color:#1a1306;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;margin-bottom:12px}
+.rare-card .k{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.rare-card h3{font-size:26px;margin:8px 0 12px}
+.rare-card p{font-size:15px;line-height:1.55;margin:0 0 10px}
+.rare-card .src{font-size:11.5px;opacity:.6}
+.rare-card form{margin-top:14px;text-align:right}
+
+/* ---- 6. Installer ---- */
+.inst-sec{text-align:center;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+.steps{list-style:none;padding:0;margin:0 0 36px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;counter-reset:s}
+.steps li{width:210px;background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:20px;font-size:15px;counter-increment:s;position:relative}
+.steps li::before{content:counter(s);position:absolute;top:10px;left:14px;font-family:var(--display);color:var(--amber);font-size:18px}
+.steps .n{display:block;width:40px;height:40px;margin:0 auto 10px;color:var(--amber)}
+.steps .n svg{width:100%;height:100%}
+.quote{font-family:var(--display);font-style:italic;color:var(--fg2);margin-top:28px}
+
+/* ---- Téléphone ---- */
+@media (max-width:760px){
+  section{padding:56px var(--gut)}
+  .hero{min-height:600px}
+  .hero-shade{background:linear-gradient(rgba(11,21,17,.75),rgba(11,21,17,.1) 50%,var(--bg))}
+  .hero-txt{left:var(--gut);right:var(--gut);top:calc(56px + env(safe-area-inset-top,0px))}
+  .hero-e{right:var(--gut);bottom:84px}
+  .hero-e .bubble{right:20%;width:min(250px,64vw);font-size:15.5px}
+  .game{grid-template-columns:1fr;gap:28px}
+  .garden{min-height:0;flex-direction:column-reverse;align-items:stretch;gap:20px;padding-top:90px}
+  .play-e{align-self:flex-end}
+  .play-e .bubble{right:40%;font-size:15.5px}
+  .pot{width:min(28vw,120px)}
+  .bubble{font-size:15.5px}
+  .dn{aspect-ratio:4/5}
+  .steps li{width:100%;max-width:340px;display:flex;align-items:center;gap:14px;text-align:left;padding:16px 16px 16px 40px}
+  .steps .n{margin:0;width:32px;height:32px;flex:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
