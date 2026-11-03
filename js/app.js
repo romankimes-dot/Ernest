@@ -89,7 +89,7 @@ async function init() {
   window.addEventListener('hashchange', handleImport);
   setInterval(() => { if (reslot(S, today, nowHour()) && $('#sheet').hidden) { save(); render(); } else if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-  window.__ernest = { houseSheet, plantSheet, livreSheet, openCabane, bonsaiSheet }; // essais de bout en bout (tests dans le navigateur)
+  window.__ernest = { houseSheet, plantSheet, livreSheet, openCabane, bonsaiSheet, openInterior }; // essais de bout en bout (tests dans le navigateur)
   pullToRefresh();
   if (SY.config()) runSync();
   window.addEventListener('online', () => { if (SY.config()) runSync(); });
@@ -249,6 +249,7 @@ function refreshAct() {
     else if (near3d && near3d.kind === 'sign') { lbl = `Panneau ${H_NAME[near3d.house]}`; fn = () => houseSheet(near3d.house); }
     else if (g3d.place === 'chaumiere' && ritualOpen()) { lbl = 'Préparer demain'; fn = () => cottageTap(); }
     else if (g3d.place === 'chaumiere') { lbl = 'Entrer chez Ernest'; fn = () => openCabane(); }
+    else if (H_NAME[g3d.place]) { const h = g3d.place; lbl = `Entrer dans la serre ${H_NAME[h]}`; fn = () => openInterior(h); }
   }
   b.hidden = !lbl; b.textContent = lbl || ''; b.onclick = fn ? (e) => { e.stopPropagation(); fn(); } : null;
 }
@@ -269,7 +270,29 @@ function cottageTap() {
 let cab = null;
 const timeNow = () => { const h = nowHour(); return h >= 8 && h < 18 ? 'day' : h >= 18 && h < 21 ? 'dusk' : 'night'; };
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
-function refreshCabane() { if (cab) cab.set(cabData()); }
+function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
+// ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
+let inter = null, interHouse = null;
+const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: timeNow() });
+function interCap() {
+  const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
+  $('#serreInCap').innerHTML = `<b>${mod ? esc(mod.themeName(house)) : ''} · Serre ${H_NAME[house]}</b><br><span>${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}, ${ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length} en pleine terre` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''}. Touche une plante pour l'arroser.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="inSow">${cans ? 'Semer une graine' : 'Le panneau de la serre'}</button></div>`;
+  $('#inSow').addEventListener('click', () => (cans ? sowSheet(house) : houseSheet(house)));
+}
+function refreshInterior() { if (inter && inter.api) { inter.api.setData(interData(interHouse)); interCap(); } }
+async function openInterior(house) {
+  if (inter) return; if (!g3d) { houseSheet(house); return; }
+  inter = {}; interHouse = house; closeSheet();
+  const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
+  if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
+  try { const mod = await import('./botaniste3d.js'); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); interCap(); }
+  catch (e) { closeInterior(); houseSheet(house); }
+}
+function closeInterior() { if (inter && inter.api) inter.api.dispose(); inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
+function onPickInterior(o) {
+  if (o.kind === 'plant') plantSheet(o.id);
+  else if (o.kind === 'ernest') { const t = say(S, `lieu.${interHouse}`, ernestEnv(S, today, plantsOf(interHouse))) || say(S, 'ernest.touche', ernestEnv(S, today, plantNames())); if (t) { toast(t, 4500); save(); } }
+}
 async function openCabane() {
   if (cab || !g3d) { if (!g3d) livreSheet(); return; }
   const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
@@ -279,7 +302,7 @@ async function openCabane() {
   try { const mod = await import('./cabane3d.js'); cab = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cab.set(cabData()); }
   catch (e) { closeCabane(); livreSheet(); }
 }
-function closeCabane() { if (cab) { cab.dispose(); cab = null; } $('#cabane').hidden = true; document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
+function closeCabane() { if (cab) { cab.dispose(); cab = null; } $('#cabane').hidden = true; if (!inter) document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
 function onPickCabane(o) {
   if (o.kind === 'book') livreSheet();
   else if (o.kind === 'seeds') livreSheet('decors');
@@ -353,7 +376,7 @@ function florePlantSheet(p) {
     <div class="btns">${p.dormant ? '' : `<button class="btn quiet" data-f="fix">${p.fixed ? 'Ne plus la fixer' : 'La fixer ici'}</button>${p.src ? '' : '<button class="btn quiet" data-f="rest">Ranger à la cabane</button>'}`}<button class="btn quiet" data-f="close">Fermer</button></div></div>`);
   $('#flPlant').querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
     const f = b.dataset.f; if (f === 'close') { closeSheet(); return; }
-    if (f === 'pour' && g3d && g3d.walking) { closeSheet(); waterNow(p.id); return; }
+    if (f === 'pour' && g3d && g3d.walking && !inter) { closeSheet(); waterNow(p.id); return; }
     if (f === 'pour' || f === 'all') { label('l\'arrosage'); const r = FL.pour(S, p.id, today, f === 'all' ? 999 : 1); toast(`${r.poured} arrosoir${r.poured > 1 ? 's' : ''} versé${r.poured > 1 ? 's' : ''} sur ${plantName(p)}.`); announce(r.events); gardenWater(); }
     if (f === 'fix') FL.fix(S, p.id, !p.fixed);
     if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); }
@@ -379,7 +402,7 @@ function sowSheet(house) {
     const s = cat.find((x) => x.id === b.dataset.sp); label('la graine');
     if (!s.open) { const t = FL.trade(S, s.id, today); if (!t.ok) return; toast(`Troc avec Ernest : ${s.nom.toLowerCase()} contre ${s.price} graines.`); }
     const r = FL.sow(S, house, s.id, today); if (r.error) { toast('Il faut un arrosoir plein de cette serre.'); return; }
-    toast(`Semé : ${s.nom.toLowerCase()}. Verse les arrosoirs suivants pour la faire grandir.`); announce(r.events); save(); gardenWater(); houseSheet(house);
+    toast(`Semé : ${s.nom.toLowerCase()}. Verse les arrosoirs suivants pour la faire grandir.`); announce(r.events); save(); gardenWater(); refreshInterior(); if (inter) closeSheet(); else houseSheet(house);
   }));
   $('#flSowClose').addEventListener('click', () => houseSheet(house));
 }
@@ -418,7 +441,8 @@ function houseSheet(house) {
     <div class="row" style="gap:6px">${t.done ? icon('check') : `${t.startedAt ? `<button class="hs-btn" data-h="pause" data-id="${t.id}">Pause</button>` : `<button class="hs-btn" data-h="start" data-id="${t.id}">Démarrer</button>`}<button class="hs-btn" data-h="done" data-id="${t.id}">Terminer</button>`}</div></div>`;
   openSheet(`<div id="houseSheet" data-house="${house}"><h2>Serre ${H_NAME[house]}</h2><div class="muted small" style="margin:-6px 0 12px">Aujourd'hui, dans cette serre</div>
     <div class="stack">${list.length ? list.map(row).join('') : '<p class="muted">Rien de prévu ici aujourd\'hui.</p>'}</div>
-    <div class="row" style="gap:8px;margin-top:14px"><button class="btn" id="hsAdd">Poser une chose ici</button><button class="btn quiet" id="hsClose">Fermer</button></div>${floreBlock(house)}</div>`);
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn" id="hsAdd">Poser une chose ici</button>${g3d && !inter ? '<button class="btn quiet" id="hsIn">Entrer dans la serre</button>' : ''}<button class="btn quiet" id="hsClose">Fermer</button></div>${floreBlock(house)}</div>`);
+  if ($('#hsIn')) $('#hsIn').addEventListener('click', () => openInterior(house));
   $('#houseSheet').querySelectorAll('[data-fp]').forEach((b) => b.addEventListener('click', () => plantSheet(b.dataset.fp)));
   if ($('#flSow')) $('#flSow').addEventListener('click', () => sowSheet(house));
   $('#houseSheet').querySelectorAll('[data-h]').forEach((el) => el.addEventListener('click', () => { action(el.dataset.h, { id: el.dataset.id }); if ($('#houseSheet')) houseSheet(house); }));

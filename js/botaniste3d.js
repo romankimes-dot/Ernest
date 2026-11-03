@@ -197,53 +197,142 @@ const G = {
   semis(r, o) { const L = []; const n = 3 + Math.floor(r() * 3); for (let i = 0; i < n; i++) { const y = r() * 6.28, h = 0.08 + r() * 0.1, t = V(Math.cos(y) * 0.02, h, Math.sin(y) * 0.02); stemPart(L, V(), t, 0.004, col('#6a8f42'), (i / n) * 0.5); leafAt(L, o.leaf, t, y, 0.3, o.s * 0.6, vary(o.c, r, 0.1), (i / n) * 0.5 + 0.2); leafAt(L, o.leaf, t, y + 3.14, 0.3, o.s * 0.6, vary(o.c, r, 0.1), (i / n) * 0.5 + 0.25); } return L; },
 };
 
-// ---------- La serre ----------
+// ---------- La serre : trois thèmes, trois architectures ----------
+// Bien-être : l'herboristerie (voûte ronde, fonte verte, briques, dalles de pierre, bouquets qui sèchent).
+// Travail : le cabinet d'étude (ogive haute, fonte noire, damier, bibliothèques basses, globe).
+// Vie perso : l'orangerie du cottage (toit à deux pans, bois peint en blanc, gravier et pas japonais, fanions).
 export const HALL = { w: 3.4, d: 6, wall: 2.4 };
 const RIB_Z = []; for (let z = -HALL.d; z <= HALL.d + 0.01; z += 1.5) RIB_Z.push(z);
-const ribPoint = (side, z, s) => { // s : 0 au sol .. 1 au faîte, le long d'un arceau
-  const R = HALL.w - 0.08, tot = HALL.wall + (Math.PI / 2) * R, d = s * tot;
-  if (d <= HALL.wall) return V(side * R, d, z);
-  const a = (d - HALL.wall) / R; return V(side * Math.cos(a) * R, HALL.wall + Math.sin(a) * R, z);
+export const THEMES = {
+  bienetre: { nom: "L'herboristerie", roof: 'vault', frame: '#24382f', metal: 0.55, ribR: 0.035, base: 'brick', floor: 'stone', edge: '#8a8174', glass: '#d9efe6', ground: '#4b3d2c', tile: '#9a9285' },
+  travail: { nom: "Le cabinet d'étude", roof: 'ogive', frame: '#1d2023', metal: 0.7, ribR: 0.04, base: 'books', floor: 'checker', edge: '#4a4846', glass: '#ece6d4', ground: '#2e2a26', tile: '#e6e0d2', tile2: '#2a2a2e' },
+  perso: { nom: "L'orangerie du cottage", roof: 'gable', frame: '#f1ede2', metal: 0, ribR: 0.05, base: 'planks', floor: 'gravel', edge: '#e6dfcc', glass: '#eef6f4', ground: '#a39680', tile: '#bdb3a0' },
 };
+let THEME = THEMES.bienetre, PROF = null;
+// Coupe de la serre (côté droit), du sol au faîte, et sa longueur cumulée : les arceaux et les lianes la suivent.
+function buildProfile() {
+  const W = HALL.w - 0.08, H = HALL.wall, pts = [];
+  for (let i = 0; i <= 8; i++) pts.push([W, (H * i) / 8]);
+  if (THEME.roof === 'vault') for (let i = 1; i <= 40; i++) { const a = (i / 40) * Math.PI / 2; pts.push([Math.cos(a) * W, H + Math.sin(a) * W]); }
+  else if (THEME.roof === 'ogive') { const cx = -0.4 * W, r = 1.4 * W, am = Math.acos(-cx / r); for (let i = 1; i <= 40; i++) { const a = (i / 40) * am; pts.push([cx + Math.cos(a) * r, H + Math.sin(a) * r]); } }
+  else { const top = H + W * 0.72; for (let i = 1; i <= 20; i++) { const t = i / 20; pts.push([W * (1 - t), H + (top - H) * t]); } }
+  pts[pts.length - 1][0] = 0;
+  const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  PROF = { pts, L, tot: L[L.length - 1], apex: pts[pts.length - 1][1] };
+}
+const ribPoint = (side, z, s) => { // s : 0 au sol .. 1 au faîte, le long d'un arceau
+  const d = clamp01(s) * PROF.tot, { pts, L } = PROF; let i = 1; while (i < L.length - 1 && L[i] < d) i++;
+  const t = (d - L[i - 1]) / Math.max(1e-6, L[i] - L[i - 1]); return V(side * (pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t), pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t, z);
+};
+const roofY = (x) => { const ax = Math.abs(x), { pts } = PROF; if (ax >= pts[8][0]) return HALL.wall; for (let i = 9; i < pts.length; i++) if (pts[i][0] <= ax) { const a = pts[i - 1], b = pts[i], t = (a[0] - ax) / Math.max(1e-6, a[0] - b[0]); return a[1] + (b[1] - a[1]) * t; } return PROF.apex; };
+function texCanvas(w, h, draw, rx = 1, ry = 1, srgb = true) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
 function buildHall(scene) {
-  const g = new THREE.Group(); scene.add(g); const r = rngOf(7);
-  const W = HALL.w, D = HALL.d, H = HALL.wall, R = W;
-  // sol : terre battue, allée de dalles, plates-bandes
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ color: 0x4b3d2c, roughness: 1 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
-  const tiles = []; for (let z = -D + 1.95; z < D; z += 0.5) for (let x = -0.6; x <= 0.61; x += 0.4) { if (Math.hypot(x, z + 2.6) < 0.95) continue; const b = new THREE.BoxGeometry(0.38, 0.05, 0.47); b.translate(x + (r() - 0.5) * 0.02, 0.02, z + (r() - 0.5) * 0.02); tiles.push(b); }
-  for (let i = 0; i < 22; i++) { const a = (i / 22) * Math.PI * 2, b = new THREE.BoxGeometry(0.24, 0.05, 0.22); b.rotateY(-a); b.translate(Math.cos(a) * 0.76, 0.02, -2.6 + Math.sin(a) * 0.76); tiles.push(b); }
+  const g = new THREE.Group(); scene.add(g); const r = rngOf(7), T = THEME;
+  const W = HALL.w, D = HALL.d, H = HALL.wall;
+  M.iron.color.set(T.frame); M.iron.metalness = T.metal; M.iron.roughness = T.metal ? 0.45 : 0.65; M.glass.color.set(T.glass);
+  // sol
+  const groundTex = texCanvas(256, 256, (x, w, h) => { x.fillStyle = T.ground; x.fillRect(0, 0, w, h); const rr = rngOf(3); for (let i = 0; i < (T.floor === 'gravel' ? 2600 : 900); i++) { const v = Math.floor(rr() * 70) - 35; x.fillStyle = `rgba(${v > 0 ? 255 : 0},${v > 0 ? 250 : 0},${v > 0 ? 240 : 0},${Math.abs(v) / 260})`; const s = T.floor === 'gravel' ? 1 + rr() * 3 : 1 + rr() * 2; x.fillRect(rr() * w, rr() * h, s, s); } }, 4, 7);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W * 2, D * 2), new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  const tiles = [], tiles2 = [];
+  if (T.floor === 'gravel') { // pas japonais
+    for (let z = -D + 2.0; z < D; z += 0.55) { if (Math.abs(z + 2.6) < 0.9) continue; for (const x of [-0.28, 0.3]) { const s = new THREE.CylinderGeometry(0.2 + r() * 0.05, 0.22, 0.05, 9); s.scale(1, 1, 0.8 + r() * 0.3); s.rotateY(r() * 3); s.translate(x + (r() - 0.5) * 0.12, 0.02, z + (r() - 0.5) * 0.12 + (x > 0 ? 0.27 : 0)); tiles.push(s); } }
+  } else for (let z = -D + 1.95, j = 0; z < D; z += 0.5, j++) for (let x = -0.6, i = 0; x <= 0.61; x += 0.4, i++) { if (Math.hypot(x, z + 2.6) < 0.95) continue;
+    const b = T.floor === 'checker' ? new THREE.BoxGeometry(0.4, 0.04, 0.5) : new THREE.BoxGeometry(0.38, 0.05, 0.47); b.translate(x + (T.floor === 'checker' ? 0 : (r() - 0.5) * 0.02), 0.02, z + (T.floor === 'checker' ? 0 : (r() - 0.5) * 0.02)); ((i + j) % 2 && T.floor === 'checker' ? tiles2 : tiles).push(b); }
+  for (let i = 0; i < 22; i++) { const a = (i / 22) * Math.PI * 2, b = new THREE.BoxGeometry(0.24, 0.05, 0.22); b.rotateY(-a); b.translate(Math.cos(a) * 0.76, 0.02, -2.6 + Math.sin(a) * 0.76); (T.floor === 'checker' && i % 2 ? tiles2 : tiles).push(b); }
   { const c = new THREE.Mesh(new THREE.CircleGeometry(0.66, 32), M.soil); c.rotation.x = -Math.PI / 2; c.position.set(0, 0.012, -2.6); c.receiveShadow = true; g.add(c); }
-  const tm = new THREE.Mesh(merge(tiles), new THREE.MeshStandardMaterial({ color: 0x9a9285, roughness: 0.9 })); tm.receiveShadow = true; g.add(tm);
-  // murets de briques, bordures de plates-bandes
-  for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.75, D * 2), M.brick); m.position.set(s * (W - 0.05), 0.375, 0); m.castShadow = m.receiveShadow = true; g.add(m); }
-  { const m = new THREE.Mesh(new THREE.BoxGeometry(W * 2, 0.75, 0.22), M.brick); m.position.set(0, 0.375, -D + 0.05); m.receiveShadow = true; g.add(m); }
+  const tm = new THREE.Mesh(merge(tiles), new THREE.MeshStandardMaterial({ color: T.tile, roughness: T.floor === 'checker' ? 0.25 : 0.9, metalness: T.floor === 'checker' ? 0.05 : 0 })); tm.receiveShadow = true; g.add(tm);
+  if (tiles2.length) { const t2 = new THREE.Mesh(merge(tiles2), new THREE.MeshStandardMaterial({ color: T.tile2, roughness: 0.25 })); t2.receiveShadow = true; g.add(t2); }
+  // soubassement : briques, bibliothèques basses ou planches peintes
+  const baseRuns = [[V(-(W - 0.05), 0, 0), 'z', D * 2], [V(W - 0.05, 0, 0), 'z', D * 2], [V(0, 0, -D + 0.05), 'x', W * 2], [V(-(W + 0.8) / 2, 0, D - 0.05), 'x', W - 0.8], [V((W + 0.8) / 2, 0, D - 0.05), 'x', W - 0.8]];
+  if (T.base === 'brick') {
+    const bt = texCanvas(256, 128, (x, w, h) => { x.fillStyle = '#c8b8a0'; x.fillRect(0, 0, w, h); const rr = rngOf(5); for (let j = 0; j < 8; j++) for (let i = -1; i < 5; i++) { const v = 0.75 + rr() * 0.3; x.fillStyle = `rgb(${Math.floor(150 * v)},${Math.floor(78 * v)},${Math.floor(56 * v)})`; x.fillRect(i * 64 + (j % 2) * 32 + 2, j * 16 + 2, 60, 12); } }, 6, 1);
+    const bm = new THREE.MeshStandardMaterial({ map: bt, roughness: 0.92 });
+    for (const [p, ax, len] of baseRuns) { const m = new THREE.Mesh(ax === 'z' ? new THREE.BoxGeometry(0.22, 0.75, len) : new THREE.BoxGeometry(len, 0.75, 0.22), bm); m.position.set(p.x, 0.375, p.z); m.castShadow = m.receiveShadow = true; g.add(m); }
+  } else if (T.base === 'books') {
+    const wood = new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 0.6 }), shelfs = [];
+    for (const [p, ax, len] of baseRuns) { const box = (sx, sy, sz, x, y, z) => shelfs.push(new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z)); const along = ax === 'z';
+      box(along ? 0.34 : len, 0.05, along ? len : 0.34, p.x, 0.8, p.z); box(along ? 0.34 : len, 0.04, along ? len : 0.34, p.x, 0.4, p.z); box(along ? 0.04 : len, 0.8, along ? len : 0.04, p.x + (along ? Math.sign(p.x) * 0.15 : 0), 0.4, p.z + (along ? 0 : Math.sign(p.z || 1) * 0.15)); }
+    const sm = new THREE.Mesh(merge(shelfs), wood); sm.castShadow = sm.receiveShadow = true; g.add(sm);
+    const COLS = ['#6a2a24', '#2a4a3a', '#2a3550', '#8a6a3a', '#5a3a4a', '#3a3a3a', '#7a5a2a', '#a08a6a', '#4a2a1a'], spines = [];
+    for (const [p, ax, len] of baseRuns) for (const y0 of [0.42, 0.04]) { let u = -len / 2 + 0.05; while (u < len / 2 - 0.05) { const t = 0.025 + r() * 0.035, h = 0.24 + r() * 0.1, lean = r() < 0.06 ? 0.25 : 0; const along = ax === 'z';
+      spines.push({ x: along ? p.x : p.x + u, z: along ? p.z + u : p.z, y: y0 + h / 2, t, h, along, lean, c: COLS[Math.floor(r() * COLS.length)] }); u += t + 0.004 + (r() < 0.05 ? 0.12 : 0); } }
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }), spines.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+    spines.forEach((s, i) => { q.setFromEuler(new THREE.Euler(s.along ? s.lean : 0, 0, s.along ? 0 : s.lean)); m4.compose(V(s.x, s.y, s.z), q, s.along ? V(0.2, s.h, s.t) : V(s.t, s.h, 0.2)); im.setMatrixAt(i, m4); im.setColorAt(i, vary(s.c, r, 0.08)); });
+    im.castShadow = true; g.add(im);
+  } else {
+    const pt = texCanvas(128, 128, (x, w, h) => { x.fillStyle = '#efeadd'; x.fillRect(0, 0, w, h); const rr = rngOf(8); for (let i = 0; i < 8; i++) { x.fillStyle = 'rgba(120,110,90,.35)'; x.fillRect(i * 16, 0, 1.5, h); for (let k = 0; k < 6; k++) { x.fillStyle = `rgba(150,140,120,${rr() * 0.12})`; x.fillRect(i * 16 + rr() * 14, rr() * h, 1, 10 + rr() * 30); } } }, 10, 1);
+    const pm = new THREE.MeshStandardMaterial({ map: pt, roughness: 0.7 }), rail = new THREE.MeshStandardMaterial({ color: 0x9fb8c8, roughness: 0.6 });
+    for (const [p, ax, len] of baseRuns) { const m = new THREE.Mesh(ax === 'z' ? new THREE.BoxGeometry(0.1, 0.75, len) : new THREE.BoxGeometry(len, 0.75, 0.1), pm); m.position.set(p.x, 0.375, p.z); m.receiveShadow = true; g.add(m);
+      const t = new THREE.Mesh(ax === 'z' ? new THREE.BoxGeometry(0.18, 0.05, len) : new THREE.BoxGeometry(len, 0.05, 0.18), rail); t.position.set(p.x, 0.77, p.z); g.add(t); }
+  }
+  // plates-bandes et leurs bordures
   for (const [x0, x1, z0, z1] of [[-W + 0.15, -0.85, -D + 0.2, -0.6], [0.85, W - 0.15, -D + 0.2, -0.6], [-0.85, 0.85, -D + 0.2, -4.35]]) {
     const soil = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.22, z1 - z0), M.soil); soil.position.set((x0 + x1) / 2, 0.11, (z0 + z1) / 2); soil.receiveShadow = true; g.add(soil);
-    const ed = []; if (x0 > -0.9 && x1 < 0.9) { /* plate-bande du fond : bordure devant seulement */ } else for (let z = z0; z < z1; z += 0.22) ed.push(new THREE.BoxGeometry(0.12, 0.26, 0.2).translate(x0 > 0 ? x0 : x1, 0.13, z + 0.11));
-    for (let x = x0; x < x1; x += 0.22) ed.push(new THREE.BoxGeometry(0.2, 0.26, 0.12).translate(x + 0.11, 0.13, z1));
-    const em = new THREE.Mesh(merge(ed), new THREE.MeshStandardMaterial({ color: 0x8a8174, roughness: 0.95 })); em.castShadow = em.receiveShadow = true; g.add(em);
+    const ed = [], plank = T.base === 'planks';
+    if (!(x0 > -0.9 && x1 < 0.9)) { if (plank) ed.push(new THREE.BoxGeometry(0.06, 0.28, z1 - z0).translate(x0 > 0 ? x0 : x1, 0.14, (z0 + z1) / 2)); else for (let z = z0; z < z1; z += 0.22) ed.push(new THREE.BoxGeometry(0.12, 0.26, 0.2).translate(x0 > 0 ? x0 : x1, 0.13, z + 0.11)); }
+    if (plank) ed.push(new THREE.BoxGeometry(x1 - x0, 0.28, 0.06).translate((x0 + x1) / 2, 0.14, z1)); else for (let x = x0; x < x1; x += 0.22) ed.push(new THREE.BoxGeometry(0.2, 0.26, 0.12).translate(x + 0.11, 0.13, z1));
+    const em = new THREE.Mesh(merge(ed), new THREE.MeshStandardMaterial({ color: T.edge, roughness: plank ? 0.7 : 0.95 })); em.castShadow = em.receiveShadow = true; g.add(em);
   }
   // établis de pépinière (près de la porte)
-  const wood = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 }), bench = [];
+  const wood = new THREE.MeshStandardMaterial({ color: T.base === 'books' ? 0x4a3020 : T.base === 'planks' ? 0xc8b896 : 0x7a5a3c, roughness: 0.85 }), bench = [];
   for (const s of [-1, 1]) { const x = s * (W - 0.62); bench.push(new THREE.BoxGeometry(0.85, 0.06, 5.0).translate(x, 0.82, 3.1), new THREE.BoxGeometry(0.85, 0.04, 5.0).translate(x, 0.3, 3.1));
     for (const z of [0.7, 3.1, 5.5]) for (const dx of [-0.38, 0.38]) bench.push(new THREE.BoxGeometry(0.06, 0.82, 0.06).translate(x + dx, 0.41, z)); }
   const bm = new THREE.Mesh(merge(bench), wood); bm.castShadow = bm.receiveShadow = true; g.add(bm);
-  // ossature : arceaux de fonte, pannes, verre
+  // ossature : arceaux, pannes, faîtage
   const ribs = [], cyl = new THREE.CylinderGeometry(1, 1, 1, 6); cyl.translate(0, 0.5, 0);
-  for (const z of RIB_Z) for (const s of [-1, 1]) { let a = ribPoint(s, z, 0); for (let i = 1; i <= 16; i++) { const b = ribPoint(s, z, i / 16); ribs.push(along(cyl, a, b, 0.035)); a = b; } }
-  for (let k = 0; k <= 6; k++) for (const s of [-1, 1]) { const a = ribPoint(s, -D, 0.3 + k * 0.115), b = ribPoint(s, D, 0.3 + k * 0.115); ribs.push(along(cyl, a, b, 0.022)); }
-  ribs.push(along(cyl, V(0, H + R, -D), V(0, H + R, D), 0.05));
+  for (const z of RIB_Z) for (const s of [-1, 1]) { let a = ribPoint(s, z, 0); for (let i = 1; i <= 20; i++) { const b = ribPoint(s, z, i / 20); ribs.push(along(cyl, a, b, T.ribR)); a = b; } }
+  for (let k = 0; k <= 6; k++) for (const s of [-1, 1]) { const a = ribPoint(s, -D, 0.3 + k * 0.115), b = ribPoint(s, D, 0.3 + k * 0.115); ribs.push(along(cyl, a, b, T.ribR * 0.62)); }
+  ribs.push(along(cyl, V(0, PROF.apex, -D), V(0, PROF.apex, D), T.ribR * 1.4));
+  if (T.roof === 'ogive') for (const z of RIB_Z) ribs.push(along(cyl, ribPoint(-1, z, 0.42), ribPoint(1, z, 0.42), 0.015)); // tirants
   const im = new THREE.Mesh(merge(ribs), M.iron); im.castShadow = true; g.add(im);
-  const sideG = new THREE.PlaneGeometry(D * 2, H - 0.75); for (const s of [-1, 1]) { const m = new THREE.Mesh(sideG, M.glass); m.rotation.y = s * Math.PI / 2; m.position.set(s * W, 0.75 + (H - 0.75) / 2, 0); m.renderOrder = 2; g.add(m); }
-  const vg = new THREE.CylinderGeometry(R, R, D * 2, 32, 1, true, -Math.PI / 2, Math.PI); vg.rotateX(-Math.PI / 2);
-  const vault = new THREE.Mesh(vg, M.glass); vault.position.y = H; vault.renderOrder = 2; g.add(vault);
-  for (const z of [-D, D]) { const sh = new THREE.Shape(); sh.moveTo(-W, 0.75); sh.lineTo(-W, H); sh.absarc(0, H, R, Math.PI, 0, true); sh.lineTo(W, 0.75);
-    if (z > 0) { sh.lineTo(0.8, 0.75); sh.lineTo(0.8, 2.3); sh.lineTo(-0.8, 2.3); sh.lineTo(-0.8, 0.75); } sh.lineTo(-W, 0.75);
-    const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 16), M.glass); m.position.z = z; m.renderOrder = 2; g.add(m); }
-  for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(W - 0.8, 0.75, 0.22), M.brick); m.position.set(s * (W + 0.8) / 2, 0.375, D - 0.05); m.castShadow = m.receiveShadow = true; g.add(m); }
+  // vitrage : la coupe, extrudée sur la longueur ; pignons découpés dans la même coupe (porte devant)
+  const half = PROF.pts.filter(([, y]) => y >= 0.75);
+  const sect = [...half.slice().reverse().map(([x, y]) => [-x, y])]; sect.unshift([-(HALL.w - 0.08), 0.75]); const right = half.slice(0, -1).reverse(); sect.push(...right); sect.push([HALL.w - 0.08, 0.75]);
+  const gp = []; for (let i = 0; i < sect.length - 1; i++) { const [ax, ay] = sect[i], [bx, by] = sect[i + 1]; gp.push(ax, ay, -D, bx, by, -D, bx, by, D, ax, ay, -D, bx, by, D, ax, ay, D); }
+  const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); gg.computeVertexNormals();
+  const vault = new THREE.Mesh(gg, M.glass); vault.renderOrder = 2; g.add(vault);
+  for (const z of [-D, D]) { const sh = new THREE.Shape(); sh.moveTo(sect[0][0], sect[0][1]); for (let i = 1; i < sect.length; i++) sh.lineTo(sect[i][0], sect[i][1]);
+    if (z > 0) { sh.lineTo(0.8, 0.75); sh.lineTo(0.8, 2.3); sh.lineTo(-0.8, 2.3); sh.lineTo(-0.8, 0.75); } sh.lineTo(sect[0][0], sect[0][1]);
+    const m = new THREE.Mesh(new THREE.ShapeGeometry(sh), M.glass); m.position.z = z; m.renderOrder = 2; g.add(m); }
   // porte ouverte : chambranle
   const door = []; for (const x of [-0.8, 0.8]) door.push(along(cyl, V(x, 0, D), V(x, 2.3, D), 0.04)); door.push(along(cyl, V(-0.8, 2.3, D), V(0.8, 2.3, D), 0.04)); const dm = new THREE.Mesh(merge(door), M.iron); g.add(dm);
+  buildThemeProps(g, r);
   return g;
+}
+// Les objets qui font le thème, toujours là.
+function buildThemeProps(g, r) {
+  const T = SERRE.id;
+  if (T === 'bienetre') { // bouquets qui sèchent sous un arceau près de la porte, pile de pots
+    const herb = new THREE.MeshStandardMaterial({ color: 0x7a8a5a, roughness: 0.9 }), twine = new THREE.MeshStandardMaterial({ color: 0xb89a6a });
+    for (let i = 0; i < 7; i++) { const x = -1.8 + i * 0.6, top = roofY(x) - 0.25, b = new THREE.Group(); const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.3, 4), twine); cord.position.y = -0.15; b.add(cord);
+      for (let k = 0; k < 9; k++) { const s = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.32, 4), herb); s.position.set((r() - 0.5) * 0.08, -0.45, (r() - 0.5) * 0.08); s.rotation.set(Math.PI + (r() - 0.5) * 0.4, 0, (r() - 0.5) * 0.4); s.material = herb; b.add(s); }
+      const hc = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: [0x9a7ab0, 0xc8b060, 0x6a8a4a][i % 3], roughness: 1 })); hc.scale.y = 1.6; hc.position.y = -0.62; b.add(hc);
+      b.position.set(x, top, RIB_Z[7]); b.traverse((o) => (o.castShadow = true)); g.add(b); }
+    for (let i = 0; i < 6; i++) { const p = new THREE.Mesh(potG, new THREE.MeshStandardMaterial({ color: 0xb8693f, roughness: 0.8 })); p.position.set(1.05, i * 0.13, 5.4); p.rotation.y = i; g.add(p); }
+  } else if (T === 'travail') { // globe sur pied, échelle de bibliothèque
+    const brass = new THREE.MeshStandardMaterial({ color: 0xb8913a, metalness: 0.9, roughness: 0.3 }), gl = new THREE.Group();
+    const earth = texCanvas(256, 128, (x, w, h) => { x.fillStyle = '#c9b78a'; x.fillRect(0, 0, w, h); const rr = rngOf(12); x.fillStyle = '#5a7a6a'; for (let i = 0; i < 14; i++) { x.beginPath(); x.ellipse(rr() * w, 20 + rr() * (h - 40), 10 + rr() * 30, 6 + rr() * 18, rr() * 3, 0, 6.29); x.fill(); } x.strokeStyle = 'rgba(80,60,40,.4)'; for (let i = 0; i < 8; i++) { x.beginPath(); x.moveTo(i * 32, 0); x.lineTo(i * 32, h); x.stroke(); } });
+    const sph = new THREE.Mesh(new THREE.SphereGeometry(0.28, 32, 16), new THREE.MeshStandardMaterial({ map: earth, roughness: 0.5 })); sph.position.y = 1.0; sph.rotation.z = 0.4; gl.add(sph);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.012, 6, 40), brass); ring.position.y = 1.0; ring.rotation.y = Math.PI / 2; ring.rotation.x = 0.4; gl.add(ring);
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.7, 10), brass); stand.position.y = 0.36; gl.add(stand); const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.04, 16), new THREE.MeshStandardMaterial({ color: 0x3a2618 })); foot.position.y = 0.02; gl.add(foot);
+    gl.position.set(1.15, 0, 1.0); gl.traverse((o) => (o.castShadow = true)); g.add(gl);
+    const lad = new THREE.Group(), wm = new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.6 });
+    for (const dx of [-0.2, 0.2]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.0, 0.05), wm); s.position.set(dx, 1.0, 0); lad.add(s); }
+    for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 6), brass); s.rotation.z = Math.PI / 2; s.position.y = 0.2 + i * 0.27; lad.add(s); }
+    lad.position.set(-(HALL.w - 0.45), 0, -0.4); lad.rotation.z = -0.22; lad.rotation.y = Math.PI / 2; g.add(lad);
+  } else { // fanions le long du faîtage, brouette
+    const n = 30, cols = ['#e8a0b0', '#9fc3e8', '#f2d27a', '#a8d8a0', '#f0f0e8'];
+    for (const z0 of [-3.5, 0, 3.5]) { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n, x = -2.4 + t * 4.8; pts.push(V(x, roofY(x) - 0.35 - Math.sin(t * Math.PI) * 0.5, z0)); }
+      for (let i = 0; i < n; i++) { if (i % 2) continue; const a = pts[i], b = pts[i + 1], tri = new THREE.BufferGeometry(); tri.setAttribute('position', new THREE.Float32BufferAttribute([a.x, a.y, a.z, b.x, b.y, b.z, (a.x + b.x) / 2, a.y - 0.2, a.z], 3)); tri.computeVertexNormals();
+        g.add(new THREE.Mesh(tri, new THREE.MeshStandardMaterial({ color: cols[(i / 2) % cols.length], side: THREE.DoubleSide, roughness: 0.9 }))); }
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x8a7a6a }))); }
+    const wb = new THREE.Group(), wm = new THREE.MeshStandardMaterial({ color: 0x6a8aa0, roughness: 0.6 }), wood = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+    const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.3, 0.3, 4, 1, true), wm); tray.rotation.y = Math.PI / 4; tray.scale.set(1, 1, 1.4); tray.material.side = THREE.DoubleSide; tray.position.y = 0.45; wb.add(tray);
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.04, 8, 20), new THREE.MeshStandardMaterial({ color: 0x2a2a2a })); wheel.position.set(0, 0.17, 0.62); wheel.rotation.y = Math.PI / 2; wb.add(wheel);
+    for (const dx of [-0.25, 0.25]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.3, 6), wood); h.rotation.x = Math.PI / 2 - 0.25; h.position.set(dx, 0.4, -0.15); wb.add(h); }
+    const soilm = new THREE.Mesh(new THREE.SphereGeometry(0.34, 12, 6, 0, 6.29, 0, 1.2), M.soil); soilm.scale.set(1, 0.35, 1.3); soilm.position.y = 0.5; wb.add(soilm);
+    wb.position.set(1.15, 0, 4.4); wb.rotation.y = 0.5; wb.traverse((o) => (o.castShadow = true)); g.add(wb);
+  }
 }
 
 // ---------- Les trois serres : douze espèces chacune, dans l'ordre du déblocage ----------
@@ -304,13 +393,13 @@ const U = [0, 0.02, 0.1, 0.17, 0.24, 0.31, 0.38, 0.45, 0.52, 0.59, 0.66, 0.73];
 const DEB = ['Au départ', 'Au départ', '1 plante en pleine terre', '5 graines', '2 plantes en pleine terre', '8 graines', '3 plantes en pleine terre', '12 graines', '5 plantes en pleine terre', '15 graines', '7 plantes en pleine terre', '25 graines'];
 const DU = [0.12, 0.28, 0.42, 0.55, 0.68, 0.82];
 export let SERRE = SERRES.bienetre, SPECIES = [], DECORS = [];
-let SP = {}, PLAN = [], POTC = [];
+let SP = {}, PLAN = [], POTC = [], SLOTS_T = {};
 const D = HALL.d;
 const BASKETS = [[-1.3, -4.2], [1.3, -4.2], [-1.3, -1.2], [1.3, -1.2], [-1.3, 1.9], [1.3, 1.9]];
 const BENCH = []; for (const s of [-1, 1]) for (let i = 0; i < 10; i++) for (const row of [0, 1]) BENCH.push(V(s * (HALL.w - 0.62) + (row - 0.5) * 0.36 + (i % 2) * 0.04 * s, 0.85, 0.9 + i * 0.48 + row * 0.2));
 BENCH.sort((a, b) => b.z - a.z); // d'abord près de la porte
 export function configure(id) {
-  SERRE = SERRES[id] || SERRES.bienetre; SERRE.id = SERRES[id] ? id : 'bienetre';
+  SERRE = SERRES[id] || SERRES.bienetre; SERRE.id = SERRES[id] ? id : 'bienetre'; THEME = THEMES[SERRE.id]; buildProfile();
   SPECIES = SERRE.species.map((s, i) => ({ ...s, u: U[i], debloque: DEB[i] })); SP = Object.fromEntries(SPECIES.map((s) => [s.id, s]));
   DECORS = SERRE.decors.map(([did, nom, prix], i) => ({ id: did, nom, prix, u: DU[i] })); POTC = SERRE.potc.map(col);
   const of = (t) => SPECIES.filter((s) => s.type === t).map((s) => s.id), m = of('Massif'), ro = SPECIES.find((s) => s.type === 'Rocaille' || s.type === 'Prairie').id, g = of('Géante'), l = of('Liane'), t = of('Tombante');
@@ -321,6 +410,9 @@ export function configure(id) {
     [g[0], -2.45, -4.9], [g[0], 2.75, -4.3], [g[1], 1.65, -5.15], [g[2], 0, -5.2],
     [l[0], -1, RIB_Z[1]], [l[1], -1, RIB_Z[3]], [l[0], -1, RIB_Z[5]], [l[1], -1, RIB_Z[7]], [l[1], 1, RIB_Z[1]], [l[0], 1, RIB_Z[3]], [l[1], 1, RIB_Z[5]], [l[0], 1, RIB_Z[7]],
     [t[0], ...BASKETS[0]], [t[1], ...BASKETS[1]], [t[1], ...BASKETS[2]], [t[0], ...BASKETS[3]], [t[1], ...BASKETS[4]], [t[0], ...BASKETS[5]]);
+  // emplacements par type, pour les vraies plantes (le plus arrosé prend la meilleure place)
+  SLOTS_T = { Massif: PLAN.slice(0, 24).map(([, x, z]) => [x, z]), Rocaille: PLAN.slice(24, 31).map(([, x, z]) => [x, z]), 'Géante': [[0, -5.2], [-2.45, -4.9], [2.75, -4.3], [1.65, -5.15]], Liane: PLAN.slice(35, 43).map(([, x, z]) => [x, z]), Tombante: BASKETS.map((b) => b.slice()) };
+  SLOTS_T.Prairie = SLOTS_T.Rocaille;
   return SERRE;
 }
 configure('bienetre');
@@ -348,7 +440,8 @@ const plants = []; let P = 0, timeKey = 'day', onFps = null, variegated = true;
 function buildPools() {
   const counts = {}; for (const pl of plants) for (const pc of [...pl.parts, ...(pl.seedParts || [])]) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
   counts.pot = (counts.pot || 0) + BENCH.length + 6; counts.moss = (counts.moss || 0) + 260; counts.stone = (counts.stone || 0) + 60; counts.stem = (counts.stem || 0) + 8;
-  for (const [k, [geo, mat]] of Object.entries(POOLS)) { const n = counts[k] || 1, im = new THREE.InstancedMesh(geo, mat, n); im.count = 0; im.castShadow = k !== 'moss' && k !== 'petal5' && k !== 'daisy' && k !== 'star'; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, col('#fff')); scene.add(im); pools[k] = { im, n: 0 }; }
+  for (const k in pools) { scene.remove(pools[k].im); pools[k].im.dispose(); delete pools[k]; }
+  for (const [k, [geo, mat]] of Object.entries(POOLS)) { const n = counts[k] || 1, im = new THREE.InstancedMesh(geo, mat, n); im.count = 0; im.castShadow = k !== 'moss' && k !== 'petal5' && k !== 'daisy' && k !== 'star'; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, col('#fff')); scene.add(im); pools[k] = { im, n: 0, own: [] }; }
 }
 
 function addPlant(it) {
@@ -362,43 +455,76 @@ function addPlant(it) {
   plants.push({ it, parts, seedParts, ground });
 }
 
-const _M = new THREE.Matrix4(), _P = new THREE.Matrix4(), _S = new THREE.Matrix4(), _c = new THREE.Color(), HIDE = new THREE.Matrix4().makeScale(0, 0, 0);
-function push(pool, m, c) { const p = pools[pool]; if (!p || p.n >= p.im.instanceMatrix.count) return; p.im.setMatrixAt(p.n, m); p.im.setColorAt(p.n, c); p.n++; }
-function emit(parts, g, mat) {
-  for (const pc of parts) { const k = smooth(pc.a, pc.a + 0.12, g); if (k <= 0.001) continue; _S.makeScale(k, k, k); _M.multiplyMatrices(mat, pc.m).multiply(_S); push(pc.pool, _M, pc.c); }
+const _M = new THREE.Matrix4(), _P = new THREE.Matrix4(), _S = new THREE.Matrix4();
+// Chaque instance garde la plante d'où elle vient (pour toucher une plante dans la serre).
+function push(pool, m, c, owner = null) { const p = pools[pool]; if (!p || p.n >= p.im.instanceMatrix.count) return; p.im.setMatrixAt(p.n, m); p.im.setColorAt(p.n, c); p.own[p.n] = owner; p.n++; }
+function emit(parts, g, mat, owner) {
+  for (const pc of parts) { const k = smooth(pc.a, pc.a + 0.12, g); if (k <= 0.001) continue; _S.makeScale(k, k, k); _M.multiplyMatrices(mat, pc.m).multiply(_S); push(pc.pool, _M, pc.c, owner); }
 }
 const BASKET_C = col('#6b4a2a'), CHAIN_C = col('#2a2a26');
+// Démonstration : le curseur p rejoue une année (botaniste.html).
 export function setProgress(p) {
   P = clamp01(p);
+  for (const pl of plants) { const { it } = pl; pl.mode = null; if (P < it.sow) continue;
+    if (P < it.ground) { pl.mode = 'bench'; pl.g = 0.15 + 0.45 * clamp01((P - it.sow) / Math.min(0.12, it.ground - it.sow)); }
+    else { pl.mode = 'ground'; pl.g = 0.5 + 0.5 * smooth(it.ground, it.full, P); } }
+  renderAll();
+}
+// Pour de vrai (l'app) : les plantes de la serre, leurs arrosages, les décors troqués.
+// data : { plants: [{ id, sp, n, seed }], decors: [id], time }
+let LIVE = null;
+const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+export function setData(data) {
+  LIVE = { decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
+  const slots = Object.fromEntries(Object.entries(SLOTS_T).map(([k, v]) => [k, v.slice()])), items = []; let bench = 0;
+  for (const p of (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n)) {
+    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id };
+    if (p.n >= 20 && slots[s.type] && slots[s.type].length) { const [x, z] = slots[s.type].shift(); Object.assign(it, { x, z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
+    else if (bench < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: bench++, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
+    else continue;
+    items.push(it);
+  }
+  plants.length = 0; for (const it of items) addPlant(it); for (const pl of plants) { pl.mode = pl.it.mode; pl.g = pl.it.g; }
+  buildPools(); buildLabels(); renderAll(); if (data.time) setTime(data.time);
+}
+const hasDecor = (id) => (LIVE ? LIVE.decors.has(id) : P >= (DECORS.find((d) => d.id === id) || { u: 9 }).u);
+function renderAll() {
   for (const k in pools) pools[k].n = 0;
-  // pots vides de l'établi au début : quelques pots empilés
   const usedBench = new Set();
   for (const pl of plants) {
-    const { it } = pl; if (P < it.sow) continue;
-    if (P < it.ground) { // en pot sur l'établi
-      usedBench.add(it.bench); const b = BENCH[it.bench], g = 0.15 + 0.45 * clamp01((P - it.sow) / Math.min(0.12, it.ground - it.sow)), big = SP[it.id].type === 'Géante';
-      _P.compose(b, _q.setFromEuler(_e.set(0, it.i * 1.7, 0)), _s.setScalar(1)); push('pot', _P, POTC[it.i % 3]);
-      const sc = big ? 0.32 : 0.5; _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(g * 1.6) : g, _P);
+    const { it } = pl, g = pl.g, own = it.pid || null; if (!pl.mode) continue;
+    if (pl.mode === 'bench') { // en pot sur l'établi
+      usedBench.add(it.bench); const b = BENCH[it.bench], big = SP[it.id].type === 'Géante';
+      _P.compose(b, _q.setFromEuler(_e.set(0, it.i * 1.7, 0)), _s.setScalar(1)); push('pot', _P, POTC[it.i % 3], own);
+      const sc = big ? 0.32 : 0.5; _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(g * 1.6) : g, _P, own);
     } else { // pleine terre, dans son emplacement du plan
-      const g = 0.5 + 0.5 * smooth(it.ground, it.full, P), gr = pl.ground;
-      if (gr.basket) { _P.compose(gr.pos.clone().add(V(0, -0.1, 0)), _q.identity(), _s.set(1.3, 0.7, 1.3)); push('pot', _P, BASKET_C); _P.compose(gr.pos.clone().add(V(0, 0.05, 0)), _q.identity(), _s.set(0.006, 2.6, 0.006)); push('stem', _P, CHAIN_C); }
-      _P.compose(gr.pos, _q.setFromEuler(_e.set(0, gr.ry, 0)), _s.setScalar(gr.s * (gr.bed ? 1 : 0.55 + 0.45 * g))); emit(pl.parts, gr.bed ? (P - it.ground) / (it.full - it.ground) * 0.98 + 0.02 : g, _P);
+      const gr = pl.ground;
+      if (gr.basket) { _P.compose(gr.pos.clone().add(V(0, -0.1, 0)), _q.identity(), _s.set(1.3, 0.7, 1.3)); push('pot', _P, BASKET_C, own); const top = roofY(gr.pos.x) - 0.05; _P.compose(gr.pos.clone().add(V(0, 0.05, 0)), _q.identity(), _s.set(0.006, Math.max(0.2, top - gr.pos.y - 0.05), 0.006)); push('stem', _P, CHAIN_C); }
+      _P.compose(gr.pos, _q.setFromEuler(_e.set(0, gr.ry, 0)), _s.setScalar(gr.s * (gr.bed ? 1 : 0.55 + 0.45 * g))); emit(pl.parts, gr.bed ? (g - 0.5) * 1.96 + 0.02 : g, _P, own);
     }
   }
   // pots vides (au départ et entre deux semis)
   BENCH.forEach((b, j) => { if (usedBench.has(j) || j % 3) return; _P.compose(b, _q.setFromEuler(_e.set(0, j, 0)), _s.setScalar(1)); push('pot', _P, POTC[j % 3]); });
   // mousse et pierres : la serre se couvre avec le temps
-  const r = rngOf(42), moss = Math.floor(260 * smooth(0.05, 1, P));
-  for (let i = 0; i < 260; i++) { const side = r() < 0.5 ? -1 : 1, z = -D + 0.4 + r() * (D * 2 - 0.8), x = side * (0.75 + r() * 0.15), onEdge = r() < 0.55, X = onEdge ? x : side * (HALL.w - 0.05 + (r() - 0.5) * 0.16), Y = onEdge ? 0.02 : 0.75, s = 0.05 + r() * 0.09;
+  const r = rngOf(42), moss = Math.floor(260 * (LIVE ? clamp01(LIVE.waters / 200) : smooth(0.05, 1, P)));
+  for (let i = 0; i < 260; i++) { const side = r() < 0.5 ? -1 : 1, z = -D + 0.4 + r() * (D * 2 - 0.8), x = side * (0.75 + r() * 0.15), onEdge = r() < 0.55, X = onEdge ? x : side * (HALL.w - 0.05 + (r() - 0.5) * 0.16), Y = onEdge ? 0.02 : 0.78, s = 0.05 + r() * 0.09;
     if (i >= moss) continue; _P.compose(V(X, Y, z), _q.setFromEuler(_e.set(0, r() * 6, 0)), _s.set(s * 1.6, s * 0.45, s * 1.3)); push('moss', _P, vary('#5f8a3c', r, 0.18)); }
-  const ro = SPECIES.find((x) => x.type === 'Rocaille'); const rs = rngOf(9); for (let i = 0; i < 40; i++) { const x = 1.05 + rs() * 2.1, z = -0.8 - rs() * 2.9, s = 0.06 + rs() * 0.12; if (!ro || P < ro.u + 0.05) continue; _P.compose(V(x, 0.22, z), _q.setFromEuler(_e.set(rs(), rs() * 6, 0)), _s.set(s * 1.4, s * 0.8, s)); push('stone', _P, vary('#b9ad98', rs, 0.08)); }
-  for (const k in pools) { const pl = pools[k]; pl.im.count = pl.n; pl.im.instanceMatrix.needsUpdate = true; if (pl.im.instanceColor) pl.im.instanceColor.needsUpdate = true; }
+  const ro = SPECIES.find((x) => x.type === 'Rocaille'), stones = ro && (LIVE ? plants.some((pl) => pl.mode === 'ground' && SP[pl.it.id].type === 'Rocaille') : P >= ro.u + 0.05);
+  const rs = rngOf(9); for (let i = 0; i < 40; i++) { const x = 1.05 + rs() * 2.1, z = -0.8 - rs() * 2.9, s = 0.06 + rs() * 0.12; if (!stones) continue; _P.compose(V(x, 0.22, z), _q.setFromEuler(_e.set(rs(), rs() * 6, 0)), _s.set(s * 1.4, s * 0.8, s)); push('stone', _P, vary('#b9ad98', rs, 0.08)); }
+  for (const k in pools) { const pl = pools[k]; pl.im.count = pl.n; pl.im.instanceMatrix.needsUpdate = true; if (pl.im.instanceColor) pl.im.instanceColor.needsUpdate = true; pl.im.computeBoundingSphere(); }
   // décors
-  for (const d of DECORS) if (decorObjs[d.id]) decorObjs[d.id].visible = P >= d.u;
-  labelMeshes.forEach(({ m, it }) => (m.visible = P >= DECORS[1].u && P >= it.ground));
+  for (const d of DECORS) if (decorObjs[d.id]) decorObjs[d.id].visible = hasDecor(d.id);
+  labelMeshes.forEach(({ m, pl }) => (m.visible = hasDecor('etiquettes') && pl.mode === 'ground'));
   applyTime();
 }
 
+// Étiquettes plantées devant les emplacements du plan.
+const LABEL_G = new THREE.BoxGeometry(0.06, 0.16, 0.012);
+function buildLabels() {
+  for (const { m } of labelMeshes) scene.remove(m); labelMeshes = [];
+  const lab = new THREE.MeshStandardMaterial({ color: SERRE.id === 'perso' ? 0xe8c8a0 : SERRE.id === 'travail' ? 0x2a2a2a : 0xf1ead8, roughness: 0.7 });
+  for (const pl of plants) { const { it } = pl; if (it.nursery || pl.ground.basket || pl.ground.bed || it.x === undefined) continue; const m = new THREE.Mesh(LABEL_G, lab); m.position.set(it.x + 0.22 * Math.sign(-it.x || 1), 0.3, it.z + 0.3); m.rotation.set(-0.3, 0, 0); m.castShadow = true; scene.add(m); labelMeshes.push({ m, pl }); }
+}
 // Lueur posée au sol (disque additif) : la lumière des photophores sans calcul d'éclairage.
 function glowTex() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,200,120,1)'); g.addColorStop(0.35, 'rgba(255,170,90,0.45)'); g.addColorStop(1, 'rgba(255,150,60,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 let groundGlow = null, groundLights = [], candleMat = null;
@@ -438,15 +564,16 @@ function buildDecor() {
   }
   if (want.has('lanternes')) { // lanternes suspendues
     const g = new THREE.Group();
-    for (const z of [-3.4, -0.2, 3.2]) { const l = new THREE.Group(); const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.2, 6), M.lamp); l.add(cage);
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.1, 6), M.iron); cap.position.y = 0.18; l.add(cap); const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 3.2, 4), M.iron); ch.position.y = 1.75; l.add(ch);
+    const lib = SERRE.id === 'travail', shadeM = new THREE.MeshStandardMaterial({ color: 0x1f5a3a, roughness: 0.35, metalness: 0.2, side: THREE.DoubleSide }), chainL = Math.max(0.4, roofY(0) - 3.35);
+    for (const z of [-3.4, -0.2, 3.2]) { const l = new THREE.Group(); const cage = new THREE.Mesh(lib ? new THREE.SphereGeometry(0.07, 12, 8) : new THREE.CylinderGeometry(0.07, 0.09, 0.2, 6), M.lamp); l.add(cage);
+      const cap = new THREE.Mesh(lib ? new THREE.ConeGeometry(0.26, 0.2, 24, 1, true) : new THREE.ConeGeometry(0.15, 0.1, 6), lib ? shadeM : M.iron); cap.position.y = lib ? 0.1 : 0.18; l.add(cap); const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, chainL, 4), M.iron); ch.position.y = 0.15 + chainL / 2; l.add(ch);
       l.position.set(0, 3.2, z); g.add(l); lampMeshes.push(cage); const pl = new THREE.PointLight(0xffb866, 0, 7, 1.6); pl.position.set(0, 3.05, z); g.add(pl); lampLights.push(pl); }
     scene.add(g); decorObjs.lanternes = g;
   }
   if (want.has('guirlande')) { // guirlande d'ampoules le long du faîtage, en festons
     const g = new THREE.Group(), n = 64, bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.025, 8, 6), M.lamp, n), m4 = new THREE.Matrix4();
-    for (let i = 0; i < n; i++) { const t = i / (n - 1), z = -D + 0.5 + t * (D * 2 - 1), sag = Math.abs(Math.sin(t * Math.PI * 6)) * 0.35, x = Math.sin(t * Math.PI * 3) * 0.9; m4.makeTranslation(x, HALL.wall + HALL.w - 0.7 - sag - Math.abs(x) * 0.25, z); bulbs.setMatrixAt(i, m4); }
-    g.add(bulbs); for (const z of [-3.4, -0.2, 3.2]) { const pl = new THREE.PointLight(0xffc27a, 0, 7, 1.6); pl.position.set(0, 4.2, z); g.add(pl); lampLights.push(pl); }
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), z = -D + 0.5 + t * (D * 2 - 1), sag = Math.abs(Math.sin(t * Math.PI * 6)) * 0.35, x = Math.sin(t * Math.PI * 3) * 0.9; m4.makeTranslation(x, roofY(x) - 0.45 - sag, z); bulbs.setMatrixAt(i, m4); }
+    g.add(bulbs); for (const z of [-3.4, -0.2, 3.2]) { const pl = new THREE.PointLight(0xffc27a, 0, 7, 1.6); pl.position.set(0, roofY(0) - 1.0, z); g.add(pl); lampLights.push(pl); }
     scene.add(g); decorObjs.guirlande = g;
   }
   if (want.has('bassin') || want.has('vasque')) { // bassin et fontaine (ou vasque aux oiseaux, plus petite) au croisement
@@ -480,10 +607,7 @@ function buildDecor() {
     const top = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 12), wood); g.add(top); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.6, 4), M.iron); st.position.y = 0.3; g.add(st);
     g.position.set(0.55, 2.6, D - 0.5); scene.add(g); decorObjs.carillon = g;
   }
-  // étiquettes plantées devant les emplacements du plan
-  const lab = new THREE.MeshStandardMaterial({ color: SERRE.id === 'perso' ? 0xe8c8a0 : 0xf1ead8, roughness: 0.7 });
-  for (const pl of plants) { const { it } = pl; if (it.nursery || pl.ground.basket || pl.ground.bed) continue; const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.012), lab); m.position.set(it.x + 0.22 * Math.sign(-it.x || 1), 0.3, it.z + 0.3); m.rotation.set(-0.3, 0, 0); m.castShadow = true; scene.add(m); labelMeshes.push({ m, it }); }
-  buildGroundLights();
+  buildLabels(); buildGroundLights();
 }
 
 // ---------- Ciel et heure ----------
@@ -495,16 +619,17 @@ const SKY = {
 function applyTime() {
   const S = SKY[timeKey]; sky.material.uniforms.top.value.set(S.top); sky.material.uniforms.bot.value.set(S.bot);
   hemi.color.set(S.hemi[0]); hemi.groundColor.set(S.hemi[1]); hemi.intensity = S.hemi[2]; sun.color.set(S.sun[0]); sun.intensity = S.sun[1]; sun.position.copy(S.sun[2]); renderer.toneMappingExposure = S.exp; LEAF_GLOW.value = S.glow;
-  const lampsOn = P >= DECORS[3].u; lampLights.forEach((l) => (l.intensity = lampsOn ? S.lamp * 6 : 0)); M.lamp.emissiveIntensity = lampsOn ? S.lamp * 2.2 : 0;
+  const lampsOn = hasDecor(DECORS[3].id); lampLights.forEach((l) => (l.intensity = lampsOn ? S.lamp * 6 : 0)); M.lamp.emissiveIntensity = lampsOn ? S.lamp * 2.2 : 0;
   const gl = S.lamp; if (groundGlow) { groundGlow.visible = gl > 0; groundGlow.userData.mat.opacity = gl * 0.85; candleMat.emissiveIntensity = gl * 3; groundLights.forEach((l) => (l.intensity = gl * 2.4)); }
   M.petal.emissive.set(timeKey === 'night' ? 0x222018 : 0x000000);
-  if (fireflies) fireflies.visible = timeKey !== 'day' && P > 0.6;
-  if (ernest) ernest.setPose(timeKey === 'night' ? 'lanterne' : P > 0.05 ? 'arrose' : 'attend');
+  if (fireflies) fireflies.visible = timeKey !== 'day' && (LIVE ? LIVE.waters > 60 : P > 0.6);
+  if (ernest) ernest.setPose(timeKey === 'night' ? 'lanterne' : (LIVE ? LIVE.waters > 0 : P > 0.05) ? 'arrose' : 'attend');
 }
 export function setTime(k) { timeKey = k; applyTime(); }
 
 export function mount(canvas, opts = {}) {
   onFps = opts.onFps || null; configure(opts.serre);
+  plants.length = 0; for (const k in pools) delete pools[k]; decorObjs = {}; labelMeshes = []; lampLights = []; lampMeshes = []; groundLights = []; groundGlow = null; water = null; chime = null; fireflies = null; LIVE = null; if (opts.data) variegated = false;
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -518,7 +643,7 @@ export function mount(canvas, opts = {}) {
   scene.add(sky);
   { const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 32), new THREE.MeshStandardMaterial({ color: 0x40552f, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.01; scene.add(ground); }
   buildHall(scene);
-  for (const it of plan()) addPlant(it);
+  if (!opts.data) for (const it of plan()) addPlant(it);
   buildPools(); buildDecor();
   { // lucioles (soir, nuit, serre bien avancée)
     const n = 60, pos = new Float32Array(n * 3), r = rngOf(3); for (let i = 0; i < n; i++) pos.set([(r() - 0.5) * 7, 0.4 + r() * 2.6, (r() - 0.5) * 13], i * 3);
@@ -530,13 +655,20 @@ export function mount(canvas, opts = {}) {
   camera.position.set(0.3, 1.7, 5.3);
   const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix(); };
   window.addEventListener('resize', resize); resize();
-  setProgress(opts.progress ?? 0.5);
+  if (opts.data) setData(opts.data); else setProgress(opts.progress ?? 0.5);
+  // toucher une plante : l'instance la plus proche renvoie l'identifiant de sa plante
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+  const onDown = (e) => { down = [e.clientX, e.clientY]; };
+  const onUp = (e) => { if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
+    const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
+    for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } } };
+  canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
   let last = performance.now(), frames = 0, acc = 0;
   renderer.setAnimationLoop(() => {
     const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; frames++; acc += dt; if (acc > 1 && onFps) { onFps(Math.round(frames / acc)); frames = 0; acc = 0; }
     controls.update();
     // rester dans la serre
-    const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D + 1.5, c.z)); const maxY = HALL.wall + Math.sqrt(Math.max(0, HALL.w * HALL.w - c.x * c.x)) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
+    const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D + 1.5, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
     controls.target.x = Math.max(-HALL.w + 0.3, Math.min(HALL.w - 0.3, controls.target.x)); controls.target.z = Math.max(-D + 0.3, Math.min(D, controls.target.z)); controls.target.y = Math.max(0.2, Math.min(4.5, controls.target.y));
     const t = now / 1000;
     if (water) water.material.color.setHSL(0.5, 0.3, 0.32 + Math.sin(t * 1.3) * 0.02);
@@ -546,8 +678,10 @@ export function mount(canvas, opts = {}) {
     ernest.update(dt, { lantern: timeKey === 'night', lanternK: 2.0, groundY: 0, still: true });
     renderer.render(scene, camera);
   });
-  return { setProgress, setTime, camera, controls, renderer, scene };
+  return { setProgress, setTime, setData, camera, controls, renderer, scene,
+    dispose() { renderer.setAnimationLoop(null); window.removeEventListener('resize', resize); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* ignore */ } } };
 }
+export const themeName = (id) => (THEMES[id] || THEMES.bienetre).nom;
 export function setVariegated(on) { variegated = on; }
 export function stats(p) {
   const it = plan(); const seen = {}; let ground = 0;

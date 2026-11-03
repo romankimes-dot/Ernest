@@ -59,5 +59,15 @@
 - Le livre s'ouvre depuis la table de la cabane ou depuis le Carnet. Il a quatre onglets : le catalogue des espèces de chaque serre avec le troc, l'herbier avec une page par plante, les achèvements calculés depuis les données, et les décors à troquer.
 - Les décors troqués sont enregistrés, mais ils ne s'affichent pas encore. Ils arriveront avec les serres de botaniste dans l'app.
 
-## À garder en tête
-- Des serres différentes : chaque serre aura sa propre architecture, et pas seulement ses plantes et ses décors. La maquette les fait encore toutes sur le même modèle.
+## Les serres de botaniste dans l'app
+- Le village reste tel quel. On entre dans une serre par le bouton « Entrer dans la serre » en promenade, ou depuis le panneau de la serre. On en voit alors l'intérieur de botaniste avec ses vraies plantes.
+- Placement automatique :
+  - une plante en pleine terre prend l'emplacement de son type (massif, rocaille, géante, liane, suspension), la plus arrosée d'abord ;
+  - les autres restent en pot sur l'établi, près de la porte.
+- Choisir soi-même l'emplacement reste à faire.
+- Toucher une plante ouvre sa fiche pour l'arroser. Les décors troqués apparaissent.
+- Trois thèmes, trois architectures :
+  - **Bien-être, l'herboristerie** : voûte ronde en fonte verte, briques, dalles de pierre, bouquets qui sèchent, pile de pots.
+  - **Travail, le cabinet d'étude** : ogive haute en fonte noire avec tirants, damier, bibliothèques basses, globe, échelle, lampes vertes.
+  - **Vie perso, l'orangerie du cottage** : toit à deux pans en bois peint en blanc, gravier et pas japonais, planches peintes, fanions, brouette.
+- La cabane est texturée (chaux, pierre, chaume, bois, plancher, tapis) et meublée : manteau de cheminée et bocaux, marmite, casseroles de cuivre, bûches, fauteuil, tableau, balai, panier de pommes, livres, bouquets aux poutres, tresse d'ail, lanterne, basilic à la fenêtre.
