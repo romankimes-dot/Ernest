@@ -61,11 +61,11 @@ async function serre3d() {
 }
 serre3d();
 
-// ---------- 2. Mini-démo : trois cases, trois pots ----------
-const pots = [...document.querySelectorAll('.pot')], playBubble = $('#playBubble'), playImg = $('#playImg'), playBtn = $('#playErnest');
-const done = [false, false, false];
-let poseT = 0, lastPlay = '';
-function burst(el) {
+// ---------- 2. Mini-démo : cocher remplit un arrosoir, le verser fait passer un stade à la monstera ----------
+const cans = [...document.querySelectorAll('#cans .can')], pot = $('#bigPot'), stageEl = $('#stage'), playBubble = $('#playBubble'), playImg = $('#playImg'), playBtn = $('#playErnest');
+const done = [false, false, false], STAGES = ['Graine', 'Pousse', 'Plante', 'Grande'];
+let full = 0, poured = 0, poseT = 0, lastPlay = '';
+function burst(el, colors = ['#6cbb74', '#8fc98f', '#5fae6d', '#f2b23d']) {
   if (reduced) return;
   const r = el.getBoundingClientRect();
   for (let i = 0; i < 14; i++) {
@@ -73,22 +73,31 @@ function burst(el) {
     const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 90;
     s.style.left = r.left + r.width / 2 + 'px'; s.style.top = r.top + r.height * 0.3 + 'px';
     s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d - 40 + 'px'); s.style.setProperty('--r', Math.random() * 540 + 'deg');
-    s.style.background = rnd(['#6cbb74', '#8fc98f', '#5fae6d', '#f2b23d']);
+    s.style.background = rnd(colors);
     document.body.appendChild(s); setTimeout(() => s.remove(), 1700);
   }
 }
+const pose = (img, ms = 1800) => { playImg.src = img; clearTimeout(poseT); poseT = setTimeout(() => { playImg.src = './img/ernest-salue.jpg'; }, ms); };
+function paint() {
+  cans.forEach((c, i) => { c.classList.toggle('full', i < full); c.classList.toggle('used', i >= full && i < full + poured); });
+  pot.dataset.stage = poured; pot.classList.toggle('ready', full > 0);
+  stageEl.textContent = `${STAGES[poured]} · ${poured} arrosage${poured > 1 ? 's' : ''}${full ? ' · touche le pot pour verser' : poured === 3 ? ' · à vingt, la pleine terre' : ''}`;
+}
 document.querySelectorAll('#todo .t').forEach((b) => b.addEventListener('click', () => {
   const i = Number(b.dataset.i); done[i] = !done[i];
-  b.classList.toggle('done', done[i]); b.setAttribute('aria-pressed', done[i]); pots[i].classList.toggle('grown', done[i]);
-  const k = done.filter(Boolean).length;
-  if (done[i]) {
-    lastPlay = k === 3 ? line(['coche.derniere'], 'derniere', lastPlay) : line(['coche'], 'coche', lastPlay);
-    playImg.src = './img/ernest-arrose.jpg'; clearTimeout(poseT); poseT = setTimeout(() => { playImg.src = './img/ernest-salue.jpg'; }, 1800);
-    setTimeout(() => burst(pots[i]), 350);
-    if (k === 3) setTimeout(() => pots.forEach((p, j) => setTimeout(() => burst(p), j * 120)), 900);
-  } else lastPlay = line(['reporte', 'laisse'], 'reporte', lastPlay);
-  say(playBubble, lastPlay); hop(playBtn);
+  b.classList.toggle('done', done[i]); b.setAttribute('aria-pressed', done[i]);
+  if (done[i]) { full++; lastPlay = full + poured === 3 ? line(['coche.derniere'], 'derniere', lastPlay) : line(['coche'], 'coche', lastPlay); pose('./img/ernest-arrose.jpg'); setTimeout(() => burst(cans[Math.min(2, full + poured - 1)], ['#9fd0f0', '#cfe8f2', '#6aa8d8']), 250); }
+  else { if (full > 0) full--; lastPlay = line(['reporte', 'laisse'], 'reporte', lastPlay); }
+  paint(); say(playBubble, lastPlay); hop(playBtn);
 }));
+pot.addEventListener('click', () => {
+  if (!full) { say(playBubble, poured === 3 ? 'Elle a eu ses trois arrosoirs. Dans l’app, à vingt, elle part en pleine terre.' : 'Pas d’arrosoir plein. Coche d’abord une case.'); hop(playBtn); return; }
+  full--; poured++; paint(); pose('./img/ernest-arrose.jpg', 2200); burst(pot, ['#9fd0f0', '#cfe8f2']); setTimeout(() => burst(pot), 450);
+  const st = STAGES[poured].toLowerCase(), pool = LINES.filter((l) => l.ctx === 'flore.stade').map((l) => l.t);
+  const t = pool.length ? rnd(pool).replace(/\{espece\}/g, 'la monstera').replace(/\{stade\}/g, st) : `La monstera passe au stade ${st}.`;
+  lastPlay = t.charAt(0).toUpperCase() + t.slice(1); say(playBubble, lastPlay); hop(playBtn);
+});
+paint();
 playBtn.addEventListener('click', () => { hop(playBtn); lastPlay = line(['ernest.touche', 'manies'], 'touche', lastPlay); say(playBubble, lastPlay); });
 
 // ---------- 3. Carrousel des cartes ----------

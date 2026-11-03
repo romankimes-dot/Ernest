@@ -36,10 +36,10 @@
   <a class="scroll-hint" href="#essaie" aria-label="Descendre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></a>
 </section>
 
-<!-- 2. Mini-démo : chaque case cochée fait pousser un pot -->
+<!-- 2. Mini-démo : une chose faite remplit un arrosoir ; on le verse sur sa plante, qui passe ses stades -->
 <section class="play" id="essaie">
-  <h2>Essaie. Coche.</h2>
-  <p class="sub">Une chose faite = une plante.</p>
+  <h2>Essaie. Coche, puis arrose.</h2>
+  <p class="sub">Une chose faite, un arrosoir. Tu le verses sur la plante de ton choix : elle passe ses stades.</p>
   <div class="game">
     <ul class="todo" id="todo">
       <li><button class="t" data-i="0"><span class="box"></span><span class="lbl">Réviser la TVA</span><small>Travail</small></button></li>
@@ -47,38 +47,24 @@
       <li><button class="t" data-i="2"><span class="box"></span><span class="lbl">Appeler Rapha</span><small>Vie perso</small></button></li>
     </ul>
     <div class="garden">
-      <div class="pots" id="pots">
-        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
-          <g class="plant">
-            <path d="M80 130C78 90 70 60 50 40" stroke="#3f8a5c" stroke-width="5" fill="none"/><path d="M80 130c2-40 10-70 34-92" stroke="#3f8a5c" stroke-width="5" fill="none"/>
-            <ellipse cx="44" cy="40" rx="26" ry="14" fill="#6cbb74" transform="rotate(-30 44 40)"/><ellipse cx="118" cy="38" rx="28" ry="14" fill="#5fae6d" transform="rotate(25 118 38)"/>
-            <ellipse cx="62" cy="80" rx="22" ry="11" fill="#8fc98f" transform="rotate(-40 62 80)"/><ellipse cx="102" cy="76" rx="22" ry="11" fill="#6cbb74" transform="rotate(35 102 76)"/>
-            <g class="flower"><circle cx="80" cy="22" r="10" fill="#f2b23d"/><circle cx="80" cy="22" r="4.5" fill="#c7772a"/></g>
-          </g>
-          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
-          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
-        </svg>
-        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
-          <g class="plant">
-            <path d="M80 128c-4-30-18-58-40-74M80 128c0-34 0-64 0-92M80 128c4-30 18-58 40-74" stroke="#2f6b48" stroke-width="4" fill="none"/>
-            <g fill="#5fae6d"><ellipse cx="46" cy="62" rx="16" ry="7" transform="rotate(30 46 62)"/><ellipse cx="58" cy="84" rx="15" ry="6" transform="rotate(25 58 84)"/><ellipse cx="114" cy="62" rx="16" ry="7" transform="rotate(-30 114 62)"/><ellipse cx="102" cy="84" rx="15" ry="6" transform="rotate(-25 102 84)"/></g>
-            <g fill="#8fc98f"><ellipse cx="70" cy="46" rx="14" ry="6" transform="rotate(50 70 46)"/><ellipse cx="90" cy="46" rx="14" ry="6" transform="rotate(-50 90 46)"/><ellipse cx="80" cy="30" rx="6" ry="12"/></g>
-          </g>
-          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
-          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
-        </svg>
-        <svg class="pot" viewBox="0 0 160 200" aria-hidden="true">
-          <g class="plant">
-            <path d="M80 128c0-24 0-40 0-52" stroke="#3f8a5c" stroke-width="5"/>
-            <circle cx="56" cy="84" r="20" fill="#6cbb74"/><circle cx="104" cy="82" r="20" fill="#5fae6d"/><circle cx="80" cy="62" r="22" fill="#8fc98f"/>
-            <g class="flower"><circle cx="62" cy="70" r="5" fill="#e98aa0"/><circle cx="98" cy="66" r="5" fill="#e98aa0"/><circle cx="82" cy="48" r="5" fill="#efe6d2"/></g>
-          </g>
-          <circle class="grain" cx="80" cy="119" r="5" fill="#6e4526"/>
-          <path d="M36 130h88l-10 62H46z" fill="#c7772a"/><rect x="30" y="122" width="100" height="14" rx="4" fill="#a85f1f"/>
-        </svg>
+      <div class="bed">
+        <div class="cans" id="cans"><svg class="can" viewBox="0 0 64 48" aria-hidden="true"><path class="water" d="M14 20h26v20a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z"/><path d="M12 18h30v22a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M42 24l14-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="57" cy="13" r="4" fill="currentColor"/><path d="M18 18c0-8 18-8 18 0" fill="none" stroke="currentColor" stroke-width="3"/></svg><svg class="can" viewBox="0 0 64 48" aria-hidden="true"><path class="water" d="M14 20h26v20a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z"/><path d="M12 18h30v22a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M42 24l14-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="57" cy="13" r="4" fill="currentColor"/><path d="M18 18c0-8 18-8 18 0" fill="none" stroke="currentColor" stroke-width="3"/></svg><svg class="can" viewBox="0 0 64 48" aria-hidden="true"><path class="water" d="M14 20h26v20a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4z"/><path d="M12 18h30v22a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M42 24l14-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="57" cy="13" r="4" fill="currentColor"/><path d="M18 18c0-8 18-8 18 0" fill="none" stroke="currentColor" stroke-width="3"/></svg></div>
+        <button class="big-pot" id="bigPot" aria-label="Verser un arrosoir sur la monstera">
+          <svg viewBox="0 0 200 240" aria-hidden="true">
+            <g class="st st0"><circle cx="100" cy="150" r="6" fill="#6e4526"/></g>
+            <g class="st st1"><path d="M100 152c0-14 0-22-2-30" stroke="#3f8a5c" stroke-width="4" fill="none"/><ellipse cx="90" cy="118" rx="12" ry="7" fill="#6cbb74" transform="rotate(-30 90 118)"/><ellipse cx="108" cy="116" rx="12" ry="7" fill="#5fae6d" transform="rotate(30 108 116)"/></g>
+            <g class="st st2"><path d="M100 152c-2-30-14-50-34-60M100 152c0-34 4-56 20-74M100 152c2-24 18-36 40-40" stroke="#3f7a3c" stroke-width="4" fill="none"/>
+              <path d="M66 92c-22-6-34 8-30 22 14 4 28-4 30-22z" fill="#3f8a4a"/><path d="M120 78c-6-22 8-36 26-30 2 16-10 28-26 30z" fill="#2f7a3a"/><path d="M140 112c16-10 32-2 32 14-14 6-28 0-32-14z" fill="#4f9a4a"/></g>
+            <g class="st st3"><path d="M100 152c-10-50-40-80-70-90M100 152c4-60 20-96 40-116M100 152c10-36 40-56 74-56" stroke="#2f6a32" stroke-width="5" fill="none"/>
+              <path d="M30 62c-26-6-30 30-6 40 14 2 24-12 20-24-4 6-10 6-12 0 6-2 8-8 4-12-4 4-8 2-8-2z" fill="#2c6428"/><path d="M140 36c0-30 40-30 44-4 0 14-16 22-28 14 6-2 6-8 0-10-2 6-8 6-10 2 4-4 2-8-2-8z" fill="#2f7030"/><path d="M174 96c24 0 26 32 4 38-12 2-22-8-18-20 4 6 10 4 10-2-6 0-8-6-4-10 4 2 8 0 8-6z" fill="#3a7a34"/>
+              <g class="flower"><path d="M100 40c-8 0-12 16 0 24 12-8 8-24 0-24z" fill="#f2efe0"/><path d="M100 44v26" stroke="#c8b860" stroke-width="3"/></g></g>
+            <path d="M52 160h96l-12 72H64z" fill="#c7772a"/><rect x="44" y="150" width="112" height="16" rx="5" fill="#a85f1f"/>
+          </svg>
+          <span class="stage" id="stage">Graine · touche le pot pour verser</span>
+        </button>
       </div>
       <div class="ernest-spot play-e">
-        <div class="bubble" id="playBubble">Trois cases. Je regarde, c'est tout.</div>
+        <div class="bubble" id="playBubble">Coche une case : je remplis un arrosoir.</div>
         <button class="ernest" id="playErnest" aria-label="Toucher Ernest"><img src="./img/ernest-salue.jpg" alt="" width="720" height="720" id="playImg"></button>
       </div>
     </div>

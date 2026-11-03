@@ -179,3 +179,19 @@ svg{display:block}
   .steps .n{margin:0;width:32px;height:32px;flex:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+
+/* mini-démo : arrosoirs et monstera qui passe ses stades */
+.bed{display:flex;flex-direction:column;align-items:center;gap:14px;flex:1}
+.cans{display:flex;gap:14px}
+.can{width:56px;height:auto;color:#5a6a62;transition:color .3s,transform .3s}
+.can .water{fill:#4a8ac8;opacity:0;transition:opacity .4s}
+.can.full{color:#cfe2f0;transform:translateY(-3px)}
+.can.full .water{opacity:.9}
+.can.used{color:#3a4a42;opacity:.55}
+.big-pot{background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:inherit;font:inherit}
+.big-pot svg{width:clamp(150px,22vw,220px);height:auto;overflow:visible}
+.big-pot.ready svg{animation:sway 3s ease-in-out infinite}
+.big-pot .st{transform-box:fill-box;transform-origin:50% 100%;transform:scale(0);opacity:0;transition:transform .9s cubic-bezier(.3,1.6,.5,1),opacity .4s}
+.big-pot[data-stage="0"] .st0,.big-pot[data-stage="1"] .st1,.big-pot[data-stage="2"] .st2,.big-pot[data-stage="3"] .st3{transform:scale(1);opacity:1}
+.big-pot .flower{transform-box:fill-box;transform-origin:50% 100%}
+.stage{font-size:14px;color:var(--fg2,#a9b5a3);text-align:center}
