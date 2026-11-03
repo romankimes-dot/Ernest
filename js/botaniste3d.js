@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { phaseAt } from './model.js';
-import { STAGES, stageOf } from './flore.js';
+import { STAGES, stageOf, SLOT_XZ, BASKETS, layout } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -397,7 +397,6 @@ const DU = [0.12, 0.28, 0.42, 0.55, 0.68, 0.82];
 export let SERRE = SERRES.bienetre, SPECIES = [], DECORS = [];
 let SP = {}, PLAN = [], POTC = [], SLOTS_T = {};
 const D = HALL.d;
-const BASKETS = [[-1.3, -4.2], [1.3, -4.2], [-1.3, -1.2], [1.3, -1.2], [-1.3, 1.9], [1.3, 1.9]];
 const BENCH = []; for (const s of [-1, 1]) for (let i = 0; i < 10; i++) for (const row of [0, 1]) BENCH.push(V(s * (HALL.w - 0.62) + (row - 0.5) * 0.36 + (i % 2) * 0.04 * s, 0.85, 0.9 + i * 0.48 + row * 0.2));
 BENCH.sort((a, b) => b.z - a.z); // d'abord près de la porte
 export function configure(id) {
@@ -406,15 +405,15 @@ export function configure(id) {
   DECORS = SERRE.decors.map(([did, nom, prix], i) => ({ id: did, nom, prix, u: DU[i] })); POTC = SERRE.potc.map(col);
   const of = (t) => SPECIES.filter((s) => s.type === t).map((s) => s.id), m = of('Massif'), ro = SPECIES.find((s) => s.type === 'Rocaille' || s.type === 'Prairie').id, g = of('Géante'), l = of('Liane'), t = of('Tombante');
   const GRID = [[0, 1, 0, 1], [1, 0, 1, 0], [2, 3, 2, 0], [3, 2, 3, 1], [2, 3, 3, 2], [3, 3, 2, 3]];
-  PLAN = []; const r = rngOf(31);
-  GRID.forEach((row, j) => row.forEach((k, i) => PLAN.push([m[k], -3.0 + i * 0.6 + (r() - 0.5) * 0.18, -0.95 - j * 0.62 + (r() - 0.5) * 0.18])));
-  PLAN.push([ro, 1.35, -1.1], [ro, 2.15, -1.5], [ro, 2.9, -1.0], [ro, 1.7, -2.3], [ro, 2.75, -2.55], [ro, 1.45, -3.3], [ro, 2.4, -3.4],
-    [g[0], -2.45, -4.9], [g[0], 2.75, -4.3], [g[1], 1.65, -5.15], [g[2], 0, -5.2],
-    [l[0], -1, RIB_Z[1]], [l[1], -1, RIB_Z[3]], [l[0], -1, RIB_Z[5]], [l[1], -1, RIB_Z[7]], [l[1], 1, RIB_Z[1]], [l[0], 1, RIB_Z[3]], [l[1], 1, RIB_Z[5]], [l[0], 1, RIB_Z[7]],
-    [t[0], ...BASKETS[0]], [t[1], ...BASKETS[1]], [t[1], ...BASKETS[2]], [t[0], ...BASKETS[3]], [t[1], ...BASKETS[4]], [t[0], ...BASKETS[5]]);
-  // emplacements par type, pour les vraies plantes (le plus arrosé prend la meilleure place)
-  SLOTS_T = { Massif: PLAN.slice(0, 24).map(([, x, z]) => [x, z]), Rocaille: PLAN.slice(24, 31).map(([, x, z]) => [x, z]), 'Géante': [[0, -5.2], [-2.45, -4.9], [2.75, -4.3], [1.65, -5.15]], Liane: PLAN.slice(35, 43).map(([, x, z]) => [x, z]), Tombante: BASKETS.map((b) => b.slice()) };
-  SLOTS_T.Prairie = SLOTS_T.Rocaille;
+  // le plan (js/flore.js, SLOT_XZ) : le même dedans et, à l'échelle, dans les serres du village
+  const X = SLOT_XZ, li = [0, 1, 0, 1, 1, 0, 1, 0], ti = [0, 1, 1, 0, 1, 0];
+  PLAN = [];
+  GRID.forEach((row, j) => row.forEach((k, i) => PLAN.push([m[k], ...X.Massif[j * 4 + i]])));
+  X.Rocaille.forEach((xz) => PLAN.push([ro, ...xz]));
+  [[0, 1], [0, 2], [1, 3], [2, 0]].forEach(([a, k]) => PLAN.push([g[a], ...X['Géante'][k]]));
+  X.Liane.forEach(([x, z], i) => PLAN.push([l[li[i]], x, z]));
+  X.Tombante.forEach((xz, i) => PLAN.push([t[ti[i]], ...xz]));
+  SLOTS_T = X;
   return SERRE;
 }
 configure('bienetre');
@@ -511,16 +510,13 @@ const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Mat
 export function setData(data) {
   const sig = JSON.stringify([data.plants, data.decors]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
   LIVE = { sig, decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
-  // emplacements : d'abord ceux choisis (place), puis les autres dans l'ordre, la plante la plus arrosée d'abord
-  const taken = {}, items = []; let bench = 0; LIVE.assign = {};
-  const list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), typeOf = (p) => (SP[p.sp].type === 'Prairie' ? 'Rocaille' : SP[p.sp].type);
-  for (const p of list) { const T = typeOf(p); if (p.n >= 20 && Number.isInteger(p.place) && SLOTS_T[T] && p.place >= 0 && p.place < SLOTS_T[T].length && !(taken[T] || {})[p.place]) { (taken[T] = taken[T] || {})[p.place] = p.id; LIVE.assign[p.id] = p.place; } }
-  for (const p of list) { const T = typeOf(p); if (p.n < 20 || LIVE.assign[p.id] !== undefined || !SLOTS_T[T]) continue; const k = SLOTS_T[T].findIndex((_, j) => !(taken[T] || {})[j]); if (k >= 0) { (taken[T] = taken[T] || {})[k] = p.id; LIVE.assign[p.id] = k; } }
-  LIVE.taken = taken;
+  // emplacements : le plan partagé avec les serres du village (js/flore.js, layout)
+  const items = [], list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), L = layout(list);
+  LIVE.assign = {}; LIVE.taken = L.taken;
   for (const p of list) {
-    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id, rare: p.rare || null }, k = LIVE.assign[p.id];
-    if (k !== undefined) { const [x, z] = SLOTS_T[typeOf(p)][k]; Object.assign(it, { x, z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
-    else if (bench < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: bench++, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
+    const it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id, rare: p.rare || null }, a = L.at.get(p.id); if (!a) continue;
+    if (a.mode === 'ground') { LIVE.assign[p.id] = a.k; Object.assign(it, { x: a.x, z: a.z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
+    else if (a.k < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: a.k, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
     else continue;
     items.push(it);
   }
@@ -651,6 +647,8 @@ function buildGroundLights() {
   }
   groundGlow.userData.mat = glowMat;
   for (const [x, z] of [[-2.0, -2.8], [2.2, -2.8]]) { const l = new THREE.PointLight(0xffa860, 0, 3.6, 1.5); l.position.set(x, 0.45, z); scene.add(l); groundLights.push(l); }
+  // veilleuses sous le faîtage : la nuit, on voit les plantes même sans lanternes troquées
+  for (const z of [-4.2, -1.4, 1.6, 4.4]) { const l = new THREE.PointLight(0xffc890, 0, 8, 1.4); l.position.set(0, 2.5, z); l.userData.k = 2.6; scene.add(l); groundLights.push(l); }
 }
 function buildDecor() {
   const wood = new THREE.MeshStandardMaterial({ color: 0x6e5034, roughness: 0.8 }), stoneMat = new THREE.MeshStandardMaterial({ color: 0xa79f90, roughness: 0.85 });
@@ -723,7 +721,7 @@ function buildDecor() {
 const SKY = {
   day: { top: '#7fb6dc', bot: '#d9ecef', hemi: ['#d8ecf0', '#8a7a52', 1.5], glow: 0.28, sun: ['#fff3dc', 2.6, V(5, 11, 4)], fog: '#cfe2e2', exp: 1.0, lamp: 0 },
   dusk: { top: '#2f3f6b', bot: '#f0a46a', hemi: ['#f0c8a8', '#6a4a34', 0.95], glow: 0.18, sun: ['#ffb46a', 1.9, V(-9, 3.2, -6)], fog: '#8a6a6a', exp: 1.05, lamp: 0.6 },
-  night: { top: '#050b18', bot: '#11203a', hemi: ['#5a6f9a', '#2a2420', 0.35], glow: 0.04, sun: ['#9fb4ff', 0.35, V(-4, 10, 6)], fog: '#0b1424', exp: 1.15, lamp: 1 },
+  night: { top: '#0b1730', bot: '#1d3050', hemi: ['#8a9cc4', '#5a4a38', 0.95], glow: 0.1, sun: ['#b4c4ff', 0.7, V(-4, 10, 6)], fog: '#16223a', exp: 1.4, lamp: 1 },
 };
 // « auto » : l'heure réelle, avec les fondus de l'aube et du crépuscule (le même soleil que le village).
 const mixSky = (a, b, t) => { const o = {}; for (const k of Object.keys(a)) { const x = a[k], y = b[k]; o[k] = typeof x === 'number' ? x + (y - x) * t : typeof x === 'string' ? '#' + col(x).lerp(col(y), t).getHexString() : Array.isArray(x) ? x.map((v, i) => (typeof v === 'number' ? v + (y[i] - v) * t : typeof v === 'string' ? '#' + col(v).lerp(col(y[i]), t).getHexString() : v.clone().lerp(y[i], t))) : x; } return o; };
@@ -731,8 +729,8 @@ function skyNow() { if (timeKey !== 'auto') return SKY[timeKey]; const d = new D
 function applyTime() {
   const S = skyNow(); sky.material.uniforms.top.value.set(S.top); sky.material.uniforms.bot.value.set(S.bot);
   hemi.color.set(S.hemi[0]); hemi.groundColor.set(S.hemi[1]); hemi.intensity = S.hemi[2]; sun.color.set(S.sun[0]); sun.intensity = S.sun[1]; sun.position.copy(S.sun[2]); renderer.toneMappingExposure = S.exp; LEAF_GLOW.value = S.glow;
-  const lampsOn = hasDecor(DECORS[3].id); lampLights.forEach((l) => (l.intensity = lampsOn ? S.lamp * 6 : 0)); M.lamp.emissiveIntensity = lampsOn ? S.lamp * 2.2 : 0;
-  const gl = S.lamp; if (groundGlow) { groundGlow.visible = gl > 0; groundGlow.userData.mat.opacity = gl * 0.85; candleMat.emissiveIntensity = gl * 3; groundLights.forEach((l) => (l.intensity = gl * 2.4)); }
+  const lampsOn = hasDecor(DECORS[3].id); lampLights.forEach((l) => (l.intensity = S.lamp * (lampsOn ? 7 : 3.5))); M.lamp.emissiveIntensity = S.lamp * (lampsOn ? 2.2 : 1.1); // veilleuses toujours, plus fort avec le décor
+  const gl = S.lamp; if (groundGlow) { groundGlow.visible = gl > 0; groundGlow.userData.mat.opacity = gl * 0.85; candleMat.emissiveIntensity = gl * 3; groundLights.forEach((l) => (l.intensity = gl * (l.userData.k || 2.4))); }
   const night = S.lamp > 0.75; nightNow = night;
   M.petal.emissive.set(night ? 0x222018 : 0x000000);
   if (fireflies) fireflies.visible = S.lamp > 0.3 && (LIVE ? LIVE.waters > 60 : P > 0.6);

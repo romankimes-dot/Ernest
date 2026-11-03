@@ -12,7 +12,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { buildCottage } from './cottage3d.js';
 import { growth, totalDone, moodAvg, catCounts, catId, floraOf, DAYLEN, NOON, phaseAt } from './model.js';
-import { bonsaiInSerre } from './flore.js';
+import { bonsaiInSerre, layout, SLOT_XZ, waterCount, GROUND } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -246,7 +246,7 @@ function ibFlush(parent) {
   ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
   ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, metalness: 0 })); // portes peintes : couleur de la serre (par instance)
   ibDef('cloth', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), false, true); // chemins de table
-  ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
+  ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('bed', box1, M.soil, false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
 }
 // Vitrages d'une serre, fusionnés : murs, toit (sa coupe extrudée), pignon arrière plein, pignon avant ouvert sur la porte.
 const glassGeoOf = (h) => {
@@ -272,7 +272,10 @@ function signTex(text, bg = '#6e4526') {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 const SIGNS = []; // panneaux des serres : on les touche pour voir les choses du jour de la serre
-const BAYS = 6, TBX = 1.75, TY = 0.82, TZ0 = -HD + 1.5, TZ1 = HD - 1.0; // tables : axe, hauteur, début et fin
+const BAYS = 6, TBX = 1.75, TY = 0.82, TZ0 = 0.25, TZ1 = HD - 1.0; // établis (moitié avant, comme dedans) : axe, hauteur, début et fin
+// Le plan de l'intérieur (js/flore.js, SLOT_XZ), ramené à la petite serre : massifs et rocaille au fond, géantes
+// contre le pignon, lianes aux poteaux, suspensions au-dessus de l'allée, jeunes pots sur les établis.
+const SX = 0.765, SZ = 0.7, BED_Z = -0.35;
 const lanterns = [], signMats = [], bulbMats = [];
 for (const h of HOUSES) {
   const g = h.g, W = g.matrixWorld, r = rngOf(3 + HOUSES.indexOf(h) * 31);
@@ -321,6 +324,12 @@ for (const h of HOUSES) {
     boxAt('cloth', W, s * TBX, TY + 0.036, zc, 0.97, 0.012, L + 0.04, 0, acc); // chemin de table de la couleur de la serre
     boxAt('cloth', W, s * (TBX - 0.49), TY - 0.03, zc, 0.012, 0.13, L + 0.04, 0, acc); // et son retombé côté allée
   }
+  // plates-bandes du fond (massif à gauche, rocaille à droite), bordées de bois, et le rond de terre au croisement
+  for (const s of [-1, 1]) { const x0 = 0.6, x1 = HW - 0.06, z0 = -HD + 0.06, xc = s * (x0 + x1) / 2, zc = (z0 + BED_Z) / 2;
+    boxAt('bed', W, xc, 0.07, zc, x1 - x0, 0.14, BED_Z - z0);
+    boxAt('dark', W, s * x0, 0.09, zc, 0.06, 0.18, BED_Z - z0); boxAt('dark', W, xc, 0.09, BED_Z, x1 - x0, 0.18, 0.06); }
+  boxAt('bed', W, 0, 0.07, (-HD + 0.06 - 3.05) / 2, 1.2, 0.14, HD - 0.06 - 3.05); boxAt('dark', W, 0, 0.09, -3.05, 1.2, 0.18, 0.06); // pied des géantes
+  { const c = new THREE.Mesh(new THREE.CircleGeometry(0.5, 28), M.soil); c.rotation.x = -Math.PI / 2; c.position.set(0, 0.015, -2.6 * SZ); c.receiveShadow = true; g.add(c); }
   // panneau de bois peint, à gauche de la porte, un peu tourné vers le chemin
   const sg = new THREE.Group(); sg.position.set(-1.62, 0, HD + 0.75); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true); sg.userData.pick = { kind: 'sign', house: h.id }; SIGNS.push(sg);
   const SW = sg.matrixWorld;
@@ -942,23 +951,31 @@ const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildf
 // ---------- Emplacements (coordonnées locales, les mêmes dans chaque serre) ----------
 // Chaque catégorie a son allure : une espèce tirée parmi les siennes, à partir de la graine de la plante.
 const speciesOf = (p) => floraOf(p)[0]; // mélange de végétaux propre à chaque serre (model.js, FLORA)
-const SLOTS = [];
-{ const t = [];
-  for (const s of [1, -1]) for (let i = 0; i < 6; i++) for (const row of [0, 1]) t.push({ x: s * (TBX - 0.2 + row * 0.42), z: TZ1 - 0.45 - i * 0.92 + row * 0.35, y: TY + 0.042, i, row, s, floor: false });
-  t.sort((a, b) => (a.i - b.i) || (a.row - b.row) || (a.s - b.s)); // d'abord près de la porte
-  SLOTS.push(...t);
-  for (const x of [1.55, -1.55]) SLOTS.push({ x, z: HD - 0.55, y: 0, floor: true }); // deux grands pots au sol, de part et d'autre de la porte
+// Établi : les 40 places de l'intérieur (deux rangs par côté), dans le même ordre, d'abord près de la porte.
+const BENCH_X = [];
+{ for (const s of [-1, 1]) for (let i = 0; i < 10; i++) for (const row of [0, 1]) BENCH_X.push({ x: s * (TBX + (row - 0.5) * 0.42), z: TZ0 + 0.2 + (i * 0.48 + row * 0.2) / 4.52 * (TZ1 - TZ0 - 0.4), y: TY + 0.042 });
+  BENCH_X.sort((a, b) => b.z - a.z); }
+const BENCH_SHOWN = 24; // dehors, on ne montre que les premiers pots de l'établi
+// Place d'une plante dans la petite serre, à partir de sa place dedans ({ mode, type, k }).
+function spotOf(at) {
+  if (!at) return null;
+  if (at.mode === 'bench') { const b = BENCH_X[at.k]; return b && at.k < BENCH_SHOWN ? { ...b, pot: 0.72 } : null; }
+  const [x, z] = SLOT_XZ[at.type][at.k];
+  if (at.type === 'Liane') return { x: x * (HW - 0.2), z: z * SZ, y: 0, pot: 1.3, liane: true };
+  if (at.type === 'Tombante') return { x: x * SX, z: z * SZ, y: 1.72, pot: 0.85, hang: true };
+  return { x: x * SX, z: z * SZ, y: z * SZ < -3.05 || Math.abs(x * SX) > 0.6 ? 0.14 : 0.015, ground: true, big: at.type === 'Géante' };
 }
-export const SLOTS_PER_HOUSE = SLOTS.length;
-const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, sway, slot, house }
-for (const h of HOUSES) h.used = new Array(SLOTS.length).fill(false);
-function buildPlant(p, h, slotIdx) {
-  const sl = SLOTS[slotIdx], rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(), tall = sp === 'broadleaf' || sp === 'ficus';
-  if (sl.floor) { g.add(makePot(2.1, h.pots[1])); const pl = compact(SPECIES[sp](rng, tall ? 0.95 : 1.2)); pl.position.y = 0.42; g.add(pl); g.position.set(sl.x, 0, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
-  const big = tall ? 1.2 : 1, ps = (0.85 + rng() * 0.35) * big;
+export const SLOTS_PER_HOUSE = 26; // démonstrations sans plan : autant de plantes par serre qu'avant
+const DEMO_AT = [...SLOT_XZ.Massif.map((_, k) => ({ mode: 'ground', type: 'Massif', k })), ...SLOT_XZ.Rocaille.map((_, k) => ({ mode: 'ground', type: 'Rocaille', k })), ...SLOT_XZ['Géante'].map((_, k) => ({ mode: 'ground', type: 'Géante', k }))];
+const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, sway, at, house }
+function buildPlant(p, h, sl) {
+  const rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(), tall = sp === 'broadleaf' || sp === 'ficus';
+  if (sl.ground) { const pl = compact(SPECIES[sp](rng, (sl.big ? 3.0 : tall ? 1.6 : 1.9) * (0.9 + rng() * 0.2))); g.add(pl); g.position.set(sl.x, sl.y, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
+  const ps = sl.pot * (tall ? 1.15 : 1) * (0.9 + rng() * 0.2);
   g.add(makePot(ps, h.pots[rng() < 0.3 ? 1 : 0]));
-  const pl = compact(SPECIES[sp](rng, 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; g.add(pl);
-  g.position.set(sl.x + (rng() - 0.5) * 0.08, sl.y, sl.z + (rng() - 0.5) * 0.08); g.rotation.y = rng() * Math.PI * 2;
+  const pl = compact(SPECIES[sp](rng, sl.hang ? 0.7 : 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; g.add(pl);
+  if (sl.hang) { const top = roofOf(h, sl.x) - 0.05 - sl.y, ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, top, 4), M.chain); ch.position.y = top / 2; ch.userData.own = true; g.add(ch); }
+  g.position.set(sl.x, sl.y, sl.z); if (!sl.hang) g.rotation.y = rng() * Math.PI * 2;
   h.g.add(g); return { obj: g, plant: pl };
 }
 // Pour la cabane (js/cabane3d.js) : une plante de la réserve dans son pot, un bonsaï de l'étagère.
@@ -966,7 +983,7 @@ export function makeSpecimen(p) { const rng = rngOf(p.seed >>> 0), sp = speciesO
 export function makeBonsai(seed, branches) { return compact(bonsai(rngOf(seed >>> 0), Math.min(1.45, 0.6 + 0.12 * (branches || 0)))); }
 // Bonsaïs du fond : un par objectif actif de la catégorie (trois au plus), une branche par étape franchie ;
 // le plus fourni au centre, sur une petite sellette de bois.
-const BONSAI_SPOTS = [[0, -HD + 0.85, 1], [-1.15, -HD + 0.7, 0.78], [1.15, -HD + 0.7, 0.78]];
+const BONSAI_SPOTS = [[0, -2.6 * SZ, 0.9]]; // sur le rond de terre du croisement (le fond est aux géantes)
 const pedestals = (() => {
   const n = HOUSES.length * BONSAI_SPOTS.length, ped = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.28, 0.32, 0.4, 12), M.wood, n), tray = new THREE.InstancedMesh(new THREE.BoxGeometry(0.62, 0.08, 0.4), M.terraDark, n);
   ped.castShadow = ped.receiveShadow = tray.castShadow = true; scene.add(ped, tray);
@@ -990,7 +1007,7 @@ function setBonsai(h, list) {
 }
 // suspensions : trois par serre, elles descendent avec les choses faites de la serre
 const hanging = [];
-for (const h of HOUSES) [[-0.8, 1.7], [0.8, -0.5], [-0.8, -2.5]].forEach(([x, z], i) => {
+for (const h of HOUSES) [[0, 2.3], [0, -1.15], [0, 1.25]].forEach(([x, z], i) => { // au-dessus de l'allée : les côtés sont aux suspensions du plan
   const rng = rngOf(900 + i + HOUSES.indexOf(h) * 10), g = new THREE.Group(), topY = roofOf(h, x), y0 = 1.95;
   const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.terra); bowl.castShadow = true; g.add(bowl);
   for (let c = 0; c < 3; c++) { const a = (c / 3) * Math.PI * 2; const p = V(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15), q = V(0, topY - y0, 0); const d = q.clone().sub(p); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, d.length(), 4), M.chain); m.position.copy(p).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); g.add(m); }
@@ -1067,6 +1084,8 @@ for (const h of HOUSES) {
   seg(0.62, HD + 0.06, 0.62 + Math.cos(-0.3) * 1.12, HD + 0.06 - Math.sin(-0.3) * 1.12); // battant ouvert
   { const c = Math.cos(0.22), sn = Math.sin(0.22); seg(-1.62 - 0.76 * c, HD + 0.75 + 0.76 * sn, -1.62 + 0.76 * c, HD + 0.75 - 0.76 * sn); } // panneau
   for (const sd of [-1, 1]) TABLES.push({ h, x0: sd * TBX - 0.5, x1: sd * TBX + 0.5, z0: TZ0 - 0.04, z1: TZ1 + 0.04 });
+  for (const sd of [-1, 1]) TABLES.push({ h, x0: sd > 0 ? 0.56 : -HW, x1: sd > 0 ? HW : -0.56, z0: -HD, z1: BED_Z + 0.04 }); // plates-bandes
+  TABLES.push({ h, x0: -0.6, x1: 0.6, z0: -HD, z1: -3.01 }); // pied des géantes
 }
 ROUND.push([cottage.position.x + 0.1, cottage.position.z, 2.35], [7.2, -9.0, 1.85]);
 for (const [x, , z, sz] of bushSpots) if (Math.hypot(x / 12.5, z / 15) < 1) ROUND.push([x, z, sz * 1.1 + 0.1]);
@@ -1265,7 +1284,7 @@ function waterPlant(id, done) {
   const fire = () => { pop = { obj: L.obj, t: clock.elapsedTime }; poke(); if (done) done(); };
   if (!walk.on) { fire(); return; }
   const h = L.house, lp = L.obj.position, side = Math.sign(lp.x) || 1;
-  const [ax, az] = SLOTS[L.slot] && SLOTS[L.slot].floor ? [side * 0.9, HD - 1.0] : [side * 1.0, lp.z];
+  const [ax, az] = L.sl.ground || L.sl.liane ? [Math.max(-0.35, Math.min(0.35, lp.x)), Math.max(-2.95, Math.min(BED_Z + 0.35, lp.z + 0.35))] : [side * 1.0, lp.z]; // massifs : depuis l'allée centrale
   const to = toWorld(h, ax, 0, az); L.obj.getWorldPosition(_w);
   const face = Math.atan2(_w.x - to.x, _w.z - to.z), p = ernest.root.position;
   walk.auto = { pts: Math.hypot(p.x - to.x, p.z - to.z) < 0.4 ? [to] : route(V(p.x, 0, p.z), to), i: 0, face, pose: 'arrose', then: () => setTimeout(fire, 700) };
@@ -1433,7 +1452,9 @@ export function houseFromState(S, today, id, counts, n) {
   const goals = Array.isArray(S.goals) ? new Map(S.goals.map((g) => [g.id, g])) : null;
   let hn = H.cats.reduce((a, c) => a + (counts[c] || 0), 0);
   if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
-  const plants = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, v: p.v, sp: p.sp, g: growth(p, S, today) })); // v, sp : l'espèce donne le dessin (floraOf)
+  const mineP = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)), L = layout(mineP.filter((p) => p.v === 2).map((p) => ({ id: p.id, sp: p.sp, n: waterCount(p), place: p.place })));
+  // chaque plante à sa place de l'intérieur (js/flore.js, layout) : pleine terre dans le plan, sinon en pot sur l'établi
+  const plants = mineP.filter((p) => L.at.has(p.id)).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, v: p.v, sp: p.sp, at: L.at.get(p.id), g: waterCount(p) >= GROUND ? 1 : growth(p, S, today) })); // v, sp : l'espèce donne le dessin (floraOf)
   const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
   const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || bonsaiInSerre(p, goals.get(p.goal))))
     .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0, goal: p.goal || null }));
@@ -1451,15 +1472,17 @@ function applyModel(m) {
   const sig = JSON.stringify(m); if (sig === lastSig) return; lastSig = sig;
   model = m; poke();
   const hm = (h) => (m.houses && m.houses[h.id]) || EMPTY_HOUSE, keep = new Map();
-  for (const h of HOUSES) for (const p of hm(h).plants || []) keep.set(p.id, h);
-  for (const [id, L] of live) if (keep.get(id) !== L.house) { L.house.g.remove(L.obj); disposeObj(L.obj); L.house.used[L.slot] = false; live.delete(id); }
+  const atOf = (p, i) => p.at || DEMO_AT[i] || (i - DEMO_AT.length < BENCH_SHOWN ? { mode: 'bench', k: i - DEMO_AT.length } : null); // démonstrations : sans plan
+  const keyOf = (a) => (a ? `${a.mode}:${a.type || ''}:${a.k}` : '');
+  for (const h of HOUSES) (hm(h).plants || []).forEach((p, i) => keep.set(p.id, [h, keyOf(atOf(p, i))]));
+  for (const [id, L] of live) { const k = keep.get(id); if (!k || k[0] !== L.house || k[1] !== L.key) { L.house.g.remove(L.obj); disposeObj(L.obj); live.delete(id); } }
   for (const h of HOUSES) {
     const H = hm(h);
     (H.plants || []).forEach((p, i) => {
       let L = live.get(p.id);
       if (!L) {
-        const slot = i < SLOTS.length && !h.used[i] ? i : h.used.indexOf(false); if (slot < 0) return; // serre pleine
-        h.used[slot] = true; L = { ...buildPlant(p, h, slot), slot, house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
+        const at = atOf(p, i), sl = spotOf(at); if (!sl) return; // pas de place visible dehors
+        L = { ...buildPlant(p, h, sl), sl, key: keyOf(at), house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
       }
       L.target = 0.35 + 0.65 * p.g;
     });

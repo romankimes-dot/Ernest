@@ -102,3 +102,14 @@ test('variante rare : tirée à la pleine terre, une fois', () => {
   rand.f = () => 0.05; const r2 = pour(S, a.id, D, 5); rand.f = keep; assert.ok(!r2.events.some((e) => e.kind === 'rare'), 'une seule fois');
   assert.equal(Object.fromEntries(achievements(S).map((x) => [x.id, x.done])).rare1, true);
 });
+
+test('plan partagé : pleine terre à sa place, le reste sur l\'établi', async () => {
+  const { layout, SLOT_XZ } = await import('../js/flore.js');
+  const L = layout([{ id: 'a', sp: 'thym', n: 25, place: 3 }, { id: 'b', sp: 'basilic', n: 22, place: 3 }, { id: 'c', sp: 'monstera', n: 30 }, { id: 'd', sp: 'thym', n: 4 }, { id: 'x', sp: 'inconnue', n: 40 }]);
+  assert.deepEqual(L.at.get('a'), { mode: 'ground', type: 'Massif', k: 3, x: SLOT_XZ.Massif[3][0], z: SLOT_XZ.Massif[3][1] });
+  assert.equal(L.at.get('b').k, 0); // place prise : la première libre
+  assert.equal(L.at.get('c').type, 'Géante');
+  assert.deepEqual(L.at.get('d'), { mode: 'bench', type: 'Massif', k: 0 });
+  assert.equal(L.at.has('x'), false);
+  assert.equal(SLOT_XZ.Massif.length, 24);
+});

@@ -95,6 +95,32 @@ export const groundCount = (S, house) => plantsOf(S, house).filter((p) => waterC
 // Croissance affichée (0..1) d'une plante nouvelle : suit le stade, et continue un peu au-delà de la pleine terre.
 export const growthOf = (p) => { const n = waterCount(p); if (n <= 0) return 0.08; if (n >= GROUND) return Math.min(1, 0.86 + (n - GROUND) * 0.007); return [0.16, 0.3, 0.52, 0.72][stageOf(n)] + 0.1 * Math.min(1, (n - STAGES[stageOf(n)][1]) / Math.max(1, (STAGES[stageOf(n) + 1] || [0, GROUND])[1] - STAGES[stageOf(n)][1])); };
 
+// ---------- Plan d'une serre (le même dedans, js/botaniste3d.js, et dehors, js/garden3d.js) ----------
+// Emplacements par type en mètres de la grande serre (x ±3.4, z ±6, porte vers +z) ; les jeunes pots vont sur l'établi.
+const rng31 = (() => { let a = 31; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+const MASSIF = []; for (let j = 0; j < 6; j++) for (let i = 0; i < 4; i++) MASSIF.push([-3.0 + i * 0.6 + (rng31() - 0.5) * 0.18, -0.95 - j * 0.62 + (rng31() - 0.5) * 0.18]);
+export const BASKETS = [[-1.3, -4.2], [1.3, -4.2], [-1.3, -1.2], [1.3, -1.2], [-1.3, 1.9], [1.3, 1.9]];
+export const SLOT_XZ = {
+  Massif: MASSIF,
+  Rocaille: [[1.35, -1.1], [2.15, -1.5], [2.9, -1.0], [1.7, -2.3], [2.75, -2.55], [1.45, -3.3], [2.4, -3.4]],
+  'Géante': [[0, -5.2], [-2.45, -4.9], [2.75, -4.3], [1.65, -5.15]],
+  Liane: [[-1, -4.5], [-1, -1.5], [-1, 1.5], [-1, 4.5], [1, -4.5], [1, -1.5], [1, 1.5], [1, 4.5]], // x : le côté ; z : l'arceau
+  Tombante: BASKETS,
+};
+SLOT_XZ.Prairie = SLOT_XZ.Rocaille;
+export const BENCH_N = 40;
+export const slotType = (sp) => { const s = speciesById(sp); return s ? (s.type === 'Prairie' ? 'Rocaille' : s.type) : null; };
+// Place de chaque plante : en pleine terre (20 arrosoirs) à l'emplacement choisi s'il est libre, sinon au premier
+// libre de son type, la plus arrosée d'abord ; les autres en pot sur l'établi. Entrée : [{ id, sp, n, place }].
+export function layout(list) {
+  const out = new Map(), taken = {}, ps = list.filter((p) => slotType(p.sp)).sort((a, b) => b.n - a.n), free = (T, k) => !(taken[T] || {})[k];
+  const put = (p, T, k) => { (taken[T] = taken[T] || {})[k] = p.id; out.set(p.id, { mode: 'ground', type: T, k, x: SLOT_XZ[T][k][0], z: SLOT_XZ[T][k][1] }); };
+  for (const p of ps) { const T = slotType(p.sp); if (p.n >= GROUND && Number.isInteger(p.place) && p.place >= 0 && p.place < SLOT_XZ[T].length && free(T, p.place)) put(p, T, p.place); }
+  for (const p of ps) { const T = slotType(p.sp); if (p.n < GROUND || out.has(p.id)) continue; const k = SLOT_XZ[T].findIndex((_, j) => free(T, j)); if (k >= 0) put(p, T, k); }
+  let bench = 0; for (const p of ps) if (!out.has(p.id) && bench < BENCH_N) out.set(p.id, { mode: 'bench', type: slotType(p.sp), k: bench++ });
+  return { at: out, taken };
+}
+
 // Espèces d'une serre et leur état : ouverte, à troquer (graines), ou en attente (plantes en pleine terre).
 export function catalogue(S, house) {
   const mine = plantsOf(S, house), g = mine.filter((p) => waterCount(p) >= GROUND).length, seeds = seedsOf(S), un = G(S).unlocked || {};
