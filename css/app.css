@@ -396,3 +396,4 @@ body.cabane-open .toast{z-index:41!important}
 .lv-ach:not(.done){opacity:.6}
 .lv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
 .fl-rare{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(242,178,61,.16);color:var(--amber);font-size:12px;font-family:-apple-system,system-ui,sans-serif;vertical-align:middle}
+.in-joy{bottom:calc(var(--sab) + 150px)}

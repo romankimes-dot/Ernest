@@ -357,3 +357,20 @@ export function organize(state, k, { max = 3, dismissed = {} } = {}) {
   const tOff = (x) => x.title && dismissed['t:' + norm(x.title)] && dismissed['t:' + norm(x.title)] >= addDays(k, -14);
   return out.filter((x) => !dismissed[x.id] && !tOff(x)).sort((a, b) => (b.kind === 'load') - (a.kind === 'load')).slice(0, max);
 }
+
+// ---------- Le soleil (le même pour le village, les serres et la cabane) ----------
+// Durée du jour et midi solaire par mois (heure légale, France) ; le soir arrive vers 17 h en novembre.
+export const DAYLEN = [8.4, 9.9, 11.8, 13.6, 15.2, 16.1, 15.7, 14.3, 12.5, 10.7, 9.1, 8.2];
+export const NOON = [12.9, 13.1, 13.2, 13.9, 13.8, 13.9, 14.1, 14.0, 13.8, 13.6, 12.7, 12.8];
+export function sunTimes(month) { const L = DAYLEN[month], n = NOON[month]; return { rise: n - L / 2, set: n + L / 2 }; }
+// Heure (décimale) → [ambiance de départ, ambiance d'arrivée, fondu 0..1], avec aube et crépuscule.
+export function phaseAt(h, month) {
+  const { rise, set } = sunTimes(month);
+  if (h < rise - 1.2 || h >= set + 1.6) return ['night', 'night', 0];
+  if (h < rise) return ['night', 'dusk', (h - rise + 1.2) / 1.2];
+  if (h < rise + 1.2) return ['dusk', 'day', (h - rise) / 1.2];
+  if (h < set - 1.2) return ['day', 'day', 0];
+  if (h < set) return ['day', 'dusk', (h - set + 1.2) / 1.2];
+  return ['dusk', 'night', (h - set) / 1.6];
+}
+export const phaseName = (h, month) => { const [a, b, t] = phaseAt(h, month); return t < 0.5 ? a : b; };

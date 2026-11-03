@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
+import { phaseAt } from './model.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -492,7 +493,10 @@ export function setProgress(p) {
 }
 // Pour de vrai (l'app) : les plantes de la serre, leurs arrosages, les décors troqués.
 // data : { plants: [{ id, sp, n, seed }], decors: [id], time }
-let LIVE = null;
+let LIVE = null, nightNow = false, lastSky = 0;
+// Se déplacer : un joystick (move) ou toucher le sol (la vue et Ernest y vont).
+const nav = { mx: 0, mz: 0, goal: null };
+export function move(x, z) { nav.mx = x; nav.mz = z; if (x || z) nav.goal = null; }
 const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 export function setData(data) {
   const sig = JSON.stringify([data.plants, data.decors]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
@@ -533,6 +537,7 @@ function standFor(t) {
   if (Math.hypot(x, z + 2.6) < 0.85) x = Math.sign(x || 1) * 0.85;
   return V(x, 0, z);
 }
+function walkErnest(p) { const to = V(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), 0, Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(); scene3 = { kind: 'walk', t: to, from, to, t0: performance.now() / 1000, walk: Math.min(2.5, from.distanceTo(to) / 1.4), phase: 0 }; }
 export function playScene(kind, pid, done) {
   const t = plantPos(pid); if (!t || !ernest) { if (done) done(); return; }
   const from = ernest.root.position.clone(), to = standFor(t);
@@ -542,7 +547,7 @@ function stepScene(now, dt) {
   const S3 = scene3; if (!S3) return; const e = ernest, el = now - S3.t0;
   const face = (a, b) => { const d = b.clone().sub(a); if (d.lengthSq() > 1e-4) e.root.rotation.y = Math.atan2(d.x, d.z); };
   if (el < S3.walk) { const k = smooth(0, 1, el / S3.walk); e.root.position.lerpVectors(S3.from, S3.to, k); e.setWalk(1); face(S3.from, S3.to); return; }
-  const a = el - S3.walk; e.root.position.copy(S3.to); face(S3.to, V(S3.t.x, 0, S3.t.z));
+  const a = el - S3.walk; e.root.position.copy(S3.to); if (S3.kind === 'walk') { e.setWalk(0); scene3 = null; applyTime(); return; } face(S3.to, V(S3.t.x, 0, S3.t.z));
   if (S3.kind === 'cabane') {
     if (!carried) { carried = new THREE.Mesh(potG, new THREE.MeshStandardMaterial({ color: 0xb8693f, roughness: 0.8 })); carried.scale.setScalar(1.1); scene.add(carried); }
     if (a < 0.8) { e.setWalk(0); e.setPose('assis'); }
@@ -710,14 +715,18 @@ const SKY = {
   dusk: { top: '#2f3f6b', bot: '#f0a46a', hemi: ['#f0c8a8', '#6a4a34', 0.95], glow: 0.18, sun: ['#ffb46a', 1.9, V(-9, 3.2, -6)], fog: '#8a6a6a', exp: 1.05, lamp: 0.6 },
   night: { top: '#050b18', bot: '#11203a', hemi: ['#5a6f9a', '#2a2420', 0.35], glow: 0.04, sun: ['#9fb4ff', 0.35, V(-4, 10, 6)], fog: '#0b1424', exp: 1.15, lamp: 1 },
 };
+// « auto » : l'heure réelle, avec les fondus de l'aube et du crépuscule (le même soleil que le village).
+const mixSky = (a, b, t) => { const o = {}; for (const k of Object.keys(a)) { const x = a[k], y = b[k]; o[k] = typeof x === 'number' ? x + (y - x) * t : typeof x === 'string' ? '#' + col(x).lerp(col(y), t).getHexString() : Array.isArray(x) ? x.map((v, i) => (typeof v === 'number' ? v + (y[i] - v) * t : typeof v === 'string' ? '#' + col(v).lerp(col(y[i]), t).getHexString() : v.clone().lerp(y[i], t))) : x; } return o; };
+function skyNow() { if (timeKey !== 'auto') return SKY[timeKey]; const d = new Date(), [a, b, t] = phaseAt(d.getHours() + d.getMinutes() / 60, d.getMonth()); return mixSky(SKY[a], SKY[b], t); }
 function applyTime() {
-  const S = SKY[timeKey]; sky.material.uniforms.top.value.set(S.top); sky.material.uniforms.bot.value.set(S.bot);
+  const S = skyNow(); sky.material.uniforms.top.value.set(S.top); sky.material.uniforms.bot.value.set(S.bot);
   hemi.color.set(S.hemi[0]); hemi.groundColor.set(S.hemi[1]); hemi.intensity = S.hemi[2]; sun.color.set(S.sun[0]); sun.intensity = S.sun[1]; sun.position.copy(S.sun[2]); renderer.toneMappingExposure = S.exp; LEAF_GLOW.value = S.glow;
   const lampsOn = hasDecor(DECORS[3].id); lampLights.forEach((l) => (l.intensity = lampsOn ? S.lamp * 6 : 0)); M.lamp.emissiveIntensity = lampsOn ? S.lamp * 2.2 : 0;
   const gl = S.lamp; if (groundGlow) { groundGlow.visible = gl > 0; groundGlow.userData.mat.opacity = gl * 0.85; candleMat.emissiveIntensity = gl * 3; groundLights.forEach((l) => (l.intensity = gl * 2.4)); }
-  M.petal.emissive.set(timeKey === 'night' ? 0x222018 : 0x000000);
-  if (fireflies) fireflies.visible = timeKey !== 'day' && (LIVE ? LIVE.waters > 60 : P > 0.6);
-  if (ernest) ernest.setPose(timeKey === 'night' ? 'lanterne' : (LIVE ? LIVE.waters > 0 : P > 0.05) ? 'arrose' : 'attend');
+  const night = S.lamp > 0.75; nightNow = night;
+  M.petal.emissive.set(night ? 0x222018 : 0x000000);
+  if (fireflies) fireflies.visible = S.lamp > 0.3 && (LIVE ? LIVE.waters > 60 : P > 0.6);
+  if (ernest && !scene3) ernest.setPose(night ? 'lanterne' : (LIVE ? LIVE.waters > 0 : P > 0.05) ? 'arrose' : 'attend');
 }
 export function setTime(k) { timeKey = k; applyTime(); }
 
@@ -761,7 +770,9 @@ export function mount(canvas, opts = {}) {
   const onUp = (e) => { if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
     if (slotMarks) { const sh = ray.intersectObjects(slotMarks.children, true)[0]; if (sh) { opts.onPick(sh.object.userData.pick); return; } }
     const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
-    for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } } };
+    for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } }
+    // le sol : la vue s'y rend, Ernest aussi
+    const hit = ray.ray.intersectPlane(new THREE.Plane(UP, 0), V()); if (hit && Math.abs(hit.x) < HALL.w - 0.3 && Math.abs(hit.z) < D - 0.3) { nav.goal = V(hit.x, 0, hit.z); if (!scene3) walkErnest(hit); } };
   canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
   let last = performance.now(), frames = 0, acc = 0;
   const loop = () => {
@@ -777,12 +788,19 @@ export function mount(canvas, opts = {}) {
     if (chime && decorObjs.carillon && decorObjs.carillon.visible) chime.forEach((p, i) => { p.rotation.z = Math.sin(t * 1.1 + i) * 0.08; p.rotation.x = Math.cos(t * 0.9 + i * 2) * 0.06; });
     if (fireflies && fireflies.visible) { fireflies.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; fireflies.rotation.y = Math.sin(t * 0.05) * 0.2; }
     stepScene(t, dt); stepParticles(dt, t);
-    ernest.update(dt, { lantern: timeKey === 'night', lanternK: 2.0, groundY: 0, still: !scene3 });
+    if (timeKey === 'auto' && now - lastSky > 30000) { lastSky = now; applyTime(); }
+    { // déplacement : joystick dans le repère de la vue, ou glissé vers le point touché
+      const f = V(controls.target.x - camera.position.x, 0, controls.target.z - camera.position.z); if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); const rgt = V(-f.z, 0, f.x);
+      let d = null; if (nav.mx || nav.mz) d = rgt.multiplyScalar(nav.mx).addScaledVector(f, nav.mz).multiplyScalar(2.2 * dt);
+      else if (nav.goal) { const g = V(nav.goal.x - controls.target.x, 0, nav.goal.z - controls.target.z); if (g.length() < 0.03) nav.goal = null; else d = g.multiplyScalar(Math.min(1, dt * 2.5)); }
+      if (d) { camera.position.add(d); controls.target.add(d); }
+    }
+    ernest.update(dt, { lantern: nightNow, lanternK: 2.0, groundY: 0, still: !scene3 });
     renderer.render(scene, camera);
   };
   renderer.setAnimationLoop(loop);
   let paused = false;
-  return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, play: playScene, camera, controls, renderer, scene, serre: SERRE.id,
+  return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, play: playScene, move, camera, controls, renderer, scene, serre: SERRE.id,
     // pause : on garde tout (rentrer à nouveau est immédiat) ; reprise : même scène, données fraîches
     pause() { if (paused) return; paused = true; renderer.setAnimationLoop(null); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.enabled = false; },
     resume() { if (!paused) return; paused = false; canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); controls.enabled = true; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },

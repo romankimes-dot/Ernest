@@ -8,6 +8,7 @@ import { decode, merge, plantHistory, forgetDay } from './bridge.js';
 import { icon } from './icons.js';
 import * as SY from './sync.js';
 import * as FL from './flore.js';
+import { phaseName } from './model.js';
 
 const VERSION = '0.8.0';
 let S, today, tab = 'today', garden, g3d = null, bubbleT = null, carnetFam = 'all', listeFilter = 'todo';
@@ -270,15 +271,15 @@ function cottageTap() {
 }
 // ---------- La cabane d'Ernest : étagère à bonsaïs, réserve, le livre, le bocal à graines ----------
 let cab = null, cabKeep = null; // cab : la cabane ouverte ; cabKeep : gardée en pause, pour rentrer sans attendre
-const timeNow = () => { const h = nowHour(); return h >= 8 && h < 18 ? 'day' : h >= 18 && h < 21 ? 'dusk' : 'night'; };
+const timeNow = () => { const d = new Date(); return phaseName(d.getHours() + d.getMinutes() / 60, d.getMonth()); }; // le même soleil que le village
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
 // ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
 let inter = null, interHouse = null, interKeep = null; // interKeep : la dernière serre visitée, en pause
-const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: timeNow() });
+const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: 'auto' });
 function interCap() {
   const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
-  $('#serreInCap').innerHTML = `<b>${mod ? esc(mod.themeName(house)) : ''} · Serre ${H_NAME[house]}</b><br><span>${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}, ${ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length} en pleine terre` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''}. Touche une plante pour l'arroser.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="inSow">${cans ? 'Semer une graine' : 'Le panneau de la serre'}</button></div>`;
+  $('#serreInCap').innerHTML = `<b>${mod ? esc(mod.themeName(house)) : ''} · Serre ${H_NAME[house]}</b><br><span>${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}, ${ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length} en pleine terre` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''}. Touche une plante pour l'arroser, le sol pour y aller.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="inSow">${cans ? 'Semer une graine' : 'Le panneau de la serre'}</button></div>`;
   $('#inSow').addEventListener('click', () => (cans ? sowSheet(house) : houseSheet(house)));
 }
 function refreshInterior() { if (inter && inter.api) { inter.api.setData(interData(interHouse)); interCap(); } }
@@ -286,7 +287,11 @@ async function openInterior(house) {
   if (inter) return; if (!g3d) { houseSheet(house); return; }
   inter = {}; interHouse = house; closeSheet();
   const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
-  if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
+  if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior);
+    const joy = $('#inJoy'), knob = joy.querySelector('i'); let id = null; // joystick : se promener dans la serre
+    const mv = (e) => { const r = joy.getBoundingClientRect(), R = r.width / 2; let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; if (inter && inter.api) inter.api.move(Math.abs(dx) < 0.12 ? 0 : dx, Math.abs(dy) < 0.12 ? 0 : -dy); };
+    const end = () => { id = null; knob.style.transform = ''; if (inter && inter.api) inter.api.move(0, 0); };
+    joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.setPointerCapture(id); mv(e); }); joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) mv(e); }); joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try {
     if (interKeep && interKeep.api.serre === house) { inter.mod = interKeep.mod; inter.api = interKeep.api; inter.api.resume(); inter.api.setData(interData(house)); }
     else { const mod = await import('./botaniste3d.js'); if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }

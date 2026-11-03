@@ -147,3 +147,10 @@ test('équilibre des serres : la Liste compte pour Vie perso, une petite chose p
   const h = hydrate({ ...defaultState(), garden: { plants: [{ id: 'm', cat: 'perso', day: '2026-11-01', seed: 1, kind: 'moss' }], objects: [] } });
   assert.equal(h.garden.plants.length, 0); assert.equal(h.garden.cans[0].cat, 'perso'); // ancien pot → arrosoir
 });
+
+import { phaseAt, phaseName } from '../js/model.js';
+test('le soleil : en novembre il fait nuit à 19 h et jour à 13 h, crépuscule vers 17 h', () => {
+  assert.equal(phaseName(13, 10), 'day'); assert.equal(phaseName(19, 10), 'night'); assert.equal(phaseName(17, 10), 'dusk');
+  assert.equal(phaseName(20, 5), 'day', 'juin : encore jour à 20 h');
+  assert.deepEqual(phaseAt(3, 0), ['night', 'night', 0]);
+});
