@@ -66,6 +66,19 @@ export const SPECIES = {
 };
 // Conditions de déblocage, par rang dans la serre : départ, plantes en pleine terre (dans cette serre), ou graines.
 export const UNLOCK = [{ start: 1 }, { start: 1 }, { ground: 1 }, { seeds: 5 }, { ground: 2 }, { seeds: 8 }, { ground: 3 }, { seeds: 12 }, { ground: 5 }, { seeds: 15 }, { ground: 7 }, { seeds: 25 }];
+// Variantes rares : une chance sur dix à la pleine terre. [nom, allure] ; l'allure dit comment la dessiner
+// (panache : feuilles crème, blanc, or, sombre, rose, bleu : fleurs ou feuillage, grand : plus grande).
+export const RARE = {
+  thym: ['à fleurs blanches', 'blanc'], basilic: ['pourpre', 'sombre'], romarin: ['rampant', 'grand'], aloes: ['tigré', 'panache'], camomille: ['double', 'grand'], lierre: ['panaché', 'panache'],
+  tradescantia: ['argentée', 'panache'], fougere: ['dorée', 'or'], capucine: ['panachée', 'panache'], jasmin: ['rose', 'rose'], citronnier: ['panaché', 'panache'], monstera: ['panachée', 'panache'],
+  pensee: ['noire', 'sombre'], lavande: ['blanche', 'blanc'], iris: ['bleu nuit', 'sombre'], sansevieria: ['dorée', 'or'], calathea: ['rayé', 'panache'], philodendron: ['doré', 'or'],
+  pothos: ['neige', 'panache'], kentia: ['géant', 'grand'], orchidee: ['tigrée', 'rose'], glycine: ['blanche', 'blanc'], ficus: ['panaché', 'panache'], strelitzia: ['blanc', 'blanc'],
+  marguerite: ['géante', 'grand'], coquelicot: ['double', 'rose'], bleuet: ['rose', 'rose'], graminees: ['pourpres', 'sombre'], cosmos: ['chocolat', 'sombre'], chevrefeuille: ['doré', 'or'],
+  geranium: ['bicolore', 'blanc'], hortensia: ['bleu', 'bleu'], fuchsia: ['blanc', 'blanc'], rosier: ['ancien', 'grand'], figuier: ['panaché', 'panache'], olivier: ['centenaire', 'grand'],
+};
+export const RARE_CHANCE = 0.1;
+export const rand = { f: Math.random }; // remplaçable dans les tests
+export const rareName = (p) => { const s = speciesById(p.sp); return s && p.rare && RARE[p.sp] ? `${s.nom} ${RARE[p.sp][0]}` : s ? s.nom : ''; };
 // La plante de chaque pont : elle reçoit seule ce que le pont coche.
 export const BRIDGE_SPECIES = { deonto: 'ficus', revision: 'lavande', memoire: 'iris' };
 const ALL = Object.entries(SPECIES).flatMap(([house, l]) => l.map((s, i) => ({ ...s, house, rank: i })));
@@ -90,7 +103,8 @@ export function catalogue(S, house) {
     const u = UNLOCK[i], open = !!(u.start || (u.ground && g >= u.ground) || un[s.id]);
     const cond = u.start ? 'Au départ' : u.ground ? `${u.ground} plante${u.ground > 1 ? 's' : ''} en pleine terre` : `${u.seeds} graines`;
     const best = plantsOf(S, house).filter((p) => p.sp === s.id).reduce((a, p) => Math.max(a, waterCount(p)), 0);
-    return { ...s, house, open, cond, price: u.seeds || 0, canTrade: !open && !!u.seeds && seeds >= u.seeds, best };
+    const rare = plantsOf(S, house).some((p) => p.sp === s.id && p.rare);
+    return { ...s, house, open, cond, price: u.seeds || 0, canTrade: !open && !!u.seeds && seeds >= u.seeds, best, rare, rareName: RARE[s.id] ? `${s.nom} ${RARE[s.id][0]}` : '' };
   });
 }
 
@@ -104,7 +118,7 @@ function grew(S, p, before, openBefore, day) {
   if (s1 <= s0) return ev;
   for (let s = s0 + 1; s <= s1; s++) {
     if (s <= 0) continue; // la graine elle-même
-    if (s === STAGES.length - 1) { addSeeds(S, 3, 'pleine terre', day); ev.push({ kind: 'ground', plant: p, seeds: 3 }); }
+    if (s === STAGES.length - 1) { addSeeds(S, 3, 'pleine terre', day); ev.push({ kind: 'ground', plant: p, seeds: 3 }); if (!p.rare && !p.src && rand.f() < RARE_CHANCE) { p.rare = day; ev.push({ kind: 'rare', plant: p, name: rareName(p) }); } }
     else { addSeeds(S, 1, 'taille', day); ev.push({ kind: 'stage', plant: p, stage: STAGES[s][0], seeds: 1 }); }
   }
   for (const x of catalogue(S, house)) if (x.open && !openBefore.includes(x.id)) ev.push({ kind: 'unlock', species: x });
@@ -227,6 +241,7 @@ export function achievements(S) {
     A('esp6', 'Botanique', 'Six espèces', 'Six espèces différentes semées.', sown.size >= 6),
     A('esp36', 'Botanique', 'Toutes les espèces', 'Les trente-six espèces semées.', sown.size >= 36),
     A('eau100', 'Botanique', 'Cent arrosoirs', 'Cent arrosoirs versés.', waters >= 100),
+    A('rare1', 'Botanique', 'Une variante rare', 'Une chance sur dix à la pleine terre.', ps.some((p) => p.rare)),
     ...Object.keys(SPECIES).map((h) => A(`serre-${h}`, 'Botanique', `Serre ${{ travail: 'Travail', bienetre: 'Bien-être', perso: 'Vie perso' }[h]} accomplie`, 'Ses douze espèces en pleine terre.', SPECIES[h].every((sp) => ground.some((p) => p.sp === sp.id)))),
     A('jours10', 'Régularité douce', 'Dix jours', 'Dix jours où tu as avancé, pas forcément d’affilée.', active >= 10),
     A('jours30', 'Régularité douce', 'Trente jours', 'Trente jours où tu as avancé.', active >= 30),

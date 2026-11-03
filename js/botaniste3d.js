@@ -434,24 +434,44 @@ export function waterings(it, p) { if (p < it.sow) return 0; if (p < it.ground) 
 export const stageOf = (w) => { let s = -1; STAGES.forEach(([, k], i) => { if (w >= k) s = i; }); return s; };
 
 // ---------- Montage ----------
+let SHARED_GEO = null; // formes partagées entre les scènes : jamais libérées
 let renderer, scene, camera, controls, hemi, sun, sky, ernest, lampLights = [], lampMeshes = [], fireflies, water, chime, decorObjs = {}, labelMeshes = [];
 const plants = []; let P = 0, timeKey = 'day', onFps = null, variegated = true;
 
 function buildPools() {
   const counts = {}; for (const pl of plants) for (const pc of [...pl.parts, ...(pl.seedParts || [])]) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
   counts.pot = (counts.pot || 0) + BENCH.length + 6; counts.moss = (counts.moss || 0) + 260; counts.stone = (counts.stone || 0) + 60; counts.stem = (counts.stem || 0) + 8;
+  if (Object.keys(pools).length && Object.entries(POOLS).every(([k]) => pools[k] && pools[k].im.instanceMatrix.count >= (counts[k] || 1))) return; // assez de place : on garde
   for (const k in pools) { scene.remove(pools[k].im); pools[k].im.dispose(); delete pools[k]; }
   for (const [k, [geo, mat]] of Object.entries(POOLS)) { const n = counts[k] || 1, im = new THREE.InstancedMesh(geo, mat, n); im.count = 0; im.castShadow = k !== 'moss' && k !== 'petal5' && k !== 'daisy' && k !== 'star'; im.receiveShadow = true; im.frustumCulled = false; im.setColorAt(0, col('#fff')); scene.add(im); pools[k] = { im, n: 0, own: [] }; }
 }
 
+// Variantes rares : la même plante, d'autres couleurs (panachée, blanche, dorée, sombre, rose, bleue) ou plus grande.
+const LEAF_POOLS = new Set(['leaf', 'ivy', 'round', 'needle', 'monstera', 'frond', 'aloe', 'paddle']), PETAL_POOLS = new Set(['petal5', 'daisy', 'star']);
+function rareLook(parts, look, r) {
+  const cream = col('#ece8c4'), gold = col('#d9b443'), dark = col('#3a1f3a'), white = col('#f8f6ee'), pink = col('#f2a0c0'), blue = col('#5a78e0');
+  return parts.map((pc) => { const leaf = LEAF_POOLS.has(pc.pool), petal = PETAL_POOLS.has(pc.pool); let c = pc.c;
+    if (look === 'panache' && leaf && r() < 0.5) c = c.clone().lerp(cream, 0.65);
+    else if (look === 'or' && leaf) c = c.clone().lerp(gold, 0.5);
+    else if (look === 'sombre') c = leaf ? c.clone().lerp(dark, 0.45) : petal ? c.clone().lerp(dark, 0.6) : c;
+    else if (look === 'blanc' && petal) c = white.clone();
+    else if (look === 'rose' && petal) c = pink.clone();
+    else if (look === 'bleu' && petal) c = blue.clone();
+    return c === pc.c ? pc : { ...pc, c }; });
+}
+const PART_CACHE = new Map(); // plante déjà dessinée (même espèce, même place, même variante) : on ne la refait pas
 function addPlant(it) {
+  const key = it.pid ? `${it.pid}|${it.id}|${it.rare || ''}|${it.mode === 'ground' ? `${it.x},${it.z}` : 'pot'}` : null;
+  if (key && PART_CACHE.has(key)) { const c = PART_CACHE.get(key); plants.push({ it, parts: c.parts, seedParts: c.seedParts, ground: c.ground }); return; }
   const r = rngOf(1000 + it.i * 977), s = SP[it.id], o = s.leafy; let parts, ground;
   if (s.type === 'Liane') { const side = it.x, z = it.z, path = [], off = rngOf(it.i);
     for (let k = 0; k <= 120; k++) { const q = ribPoint(side, z, Math.min(0.97, k / 120)); const n = V(-q.x, HALL.wall - q.y, 0).normalize(); if (q.y < HALL.wall) n.set(-side, 0, 0); q.addScaledVector(n, 0.14); q.z += Math.sin(k * 0.7) * 0.07 + (off() - 0.5) * 0.03; path.push(q); }
     parts = G.liane(r, path, o); ground = { pos: V(), ry: 0, s: 1, bed: true };
   } else if (s.type === 'Tombante') { parts = G.tombante(r, o); ground = { pos: V(it.x, 3.05, it.z), ry: r() * 6, s: 1, basket: true }; }
   else { parts = s.gen(r); ground = { pos: V(it.x, 0.22, it.z), ry: r() * 6, s: s.gs || 1 }; }
+  if (it.rare) { parts = rareLook(parts, it.rare, rngOf(it.i + 77)); if (it.rare === 'grand') ground.s *= 1.25; }
   const seedParts = o ? G.semis(rngOf(it.i + 5), o) : null;
+  if (key) PART_CACHE.set(key, { parts, seedParts, ground });
   plants.push({ it, parts, seedParts, ground });
 }
 
@@ -475,7 +495,8 @@ export function setProgress(p) {
 let LIVE = null;
 const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 export function setData(data) {
-  LIVE = { decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
+  const sig = JSON.stringify([data.plants, data.decors]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
+  LIVE = { sig, decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
   // emplacements : d'abord ceux choisis (place), puis les autres dans l'ordre, la plante la plus arrosée d'abord
   const taken = {}, items = []; let bench = 0; LIVE.assign = {};
   const list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), typeOf = (p) => (SP[p.sp].type === 'Prairie' ? 'Rocaille' : SP[p.sp].type);
@@ -483,7 +504,7 @@ export function setData(data) {
   for (const p of list) { const T = typeOf(p); if (p.n < 20 || LIVE.assign[p.id] !== undefined || !SLOTS_T[T]) continue; const k = SLOTS_T[T].findIndex((_, j) => !(taken[T] || {})[j]); if (k >= 0) { (taken[T] = taken[T] || {})[k] = p.id; LIVE.assign[p.id] = k; } }
   LIVE.taken = taken;
   for (const p of list) {
-    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id }, k = LIVE.assign[p.id];
+    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id, rare: p.rare || null }, k = LIVE.assign[p.id];
     if (k !== undefined) { const [x, z] = SLOTS_T[typeOf(p)][k]; Object.assign(it, { x, z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
     else if (bench < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: bench++, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
     else continue;
@@ -491,6 +512,60 @@ export function setData(data) {
   }
   plants.length = 0; for (const it of items) addPlant(it); for (const pl of plants) { pl.mode = pl.it.mode; pl.g = pl.it.g; }
   buildPools(); buildLabels(); renderAll(); if (data.time) setTime(data.time);
+}
+// ---------- Petites scènes d'Ernest : il va à la plante, arrose, taille, rempote, ou la porte à la cabane ----------
+const PN = 260; let parts3 = null, scene3 = null, carried = null;
+function buildParticles() {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PN * 3), 3)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(PN * 3), 3));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.045, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false })); pts.frustumCulled = false; scene.add(pts);
+  parts3 = { pts, p: Array.from({ length: PN }, () => ({ life: 0, pos: V(), vel: V(), c: col('#fff'), drag: 0, sway: 0 })) };
+}
+function spawn(n, at, f) { if (!parts3) return; let k = 0; for (const q of parts3.p) { if (k >= n) break; if (q.life > 0) continue; q.life = 1; q.pos.copy(at); f(q); k++; } }
+function plantPos(pid) {
+  const pl = plants.find((x) => x.it.pid === pid); if (!pl) return null;
+  if (pl.mode === 'bench') return BENCH[pl.it.bench].clone().add(V(0, 0.3, 0));
+  if (pl.ground.bed) return V(pl.it.x * (HALL.w - 0.5), 0.5, pl.it.z);
+  return pl.ground.pos.clone();
+}
+function standFor(t) {
+  let x, z = t.z + 0.15;
+  if (t.z < -4.3 && Math.abs(t.x) < 0.9) { x = t.x * 0.5; z = -4.1; } else if (t.z < -0.6) x = Math.sign(t.x || 1) * 0.62; else x = Math.sign(t.x || 1) * 1.85;
+  if (Math.hypot(x, z + 2.6) < 0.85) x = Math.sign(x || 1) * 0.85;
+  return V(x, 0, z);
+}
+export function playScene(kind, pid, done) {
+  const t = plantPos(pid); if (!t || !ernest) { if (done) done(); return; }
+  const from = ernest.root.position.clone(), to = standFor(t);
+  scene3 = { kind, pid, t, from, to, t0: performance.now() / 1000, walk: Math.min(1.6, from.distanceTo(to) / 1.6), done, phase: 0, door: V(0, 0, HALL.d - 0.4) };
+}
+function stepScene(now, dt) {
+  const S3 = scene3; if (!S3) return; const e = ernest, el = now - S3.t0;
+  const face = (a, b) => { const d = b.clone().sub(a); if (d.lengthSq() > 1e-4) e.root.rotation.y = Math.atan2(d.x, d.z); };
+  if (el < S3.walk) { const k = smooth(0, 1, el / S3.walk); e.root.position.lerpVectors(S3.from, S3.to, k); e.setWalk(1); face(S3.from, S3.to); return; }
+  const a = el - S3.walk; e.root.position.copy(S3.to); face(S3.to, V(S3.t.x, 0, S3.t.z));
+  if (S3.kind === 'cabane') {
+    if (!carried) { carried = new THREE.Mesh(potG, new THREE.MeshStandardMaterial({ color: 0xb8693f, roughness: 0.8 })); carried.scale.setScalar(1.1); scene.add(carried); }
+    if (a < 0.8) { e.setWalk(0); e.setPose('assis'); }
+    else { const k = Math.min(1, (a - 0.8) / 2.2); e.root.position.lerpVectors(S3.to, S3.door, smooth(0, 1, k)); face(S3.to, S3.door); e.setWalk(1); e.setPose('attend'); }
+    carried.position.copy(e.root.position).add(V(0, 0.42, 0)).addScaledVector(V(Math.sin(e.root.rotation.y), 0, Math.cos(e.root.rotation.y)), 0.22);
+    if (a > 3.0) { scene.remove(carried); carried = null; e.setWalk(0); e.root.position.set(0.55, 0, 1.3); e.root.rotation.y = -2.1; const d = S3.done; scene3 = null; applyTime(); if (d) d(); }
+    return;
+  }
+  e.setWalk(0);
+  const pose = { arrose: 'arrose', taille: 'salue', terre: 'assis', ground: 'assis', rare: 'salue' }[S3.kind] || 'attend'; e.setPose(pose);
+  const tip = S3.to.clone().add(V(0, 0.55, 0)).addScaledVector(t3dir(S3), 0.35);
+  if (S3.kind === 'arrose' && a < 2) spawn(3, tip, (q) => { q.vel.set((S3.t.x - tip.x) * 0.9 + (Math.random() - 0.5) * 0.2, 0.4 + Math.random() * 0.3, (S3.t.z - tip.z) * 0.9 + (Math.random() - 0.5) * 0.2); q.c.set('#9fd0f0'); q.drag = 0; q.sway = 0; });
+  if (S3.kind === 'taille' && a < 1.6) spawn(1, S3.t.clone().add(V((Math.random() - 0.5) * 0.4, 0.4 + Math.random() * 0.5, (Math.random() - 0.5) * 0.4)), (q) => { q.vel.set(0, -0.15, 0); q.c.set(Math.random() < 0.5 ? '#6f9a4a' : '#9ab86a'); q.drag = 0.92; q.sway = 1; });
+  if ((S3.kind === 'terre' || S3.kind === 'ground') && a < 0.4) spawn(6, S3.t.clone().setY(0.3), (q) => { const ang = Math.random() * 6.28; q.vel.set(Math.cos(ang) * 0.8, 1 + Math.random(), Math.sin(ang) * 0.8); q.c.set(Math.random() < 0.85 ? '#5a3f28' : '#f2c84a'); q.drag = 0; q.sway = 0; });
+  if (S3.kind === 'rare' && a < 2.2) spawn(3, S3.t.clone().add(V((Math.random() - 0.5) * 0.8, Math.random() * 0.4, (Math.random() - 0.5) * 0.8)), (q) => { q.vel.set(0, 0.5 + Math.random() * 0.4, 0); q.c.set(Math.random() < 0.5 ? '#f2c84a' : '#fff2c0'); q.drag = 0.98; q.sway = 0.5; });
+  if (a > 2.6) { const d = S3.done; scene3 = null; applyTime(); if (d) d(); }
+}
+const t3dir = (S3) => { const d = V(S3.t.x - S3.to.x, 0, S3.t.z - S3.to.z); return d.lengthSq() > 1e-4 ? d.normalize() : V(0, 0, -1); };
+function stepParticles(dt, now) {
+  if (!parts3) return; const P3 = parts3.pts.geometry.attributes.position, C3 = parts3.pts.geometry.attributes.color; let live = 0;
+  parts3.p.forEach((q, i) => { if (q.life > 0) { q.life -= dt / 1.6; q.vel.y -= (q.sway ? 0.4 : 3.2) * dt; if (q.drag) q.vel.multiplyScalar(q.drag); q.pos.addScaledVector(q.vel, dt); if (q.sway) q.pos.x += Math.sin(now * 6 + i) * 0.003; if (q.pos.y < 0.02) q.life = 0; live++; }
+    if (q.life > 0) { P3.setXYZ(i, q.pos.x, q.pos.y, q.pos.z); C3.setXYZ(i, q.c.r, q.c.g, q.c.b); } else P3.setXYZ(i, 0, -50, 0); });
+  P3.needsUpdate = C3.needsUpdate = true; parts3.pts.visible = live > 0;
 }
 // Changer une plante de place : les emplacements de son type s'allument (l'actuel en ambre), on en touche un.
 let slotMarks = null;
@@ -647,9 +722,13 @@ function applyTime() {
 export function setTime(k) { timeKey = k; applyTime(); }
 
 export function mount(canvas, opts = {}) {
-  onFps = opts.onFps || null; configure(opts.serre);
+  onFps = opts.onFps || null; configure(opts.serre); PART_CACHE.clear();
   plants.length = 0; for (const k in pools) delete pools[k]; decorObjs = {}; labelMeshes = []; lampLights = []; lampMeshes = []; groundLights = []; groundGlow = null; water = null; chime = null; fireflies = null; LIVE = null; if (opts.data) variegated = false;
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  // Un seul contexte WebGL par toile, gardé d'une serre à l'autre (en créer un à chaque entrée est lent sur iPhone,
+  // et Safari finit par en refuser). L'ancienne scène est libérée, sauf les formes partagées.
+  SHARED_GEO = SHARED_GEO || new Set([...Object.values(POOLS).map(([g]) => g), potG, stemG, LABEL_G]);
+  if (scene) scene.traverse((o) => { if (o.geometry && !SHARED_GEO.has(o.geometry)) o.geometry.dispose(); });
+  if (!renderer || renderer.domElement !== canvas) renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
   scene = new THREE.Scene();
@@ -670,6 +749,7 @@ export function mount(canvas, opts = {}) {
     fireflies = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffe08a, size: 0.05, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(fireflies);
   }
   ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0.55, 0, 1.3); ernest.root.rotation.y = -2.1; scene.add(ernest.root); ernest.attach(scene);
+  scene3 = null; carried = null; buildParticles();
   controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 1.3, -2); controls.minDistance = 0.8; controls.maxDistance = 9; controls.maxPolarAngle = Math.PI * 0.62; controls.enablePan = true; controls.screenSpacePanning = false;
   camera.position.set(0.3, 1.7, 5.3);
   const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix(); };
@@ -684,7 +764,7 @@ export function mount(canvas, opts = {}) {
     for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } } };
   canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
   let last = performance.now(), frames = 0, acc = 0;
-  renderer.setAnimationLoop(() => {
+  const loop = () => {
     const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; frames++; acc += dt; if (acc > 1 && onFps) { onFps(Math.round(frames / acc)); frames = 0; acc = 0; }
     controls.update();
     // rester dans la serre
@@ -696,11 +776,17 @@ export function mount(canvas, opts = {}) {
     if (decorObjs.horloge && decorObjs.horloge.visible) { const d = new Date(), [hh, mh] = decorObjs.horloge.userData.hands; mh.rotation.z = -(d.getMinutes() / 60) * Math.PI * 2; hh.rotation.z = -((d.getHours() % 12) / 12 + d.getMinutes() / 720) * Math.PI * 2; }
     if (chime && decorObjs.carillon && decorObjs.carillon.visible) chime.forEach((p, i) => { p.rotation.z = Math.sin(t * 1.1 + i) * 0.08; p.rotation.x = Math.cos(t * 0.9 + i * 2) * 0.06; });
     if (fireflies && fireflies.visible) { fireflies.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; fireflies.rotation.y = Math.sin(t * 0.05) * 0.2; }
-    ernest.update(dt, { lantern: timeKey === 'night', lanternK: 2.0, groundY: 0, still: true });
+    stepScene(t, dt); stepParticles(dt, t);
+    ernest.update(dt, { lantern: timeKey === 'night', lanternK: 2.0, groundY: 0, still: !scene3 });
     renderer.render(scene, camera);
-  });
-  return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, camera, controls, renderer, scene,
-    dispose() { renderer.setAnimationLoop(null); window.removeEventListener('resize', resize); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* ignore */ } } };
+  };
+  renderer.setAnimationLoop(loop);
+  let paused = false;
+  return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, play: playScene, camera, controls, renderer, scene, serre: SERRE.id,
+    // pause : on garde tout (rentrer à nouveau est immédiat) ; reprise : même scène, données fraîches
+    pause() { if (paused) return; paused = true; renderer.setAnimationLoop(null); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.enabled = false; },
+    resume() { if (!paused) return; paused = false; canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); controls.enabled = true; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },
+    dispose() { this.pause(); window.removeEventListener('resize', resize); controls.dispose(); } };
 }
 export const themeName = (id) => (THEMES[id] || THEMES.bienetre).nom;
 export function setVariegated(on) { variegated = on; }

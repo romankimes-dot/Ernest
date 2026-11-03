@@ -1091,10 +1091,19 @@ function wallHit(ax, az, bx, bz) {
   return best;
 }
 const roundHit = (ax, az, bx, bz, pad) => ROUND.some(([x, z, R]) => { closestOnSeg(x, z, { x: ax, z: az }, { x: bx, z: bz }, _c); return Math.hypot(x - _c[0], z - _c[1]) < R + pad; });
-const clearPath = (a, b) => wallHit(a.x, a.z, b.x, b.z) >= 1 && !roundHit(a.x, a.z, b.x, b.z, 0.2);
+// Un passage est libre s'il ne coupe rien et qu'il garde une marge le long des murs et des panneaux (Ernest a une
+// largeur : sans marge, le chemin frôlait le bout du panneau Travail et il s'y cognait en allant à la chaumière).
+const clearPath = (a, b) => {
+  if (wallHit(a.x, a.z, b.x, b.z) < 1 || roundHit(a.x, a.z, b.x, b.z, 0.3)) return false;
+  const L = Math.hypot(b.x - a.x, b.z - a.z), n = Math.ceil(L / 0.15);
+  for (let i = 1; i < n; i++) { const d = (i / n) * L; if (d < 0.4 || L - d < 0.4) continue; const x = a.x + ((b.x - a.x) * i) / n, z = a.z + ((b.z - a.z) * i) / n;
+    for (const [p, q] of WALLS) { closestOnSeg(x, z, p, q, _c); if (Math.hypot(x - _c[0], z - _c[1]) < 0.34) return false; } }
+  return true;
+};
 // Graphe de passage : coins des serres (élargis), devant et derrière chaque porte, l'allée, le tour de la chaumière et de la mare.
 const NAV = [];
-for (const h of HOUSES) { for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) NAV.push(toWorld(h, x * (HW + 0.75), 0, z * (HD + 0.75))); NAV.push(toWorld(h, 0, 0, HD + 1.3), toWorld(h, 0, 0, HD - 0.6), toWorld(h, 0, 0, 0.2)); }
+for (const h of HOUSES) { for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) NAV.push(toWorld(h, x * (HW + 0.75), 0, z * (HD + 0.75))); NAV.push(toWorld(h, 0, 0, HD + 1.3), toWorld(h, 0, 0, HD - 0.6), toWorld(h, 0, 0, 0.2));
+  NAV.push(toWorld(h, -1.62, 0, HD + 1.9), toWorld(h, -3.1, 0, HD + 0.6), toWorld(h, -0.35, 0, HD + 1.6)); } // autour du panneau : devant, au-delà de son bout, entre lui et la porte
 for (const [x, z, R] of ROUND.slice(0, 2)) for (let i = 0; i < 8; i++) NAV.push(V(x + Math.cos(i * 0.785) * (R + 0.7), 0, z + Math.sin(i * 0.785) * (R + 0.7)));
 const COT_DOOR = (() => { const d = cottageB.door.clone().applyMatrix4(cottage.matrixWorld); d.addScaledVector(V(Math.sin(0.5), 0, Math.cos(0.5)), 1.3); d.y = 0; return d; })();
 function route(from, to) {
@@ -1702,6 +1711,10 @@ export const api = {
   // démonstration : fixe l'angle du bandeau (0 à 5, null pour revenir à la rotation par demi-heure)
   setAngle(i) { forcedAngle = i === null || i === undefined ? null : ((Number(i) % ANGLES.length) + ANGLES.length) % ANGLES.length; poke(); },
   houses: HOUSE_IDS,
+  // essai : le chemin calculé vers un lieu, et sa plus petite distance aux murs et panneaux (hors départ et arrivée)
+  routeCheck(id, fx, fz) { const from = V(fx ?? ERNEST.x, 0, fz ?? ERNEST.z), to = HB[id] ? toWorld(HB[id], 0, 0, -0.6) : COT_DOOR.clone(), pts = [from, ...route(from, to)]; let min = 9;
+    for (let k = 0; k < pts.length - 1; k++) { const a = pts[k], b = pts[k + 1], L = a.distanceTo(b), n = Math.ceil(L / 0.1); for (let i = 1; i < n; i++) { const d = (i / n) * L; if ((k === 0 && d < 0.5) || (k === pts.length - 2 && L - d < 0.5)) continue; const x = a.x + ((b.x - a.x) * i) / n, z = a.z + ((b.z - a.z) * i) / n; for (const [p, q] of WALLS) { closestOnSeg(x, z, p, q, _c); min = Math.min(min, Math.hypot(x - _c[0], z - _c[1])); } } }
+    return { n: pts.length, min: Math.round(min * 100) / 100 }; },
   get camera() { return camera; }, get controls() { return controls; }, get scene() { return scene; }, get renderer() { return renderer; },
 };
 export default api;

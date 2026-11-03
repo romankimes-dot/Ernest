@@ -3073,5 +3073,533 @@
 {
 "ctx": "trouvaille",
 "t": "Trouvée. On ne dira à personne où elle était."
+},
+{
+"ctx": "flore.stade",
+"t": "{espece} passe au stade {stade}. J'ai retiré deux feuilles jaunes, je garde la graine."
+},
+{
+"ctx": "flore.stade",
+"t": "Un coup de sécateur, et {espece} respire mieux. Stade {stade}. La graine va dans le bocal."
+},
+{
+"ctx": "flore.stade",
+"t": "{espece} a pris un étage. Stade {stade}. J'ai noté la date au crayon sur l'étiquette."
+},
+{
+"ctx": "flore.stade",
+"t": "Stade {stade} pour {espece}. Je l'ai taillée en parlant doucement, elle n'a rien dit."
+},
+{
+"ctx": "flore.stade",
+"t": "{espece} change de taille de pot dans sa tête. Stade {stade}, une graine de plus pour toi."
+},
+{
+"ctx": "flore.stade",
+"t": "J'ai taillé {espece} au-dessus d'un nœud, comme on me l'a appris. Stade {stade}."
+},
+{
+"ctx": "flore.stade",
+"t": "Stade {stade}. {espece} pousse dans la bonne direction, c'est-à-dire vers le haut."
+},
+{
+"ctx": "flore.stade",
+"t": "{espece} a gagné un stade pendant que je regardais ailleurs. Je l'ai taillée pour la forme."
+},
+{
+"ctx": "flore.stade",
+"t": "Une graine récoltée en taillant {espece}. Elle est au stade {stade} maintenant."
+},
+{
+"ctx": "flore.stade",
+"t": "{espece}, stade {stade}. Les arrosoirs s'additionnent, ça se voit aux feuilles."
+},
+{
+"ctx": "flore.stade",
+"t": "Petite taille de printemps pour {espece}, même hors saison. Stade {stade}."
+},
+{
+"ctx": "flore.terre",
+"t": "{espece} part en pleine terre. Je l'ai rempotée avec les mains, le pot est rincé."
+},
+{
+"ctx": "flore.terre",
+"t": "Vingt arrosoirs. {espece} a quitté son pot pour la terre de la serre. Trois graines au bocal."
+},
+{
+"ctx": "flore.terre",
+"t": "Rempotage fait. {espece} a ses racines dans la vraie terre maintenant, elle s'étire."
+},
+{
+"ctx": "flore.terre",
+"t": "{espece} prend sa place dans la serre. J'ai tassé la terre autour avec le talon, doucement."
+},
+{
+"ctx": "flore.terre",
+"t": "Pleine terre pour {espece}. Le pot vide est retourné sur l'établi, il attend la suivante."
+},
+{
+"ctx": "flore.terre",
+"t": "J'ai sorti {espece} de son pot sans casser une racine. Trois graines, et une place à elle."
+},
+{
+"ctx": "flore.terre",
+"t": "{espece} est chez elle dans la serre. Je lui ai mis une étiquette avec son nom latin."
+},
+{
+"ctx": "flore.terre",
+"t": "Le pot devenait trop petit pour {espece}. Elle a la pleine terre, et toute la place qu'il faut."
+},
+{
+"ctx": "flore.terre",
+"t": "Pleine terre. {espece} a eu droit au meilleur terreau, celui que je garde derrière la porte."
+},
+{
+"ctx": "flore.terre",
+"t": "{espece} rejoint le plan de la serre. J'ai gardé trois graines, elles sont au chaud."
+},
+{
+"ctx": "flore.rare",
+"t": "Regarde {espece} : {variante}. Ça arrive une fois sur dix, et c'est tombé sur elle."
+},
+{
+"ctx": "flore.rare",
+"t": "{espece} est sortie {variante}. Je l'ai notée dans le livre, avec une petite étoile."
+},
+{
+"ctx": "flore.rare",
+"t": "Une variante rare : {espece}, {variante}. Je n'en avais pas vu depuis longtemps."
+},
+{
+"ctx": "flore.rare",
+"t": "{espece} a fait un caprice de botaniste : {variante}. Je la garde à l'œil."
+},
+{
+"ctx": "flore.rare",
+"t": "J'ai dû m'asseoir. {espece}, {variante}. Le livre a une page de plus."
+},
+{
+"ctx": "flore.rare",
+"t": "Il y a des jours de chance dans une serre. {espece} est {variante}."
+},
+{
+"ctx": "flore.rare",
+"t": "{espece} n'a pas fait comme les autres : {variante}. Rien à faire, juste à regarder."
+},
+{
+"ctx": "flore.rare",
+"t": "Une sur dix, et c'est la tienne. {espece} {variante}, dans la terre de la serre."
+},
+{
+"ctx": "flore.rare",
+"t": "Je vais écrire à mon cousin. {espece} {variante}, il ne va pas me croire."
+},
+{
+"ctx": "flore.rare",
+"t": "{espece} a choisi sa couleur toute seule : {variante}. Je n'y suis pour rien."
+},
+{
+"ctx": "flore.seme",
+"t": "Une graine de {espece} dans un pot. Le premier arrosoir, c'est fait."
+},
+{
+"ctx": "flore.seme",
+"t": "{espece} est semée. J'ai posé le pot près de la porte, là où la lumière arrive."
+},
+{
+"ctx": "flore.seme",
+"t": "Semé : {espece}. Pour l'instant c'est de la terre mouillée, il faut lui laisser le temps."
+},
+{
+"ctx": "flore.seme",
+"t": "J'ai tracé un petit trou avec le doigt, la graine de {espece} est dedans."
+},
+{
+"ctx": "flore.seme",
+"t": "{espece} commence ici, dans un pot de terre cuite. Le reste viendra avec les arrosoirs."
+},
+{
+"ctx": "flore.seme",
+"t": "Un pot de plus sur l'établi. {espece}, écrit à la craie dessus."
+},
+{
+"ctx": "flore.seme",
+"t": "Graine de {espece} enterrée, arrosée, oubliée exprès. C'est comme ça qu'elles poussent."
+},
+{
+"ctx": "flore.seme",
+"t": "{espece} est en route. Je lui ai mis un peu de terreau fin, celui des débuts."
+},
+{
+"ctx": "flore.seme",
+"t": "Le pot de {espece} est prêt. Les prochains arrosoirs le feront sortir de terre."
+},
+{
+"ctx": "flore.seme",
+"t": "Semé. {espece} dort encore, mais la terre est déjà humide autour."
+},
+{
+"ctx": "flore.troc",
+"t": "Marché conclu : {chose} contre des graines. Je les recompte ce soir, par principe."
+},
+{
+"ctx": "flore.troc",
+"t": "{chose}, c'est à toi. Les graines sont rangées dans ma boîte en fer."
+},
+{
+"ctx": "flore.troc",
+"t": "Troc fait. {chose} arrive, je m'occupe de l'installer."
+},
+{
+"ctx": "flore.troc",
+"t": "Des graines contre {chose}. J'ai craché dans ma main avant de la serrer, c'est la coutume."
+},
+{
+"ctx": "flore.troc",
+"t": "{chose} est réservé pour toi. Je fais un nœud à mon mouchoir pour ne pas l'oublier."
+},
+{
+"ctx": "flore.troc",
+"t": "Bonne affaire pour les deux. {chose} pour toi, des graines pour mon bocal à moi."
+},
+{
+"ctx": "flore.troc",
+"t": "{chose}, contre des graines bien sèches. Je ne fais pas de crédit, mais je fais des sourires."
+},
+{
+"ctx": "flore.troc",
+"t": "J'ai sorti {chose} de la remise. Il avait de la poussière, je l'ai essuyé."
+},
+{
+"ctx": "flore.troc",
+"t": "Le troc est inscrit dans le livre. {chose}, colonne de droite."
+},
+{
+"ctx": "flore.troc",
+"t": "{chose} change de main. Les graines tintent dans le bocal, j'aime bien ce bruit."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} n'a pas eu d'eau depuis trois semaines. Je peux la mettre au repos à la cabane, ou la laisser là si sa place te plaît."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} attend depuis un moment. La cabane est au chaud, elle y serait bien, sauf si tu la veux ici."
+},
+{
+"ctx": "flore.dormance",
+"t": "Je propose la cabane pour {espece}. Elle reviendra au premier arrosoir."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} somnole. Je peux la porter à la réserve, elle n'y perdra rien."
+},
+{
+"ctx": "flore.dormance",
+"t": "Trois semaines sans eau pour {espece}. Rien de grave, elle se met au repos. La cabane l'attend si tu veux."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} tient le coup. Je peux la ranger à la cabane, ou la fixer ici pour de bon."
+},
+{
+"ctx": "flore.dormance",
+"t": "À la cabane, {espece} ne fanera pas. Elle attendra le prochain arrosoir."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} prendrait bien une saison à l'abri. La réserve de la cabane a de la place."
+},
+{
+"ctx": "flore.dormance",
+"t": "Je garde la réserve propre pour des plantes comme {espece}. Elle y serait tranquille."
+},
+{
+"ctx": "flore.dormance",
+"t": "{espece} peut rester là ou venir à la cabane. Les deux me vont."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} revient dans la serre. Je l'ai portée avec les deux mains."
+},
+{
+"ctx": "flore.reveil",
+"t": "Retour de la cabane pour {espece}. Elle a gardé toutes ses feuilles."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} est de nouveau au soleil. Elle a l'air de reconnaître l'endroit."
+},
+{
+"ctx": "flore.reveil",
+"t": "J'ai ressorti {espece}. La réserve fait un peu vide maintenant."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} reprend sa place. Le premier arrosoir sera pour elle si tu veux."
+},
+{
+"ctx": "flore.reveil",
+"t": "La cabane rend {espece} en bon état. Je l'ai dépoussiérée en passant."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} est rentrée de vacances. Elle n'a rien raconté."
+},
+{
+"ctx": "flore.reveil",
+"t": "Revoilà {espece}. Je lui ai trouvé une place à la lumière."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} retrouve la serre. Les voisines se sont poussées pour elle."
+},
+{
+"ctx": "flore.reveil",
+"t": "{espece} sort de la réserve. Elle s'est bien reposée, ça se voit aux tiges."
+},
+{
+"ctx": "flore.etagere",
+"t": "Le bonsaï de « {objectif} » est sur l'étagère de la cabane. Je l'ai tourné vers la fenêtre."
+},
+{
+"ctx": "flore.etagere",
+"t": "« {objectif} » : le bonsaï est rentré à la cabane. Je l'arroserai le dimanche."
+},
+{
+"ctx": "flore.etagere",
+"t": "J'ai posé le bonsaï de « {objectif} » sur l'étagère, entre deux autres. Il a de la compagnie."
+},
+{
+"ctx": "flore.etagere",
+"t": "Étagère du haut pour le bonsaï de « {objectif} ». C'est la meilleure lumière."
+},
+{
+"ctx": "flore.etagere",
+"t": "Le bonsaï de « {objectif} » rejoint la cabane. Chaque branche est une étape que tu as franchie."
+},
+{
+"ctx": "flore.etagere",
+"t": "« {objectif} » est terminé. Son bonsaï est dans la cabane, au sec, en sécurité."
+},
+{
+"ctx": "flore.etagere",
+"t": "J'ai porté le bonsaï de « {objectif} » sans le secouer. Il est sur l'étagère maintenant."
+},
+{
+"ctx": "flore.etagere",
+"t": "Le bonsaï de « {objectif} » a sa place chez moi. Je lui parlerai de toi de temps en temps."
+},
+{
+"ctx": "flore.etagere",
+"t": "Une étagère, des bonsaïs, et celui de « {objectif} » en plus. La cabane se remplit bien."
+},
+{
+"ctx": "flore.etagere",
+"t": "« {objectif} » repose sur l'étagère. Je passe un chiffon dessus le samedi."
+},
+{
+"ctx": "flore.deplace",
+"t": "{espece} a changé de place. J'ai creusé, porté, retassé, sans casser une racine."
+},
+{
+"ctx": "flore.deplace",
+"t": "Déménagement fait pour {espece}. Elle a l'air de mieux voir l'allée d'ici."
+},
+{
+"ctx": "flore.deplace",
+"t": "J'ai déplacé {espece}. La terre de l'ancienne place est retournée, elle se repose."
+},
+{
+"ctx": "flore.deplace",
+"t": "{espece} est à sa nouvelle place. Je l'ai tournée face à la lumière."
+},
+{
+"ctx": "flore.deplace",
+"t": "Nouvelle place pour {espece}. J'ai gardé la motte entière, elle ne sentira presque rien."
+},
+{
+"ctx": "flore.deplace",
+"t": "{espece} s'installe ailleurs. Les plantes aiment bien changer de voisines, parfois."
+},
+{
+"ctx": "flore.deplace",
+"t": "C'est fait. {espece} est là où tu voulais, et moi j'ai de la terre jusqu'aux coudes."
+},
+{
+"ctx": "flore.deplace",
+"t": "{espece} a déménagé avec sa motte. J'ai arrosé un peu pour qu'elle s'y sente bien."
+},
+{
+"ctx": "flore.deplace",
+"t": "La serre a bougé un peu. {espece} est à sa nouvelle place, droite comme un i."
+},
+{
+"ctx": "flore.deplace",
+"t": "{espece} a une autre vue maintenant. Je lui ai remis son étiquette."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Entre, la bouilloire est froide mais le feu est bon."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Bienvenue chez moi. Attention à la marche, elle est plus haute qu'elle n'en a l'air."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Le livre est sur la table. Je n'y écris que des choses vraies."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Assieds-toi dans le fauteuil si tu veux. Il connaît la forme de mon dos, pas la tienne, mais il apprendra."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Les bouquets aux poutres sèchent depuis l'été. Ça sent le thym jusqu'au plancher."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Le bocal à graines est sur la table. Je le secoue parfois, pour le bruit."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Tu es chez moi. Les bottes se laissent où on veut, je ne suis pas regardant."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Le feu crépite. J'ai mis une bûche de pommier, elle sent bon."
+},
+{
+"ctx": "lieu.cabane",
+"t": "La réserve est à droite, les bonsaïs à gauche. Le reste, c'est du rangement à ma façon."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Il y a un tableau des trois serres au mur. Je l'ai peint un soir de pluie."
+},
+{
+"ctx": "lieu.cabane",
+"t": "Ma cabane est petite, mais tout y a une place, même le désordre."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "L'herboristerie. Ça sent le romarin dès la porte, c'est fait exprès."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Les bouquets sèchent sous l'arceau. J'en prends un brin pour la tisane du soir."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Ici, tout se soigne un peu. Les plantes, et ceux qui passent."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Les briques gardent la chaleur du jour. Les aromatiques aiment ça."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "La fontaine tourne doucement. Le bruit de l'eau, c'est déjà un soin."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "L'herboristerie est calme aujourd'hui. Les feuilles font le travail sans bruit."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Je pèse les herbes à la main ici, pas à la balance. On sent quand c'est assez."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Bienvenue à l'herboristerie. Les pots de terre cuite sont alignés comme je les aime."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "La voûte laisse passer toute la lumière. Les plantes de bien-être en profitent."
+},
+{
+"ctx": "dedans.bienetre",
+"t": "Ici on cultive ce qui fait du bien. Ça tombe bien, c'est ce qui pousse le mieux."
+},
+{
+"ctx": "dedans.travail",
+"t": "Le cabinet d'étude. Parle doucement, les livres réfléchissent."
+},
+{
+"ctx": "dedans.travail",
+"t": "La lampe verte est allumée. Chaque plante ici est une heure de travail posée dans la terre."
+},
+{
+"ctx": "dedans.travail",
+"t": "Le damier est ciré du matin. Je marche sur les cases blanches, par habitude."
+},
+{
+"ctx": "dedans.travail",
+"t": "Le globe a tourné tout seul cette nuit. Je ne pose pas de questions au globe."
+},
+{
+"ctx": "dedans.travail",
+"t": "Ici, chaque feuille vient d'une heure passée sur quelque chose. Ça fait une sacrée bibliothèque."
+},
+{
+"ctx": "dedans.travail",
+"t": "L'ogive monte haut. On pense mieux sous un plafond qui ne vous écrase pas."
+},
+{
+"ctx": "dedans.travail",
+"t": "Les livres du soubassement sont rangés par couleur, pas par sujet. C'est plus joli comme ça."
+},
+{
+"ctx": "dedans.travail",
+"t": "Le cabinet sent le papier et la terre. Deux bonnes odeurs, ensemble."
+},
+{
+"ctx": "dedans.travail",
+"t": "J'ai remis l'échelle contre la bibliothèque. Je ne sais pas qui l'avait poussée."
+},
+{
+"ctx": "dedans.travail",
+"t": "Le travail pousse lentement ici, mais il pousse droit."
+},
+{
+"ctx": "dedans.perso",
+"t": "L'orangerie du cottage. Le gravier crisse, c'est normal, il dit bonjour."
+},
+{
+"ctx": "dedans.perso",
+"t": "Les fanions sont un peu de travers. Je les préfère comme ça."
+},
+{
+"ctx": "dedans.perso",
+"t": "Ici pousse ce qui est à toi : les courses, les colis, les petites choses de la vie."
+},
+{
+"ctx": "dedans.perso",
+"t": "La guirlande s'allumera ce soir. Elle fait comme des lucioles qui ne partent pas."
+},
+{
+"ctx": "dedans.perso",
+"t": "La brouette est pleine de terreau. Je n'ai pas encore décidé pour qui."
+},
+{
+"ctx": "dedans.perso",
+"t": "L'orangerie est en bois peint, comme les vieilles maisons de campagne. Ça grince un peu."
+},
+{
+"ctx": "dedans.perso",
+"t": "Les fleurs des champs ont pris leurs aises. Je les laisse faire, c'est leur caractère."
+},
+{
+"ctx": "dedans.perso",
+"t": "Les jardinières devant la porte, c'est pour les passants. Il n'en passe pas beaucoup, mais quand même."
+},
+{
+"ctx": "dedans.perso",
+"t": "Ici, rien n'est rangé au cordeau. Ça s'appelle un jardin de cottage."
+},
+{
+"ctx": "dedans.perso",
+"t": "Le toit à deux pans laisse couler la pluie des deux côtés. Les plantes de la vie perso aiment ça."
 }
 ]

@@ -181,6 +181,8 @@ async function setupGarden3d() {
     g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today); if (lastErnestSt) g3d.setErnest(lastErnestSt); bind3d();
     $('#garden').hidden = true; garden.stop();
     c.addEventListener('click', openSerre);
+    const pre = () => { import('./botaniste3d.js').catch(() => {}); import('./cabane3d.js').catch(() => {}); }; // préchargés : entrer ne charge plus rien
+    if ('requestIdleCallback' in window) requestIdleCallback(pre, { timeout: 4000 }); else setTimeout(pre, 2500);
     $('#serreClose').addEventListener('click', closeSerre);
     // iPhone : un pincement ou un double-tap sur un bouton zoomait toute la page (bouton retour et sélecteur hors de l'écran)
     for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) $('#serreFull').addEventListener(ev, (e) => e.preventDefault(), { passive: false });
@@ -197,7 +199,7 @@ function openSerre() {
   const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.walking) g3d.walkTo(b.dataset.house); else if (g3d.focus) g3d.focus(b.dataset.house); })); }
   if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
   bindWalkUi(); setWalkUi(false); document.body.classList.add('serre-open'); g3d.setFinds(todayFinds());
-  { const r = FL.toRest(S, today); if (r.length && S.garden.restAsked !== today) { S.garden.restAsked = today; save(); toast(`${cap1(plantName(r[0]))}${r.length > 1 ? ` et ${r.length - 1} autre${r.length > 2 ? 's' : ''}` : ''} n'ont pas eu d'eau depuis trois semaines. Ernest propose la cabane : touche la plante pour décider.`, 6000); } const c = FL.cansOf(S).length; if (c && !r.length) toast(`${c} arrosoir${c > 1 ? 's' : ''} plein${c > 1 ? 's' : ''} à verser. Promenade, ou le panneau d'une serre.`, 3500); }
+  { const r = FL.toRest(S, today); if (r.length && S.garden.restAsked !== today) { S.garden.restAsked = today; save(); setTimeout(() => ernestLine('flore.dormance', { espece: plantName(r[0]) }, `${cap1(plantName(r[0]))} attend depuis trois semaines. Ernest propose la cabane.`), 600); } const c = FL.cansOf(S).length; if (c && !r.length) toast(`${c} arrosoir${c > 1 ? 's' : ''} plein${c > 1 ? 's' : ''} à verser. Promenade, ou le panneau d'une serre.`, 3500); }
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
   g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
 }
@@ -267,13 +269,13 @@ function cottageTap() {
   $('#ctRit').addEventListener('click', () => { closeSheet(); ritualSheet(); }); $('#ctIn').addEventListener('click', () => { closeSheet(); openCabane(); });
 }
 // ---------- La cabane d'Ernest : étagère à bonsaïs, réserve, le livre, le bocal à graines ----------
-let cab = null;
+let cab = null, cabKeep = null; // cab : la cabane ouverte ; cabKeep : gardée en pause, pour rentrer sans attendre
 const timeNow = () => { const h = nowHour(); return h >= 8 && h < 18 ? 'day' : h >= 18 && h < 21 ? 'dusk' : 'night'; };
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
 // ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
-let inter = null, interHouse = null;
-const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: timeNow() });
+let inter = null, interHouse = null, interKeep = null; // interKeep : la dernière serre visitée, en pause
+const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: timeNow() });
 function interCap() {
   const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
   $('#serreInCap').innerHTML = `<b>${mod ? esc(mod.themeName(house)) : ''} · Serre ${H_NAME[house]}</b><br><span>${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}, ${ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length} en pleine terre` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''}. Touche une plante pour l'arroser.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="inSow">${cans ? 'Semer une graine' : 'Le panneau de la serre'}</button></div>`;
@@ -285,10 +287,13 @@ async function openInterior(house) {
   inter = {}; interHouse = house; closeSheet();
   const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
   if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
-  try { const mod = await import('./botaniste3d.js'); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); interCap(); }
+  try {
+    if (interKeep && interKeep.api.serre === house) { inter.mod = interKeep.mod; inter.api = interKeep.api; inter.api.resume(); inter.api.setData(interData(house)); }
+    else { const mod = await import('./botaniste3d.js'); if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }
+    interKeep = { mod: inter.mod, api: inter.api }; interCap(); setTimeout(() => inter && ernestLine(`dedans.${house}`), 900); }
   catch (e) { closeInterior(); houseSheet(house); }
 }
-function closeInterior() { moving = null; if (inter && inter.api) inter.api.dispose(); inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
+function closeInterior() { moving = null; if (inter && inter.api) { inter.api.hideSlots(); inter.api.pause(); } inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
 let moving = null; // plante qu'on change de place
 function startMove(p) {
   if (!inter || !inter.api) return; closeSheet(); moving = p.id; inter.api.showSlots(p.id, p.sp);
@@ -298,8 +303,8 @@ function startMove(p) {
 function endMove() { moving = null; if (inter && inter.api) inter.api.hideSlots(); if (inter) interCap(); }
 function onPickInterior(o) {
   if (o.kind === 'slot' && moving) { const p = S.garden.plants.find((x) => x.id === moving); if (!p) { endMove(); return; }
-    if (!o.mine) { label('le déplacement'); const old = inter.api.assignOf(p.id); if (o.who) { const q = S.garden.plants.find((x) => x.id === o.who); if (q) { if (old !== undefined) q.place = old; else delete q.place; } } p.place = o.idx; save(); toast(`Ernest déplace ${plantName(p)}.`); }
-    endMove(); refreshInterior(); return; }
+    if (!o.mine) { label('le déplacement'); const old = inter.api.assignOf(p.id); if (o.who) { const q = S.garden.plants.find((x) => x.id === o.who); if (q) { if (old !== undefined) q.place = old; else delete q.place; } } p.place = o.idx; save(); ernestLine('flore.deplace', { espece: plantName(p) }, `Ernest déplace ${plantName(p)}.`); }
+    endMove(); refreshInterior(); if (!o.mine) setTimeout(() => inter && inter.api.play('terre', p.id), 300); return; }
   if (moving) return;
   if (o.kind === 'plant') plantSheet(o.id);
   else if (o.kind === 'ernest') { const t = say(S, `lieu.${interHouse}`, ernestEnv(S, today, plantsOf(interHouse))) || say(S, 'ernest.touche', ernestEnv(S, today, plantNames())); if (t) { toast(t, 4500); save(); } }
@@ -310,10 +315,10 @@ async function openCabane() {
   const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
   $('#cabCap').innerHTML = `<b>Chez Ernest</b><br><span>Le livre sur la table, ${n} graine${n > 1 ? 's' : ''} dans le bocal. ${b ? `${b} bonsaï${b > 1 ? 's' : ''} sur l'étagère` : "L'étagère attend un objectif atteint"}, ${r ? `${r} plante${r > 1 ? 's' : ''} à la réserve` : 'la réserve est vide'}.</span>`;
   if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
-  try { const mod = await import('./cabane3d.js'); cab = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cab.set(cabData()); }
+  try { if (cabKeep) { cab = cabKeep; cab.resume(); } else { const mod = await import('./cabane3d.js'); cab = cabKeep = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); } cab.set(cabData()); setTimeout(() => cab && ernestLine('lieu.cabane'), 900); }
   catch (e) { closeCabane(); livreSheet(); }
 }
-function closeCabane() { if (cab) { cab.dispose(); cab = null; } $('#cabane').hidden = true; if (!inter) document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
+function closeCabane() { if (cab) { cab.pause(); cab = null; } $('#cabane').hidden = true; if (!inter) document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
 function onPickCabane(o) {
   if (o.kind === 'book') livreSheet();
   else if (o.kind === 'seeds') livreSheet('decors');
@@ -330,11 +335,11 @@ function livreSheet(t) {
   let body = '';
   if (livreTab === 'catalogue') {
     const cat = FL.catalogue(S, livreHouse);
-    body = `${houses}<div class="muted small">${cat.filter((s) => s.open).length} espèces sur 12 · ${seeds} graine${seeds > 1 ? 's' : ''}</div><div class="fl-grid">${cat.map((s) => `<div class="fl-sp${s.open ? '' : ' locked'}"><b>${esc(s.nom)}</b><span class="muted small"><i>${esc(s.latin)}</i></span><span class="small">${s.type}</span>
+    body = `${houses}<div class="muted small">${cat.filter((s) => s.open).length} espèces sur 12 · ${seeds} graine${seeds > 1 ? 's' : ''}</div><div class="fl-grid">${cat.map((s) => `<div class="fl-sp${s.open ? '' : ' locked'}"><b>${esc(s.nom)}</b><span class="muted small"><i>${esc(s.latin)}</i></span><span class="small">${s.type}</span>${s.rare ? `<span class="fl-rare">${esc(s.rareName)}</span>` : ''}
       ${s.open ? `<span class="fl-dots">${FL.STAGES.map((_, i) => `<i class="fl-dot${i <= FL.stageOf(s.best) ? ' on' : ''}"></i>`).join('')}</span><span class="small muted">${s.best ? FL.stageName(s.best) : 'Pas encore semée'}</span>` : s.canTrade ? `<button class="btn quiet" data-tsp="${s.id}">Troquer ${s.price} graines</button>` : `<span class="small muted">Se débloque : ${esc(s.cond)}</span>`}</div>`).join('')}</div>`;
   } else if (livreTab === 'herbier') {
     const ps = (S.garden.plants || []).filter(FL.isNew).sort((a, b) => FL.waterCount(b) - FL.waterCount(a));
-    body = ps.length ? `<div class="stack">${ps.map((p) => { const sp = FL.speciesById(p.sp) || {}, f = FL.fedBy(p)[0]; return `<button class="fl-plant" data-fp="${p.id}" style="width:100%"><b>${esc(sp.nom || '')} <span class="muted small"><i>${esc(sp.latin || '')}</i></span></b><span class="small">Serre ${H_NAME[catId(p.cat)]} · ${FL.stageName(FL.waterCount(p))} · ${FL.waterCount(p)} arrosage${FL.waterCount(p) > 1 ? 's' : ''}${p.dormant ? ' · à la réserve' : ''}${p.fixed ? ' · fixée' : ''}</span><span class="small muted">Semée ${esc(fmtDay(p.day))}${f ? ` · surtout « ${esc(f[0])} »` : ''}</span></button>`; }).join('')}</div>` : '<p class="muted">L\'herbier se remplit avec tes plantes. Sème une graine depuis le panneau d\'une serre.</p>';
+    body = ps.length ? `<div class="stack">${ps.map((p) => { const sp = FL.speciesById(p.sp) || {}, f = FL.fedBy(p)[0]; return `<button class="fl-plant" data-fp="${p.id}" style="width:100%"><b>${esc(FL.rareName(p) || sp.nom || '')}${p.rare ? ' ✦' : ''} <span class="muted small"><i>${esc(sp.latin || '')}</i></span></b><span class="small">Serre ${H_NAME[catId(p.cat)]} · ${FL.stageName(FL.waterCount(p))} · ${FL.waterCount(p)} arrosage${FL.waterCount(p) > 1 ? 's' : ''}${p.dormant ? ' · à la réserve' : ''}${p.fixed ? ' · fixée' : ''}</span><span class="small muted">Semée ${esc(fmtDay(p.day))}${f ? ` · surtout « ${esc(f[0])} »` : ''}</span></button>`; }).join('')}</div>` : '<p class="muted">L\'herbier se remplit avec tes plantes. Sème une graine depuis le panneau d\'une serre.</p>';
   } else if (livreTab === 'achevements') {
     const all = FL.achievements(S), groups = [...new Set(all.map((a) => a.groupe))];
     body = `<div class="muted small">${all.filter((a) => a.done).length} sur ${all.length}</div>${groups.map((g) => `<h3 style="margin:12px 0 2px">${esc(g)}</h3>${all.filter((a) => a.groupe === g).map((a) => `<div class="lv-ach${a.done ? ' done' : ''}"><i></i><div><b>${esc(a.nom)}</b><div class="small muted">${esc(a.desc)}</div></div></div>`).join('')}`).join('')}`;
@@ -347,8 +352,8 @@ function livreSheet(t) {
   L.querySelectorAll('[data-lt]').forEach((b) => b.addEventListener('click', () => livreSheet(b.dataset.lt)));
   L.querySelectorAll('[data-lh]').forEach((b) => b.addEventListener('click', () => { livreHouse = b.dataset.lh; livreSheet(); }));
   L.querySelectorAll('[data-fp]').forEach((b) => b.addEventListener('click', () => plantSheet(b.dataset.fp)));
-  L.querySelectorAll('[data-tsp]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.trade(S, b.dataset.tsp, today); if (r.ok) { toast(`Troc avec Ernest : ${r.species.nom.toLowerCase()} contre ${r.species.price} graines.`); save(); refreshCabane(); } livreSheet(); }));
-  L.querySelectorAll('[data-tdec]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.tradeDecor(S, livreHouse, b.dataset.tdec, today); if (r.ok) { toast(`Troc avec Ernest : ${r.decor.nom.toLowerCase()} contre ${r.decor.prix} graines.`); save(); refreshCabane(); } livreSheet(); }));
+  L.querySelectorAll('[data-tsp]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.trade(S, b.dataset.tsp, today); if (r.ok) { ernestLine('flore.troc', { chose: `« ${r.species.nom} »` }, `Troc fait : ${r.species.nom.toLowerCase()}.`); save(); refreshCabane(); } livreSheet(); }));
+  L.querySelectorAll('[data-tdec]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.tradeDecor(S, livreHouse, b.dataset.tdec, today); if (r.ok) { ernestLine('flore.troc', { chose: `« ${r.decor.nom} »` }, `Troc fait : ${r.decor.nom.toLowerCase()}.`); save(); refreshCabane(); refreshInterior(); } livreSheet(); }));
   $('#lvClose').addEventListener('click', closeSheet);
 }
 // La chose faite qui a fait pousser une plante. Les plantes récentes la portent ; pour les anciennes, on apparie
@@ -379,7 +384,7 @@ function florePlantSheet(p) {
   const sp = FL.speciesById(p.sp) || {}, house = catId(p.cat), n = FL.waterCount(p), st = FL.stageOf(n), cans = FL.cansOf(S, house).length;
   const next = FL.STAGES[st + 1], fed = FL.fedBy(p).slice(0, 6), rest = FL.toRest(S, today).some((x) => x.id === p.id);
   const dots = FL.STAGES.map((_, i) => `<i class="fl-dot${i <= st ? ' on' : ''}"></i>`).join('');
-  openSheet(`<div id="flPlant"><h2>${esc(sp.nom || cap1(plantName(p)))}</h2><div class="muted small" style="margin:-6px 0 10px"><i>${esc(sp.latin || '')}</i> · Serre ${H_NAME[house]} · semée ${esc(fmtDay(p.day))}${p.src ? ` · plante de ${esc(p.src === 'deonto' ? 'Deonto' : p.src)}` : ''}</div>
+  openSheet(`<div id="flPlant"><h2>${esc(FL.rareName(p) || sp.nom || cap1(plantName(p)))}${p.rare ? ' <span class="fl-rare">variante rare</span>' : ''}</h2><div class="muted small" style="margin:-6px 0 10px"><i>${esc(sp.latin || '')}</i> · Serre ${H_NAME[house]} · semée ${esc(fmtDay(p.day))}${p.src ? ` · plante de ${esc(p.src === 'deonto' ? 'Deonto' : p.src)}` : ''}</div>
     <div class="card"><div class="row spread"><b>${FL.stageName(n)}</b><span class="fl-dots">${dots}</span></div><div class="muted small">${n} arrosage${n > 1 ? 's' : ''}${next ? ` · ${next[0].toLowerCase()} à ${next[1]}` : ' · elle continue de grandir'}${p.dormant ? ' · à la cabane' : ''}${p.fixed ? ' · fixée ici' : ''}</div></div>
     ${fed.length ? `<div class="kv"><label>Ce qui l'a nourrie</label><div class="stack">${fed.map(([t, k]) => `<div class="row spread"><span>${esc(t)}</span><span class="muted small">${k}</span></div>`).join('')}</div></div>` : ''}
     ${rest ? `<p class="muted small">Trois semaines sans eau. Ernest propose de la ranger à la cabane, ou de la fixer ici si sa place te plaît.</p>` : ''}
@@ -389,10 +394,11 @@ function florePlantSheet(p) {
   $('#flPlant').querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
     const f = b.dataset.f; if (f === 'close') { closeSheet(); return; } if (f === 'move') { startMove(p); return; }
     if (f === 'pour' && g3d && g3d.walking && !inter) { closeSheet(); waterNow(p.id); return; }
-    if (f === 'pour' || f === 'all') { label('l\'arrosage'); const r = FL.pour(S, p.id, today, f === 'all' ? 999 : 1); toast(`${r.poured} arrosoir${r.poured > 1 ? 's' : ''} versé${r.poured > 1 ? 's' : ''} sur ${plantName(p)}.`); announce(r.events); gardenWater(); }
+    if (f === 'pour' || f === 'all') { label('l\'arrosage'); const r = FL.pour(S, p.id, today, f === 'all' ? 999 : 1); toast(`${r.poured} arrosoir${r.poured > 1 ? 's' : ''} versé${r.poured > 1 ? 's' : ''} sur ${plantName(p)}.`); gardenWater();
+      if (inter && inter.api) { closeSheet(); save(); refreshInterior(); inter.api.play('arrose', p.id); announce(r.events); return; } announce(r.events); }
     if (f === 'fix') FL.fix(S, p.id, !p.fixed);
-    if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); }
-    if (f === 'wake') { FL.wake(S, p.id); toast(`${cap1(plantName(p))} revient dans la serre.`); }
+    if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); if (inter && inter.api) { closeSheet(); save(); inter.api.play('cabane', p.id, () => { refreshInterior(); gardenUpdate(); }); return; } }
+    if (f === 'wake') { FL.wake(S, p.id); ernestLine('flore.reveil', { espece: plantName(p) }, `${cap1(plantName(p))} revient dans la serre.`); }
     save(); gardenUpdate(); refreshCabane(); if (f === 'rest') closeSheet(); else florePlantSheet(p);
   }));
 }
@@ -412,9 +418,9 @@ function sowSheet(house) {
     <button class="btn quiet" id="flSowClose" style="margin-top:12px">Fermer</button></div>`);
   $('#flSowS').querySelectorAll('[data-sp]').forEach((b) => b.addEventListener('click', () => {
     const s = cat.find((x) => x.id === b.dataset.sp); label('la graine');
-    if (!s.open) { const t = FL.trade(S, s.id, today); if (!t.ok) return; toast(`Troc avec Ernest : ${s.nom.toLowerCase()} contre ${s.price} graines.`); }
+    if (!s.open) { const t = FL.trade(S, s.id, today); if (!t.ok) return; ernestLine('flore.troc', { chose: `« ${s.nom} »` }); }
     const r = FL.sow(S, house, s.id, today); if (r.error) { toast('Il faut un arrosoir plein de cette serre.'); return; }
-    toast(`Semé : ${s.nom.toLowerCase()}. Verse les arrosoirs suivants pour la faire grandir.`); announce(r.events); save(); gardenWater(); refreshInterior(); if (inter) closeSheet(); else houseSheet(house);
+    ernestLine('flore.seme', { espece: s.art }, `Semé : ${s.nom.toLowerCase()}.`); announce(r.events); save(); gardenWater(); refreshInterior(); if (inter) closeSheet(); else houseSheet(house);
   }));
   $('#flSowClose').addEventListener('click', () => houseSheet(house));
 }
@@ -425,7 +431,7 @@ function waterNow(id) {
 }
 function recordWater(p) {
   const house = catId(p.cat);
-  if (FL.isNew(p)) { const r = FL.pour(S, p.id, today, 1); if (r.poured) { announce(r.events); gardenUpdate(); } }
+  if (FL.isNew(p)) { const r = FL.pour(S, p.id, today, 1); if (r.poured) { announce(r.events); gardenUpdate(); if (r.events.length && g3d) { g3d.setErnest('salue'); setTimeout(() => g3d && g3d.setErnest('attend'), 2600); } } }
   if (!S.garden.watered || S.garden.watered.day !== today) S.garden.watered = { day: today, houses: [] };
   const w = S.garden.watered, first = !w.houses.includes(house); if (first) w.houses.push(house);
   if (w.houses.length === 3 && first && S.garden.waterCard !== today) { S.garden.waterCard = today; const c = drawWater(S); toast(c ? `Les trois serres arrosées. Carnet : « ${c.titre || 'une carte'} »` : 'Les trois serres arrosées.', 4200); }
@@ -438,7 +444,7 @@ function bonsaiSheet(goalId) {
   openSheet(`<h2>${esc(g.title)}</h2><div class="muted small" style="margin:-6px 0 12px">Bonsaï de la serre ${H_NAME[catId(g.cat)]} · ${done} branche${done > 1 ? 's' : ''}${g.due ? ` · pour ${esc(fmtDay(g.due))}` : ''}</div>
     <div class="stack" id="bsMs">${g.milestones.map((m, i) => `<button class="ms-row ${m.done ? 'done' : ''}" data-i="${i}"><span class="check">${m.done ? icon('check') : ''}</span><span>${esc(m.text)}${m.due ? `<small class="muted"> · ${esc(new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}</small>` : ''}</span></button>`).join('') || '<p class="muted">Pas encore d\'étape.</p>'}</div>
     ${shelfBlock(g)}<div class="row" style="gap:8px;margin-top:14px"><button class="btn quiet" id="bsEdit">Modifier l'objectif</button><button class="btn quiet" id="bsClose">Fermer</button></div>`);
-  document.querySelectorAll('[data-shelf]').forEach((b) => b.addEventListener('click', () => { label("l'étagère"); if (b.dataset.shelf === 'on') { FL.shelve(S, g.id, today); toast('Ernest pose le bonsaï sur l\'étagère de la cabane.'); } else { FL.keepInSerre(S, g.id); toast('Le bonsaï reste dans la serre.'); } save(); gardenUpdate(); refreshCabane(); bonsaiSheet(goalId); }));
+  document.querySelectorAll('[data-shelf]').forEach((b) => b.addEventListener('click', () => { label("l'étagère"); if (b.dataset.shelf === 'on') { FL.shelve(S, g.id, today); ernestLine('flore.etagere', { objectif: g.title }, 'Ernest pose le bonsaï sur l\'étagère de la cabane.'); } else { FL.keepInSerre(S, g.id); toast('Le bonsaï reste dans la serre.'); } save(); gardenUpdate(); refreshCabane(); bonsaiSheet(goalId); }));
   $('#bsMs').querySelectorAll('[data-i]').forEach((el) => el.addEventListener('click', () => { action('goalMs', { id: g.id, i: el.dataset.i }); bonsaiSheet(goalId); }));
   $('#bsEdit').addEventListener('click', () => goalSheet(g)); $('#bsClose').addEventListener('click', closeSheet);
 }
@@ -869,13 +875,20 @@ function markDone(t, real) {
 // Une chose faite : un arrosoir plein pour sa serre (ou, venue d'un pont, versé tout de suite sur la plante du pont).
 function gainCan(o) { const r = FL.addCan(S, o); if (r.events) announce(r.events); return r; }
 // Ce qu'Ernest dit quand une plante change de stade, part en pleine terre, ou qu'une espèce s'ouvre.
+// Ernest parle : dans sa bulle sur la page, dans la bulle 3D en promenade, en message dans la serre ou la cabane.
+function ernestLine(ctx, extra = {}, fallback = null) {
+  const t = say(S, ctx, ernestEnv(S, today, plantNames()), extra) || fallback; if (!t) return;
+  if (inter || cab) toast(t, Math.max(4200, t.length * 55)); else if (!$('#serreFull').hidden) showBubble3d(t); else bubble(t); save();
+}
 function announce(events) {
   for (const e of events) {
-    const n = e.plant ? cap1(plantName(e.plant)) : '';
-    if (e.kind === 'stage') toast(`${n} passe au stade ${e.stage.toLowerCase()}. Ernest la taille et te garde une graine.`, 4200);
-    else if (e.kind === 'ground') toast(`${n} part en pleine terre. Ernest la rempote : trois graines.`, 4500);
+    const n = e.plant ? plantName(e.plant) : '';
+    if (e.kind === 'stage') ernestLine('flore.stade', { espece: n, stade: e.stage.toLowerCase() }, `${cap1(n)} passe au stade ${e.stage.toLowerCase()}.`);
+    else if (e.kind === 'ground') ernestLine('flore.terre', { espece: n }, `${cap1(n)} part en pleine terre.`);
+    else if (e.kind === 'rare') ernestLine('flore.rare', { espece: n, variante: (FL.RARE[e.plant.sp] || [''])[0] }, `${e.name} : une variante rare.`);
     else if (e.kind === 'unlock') toast(`Nouvelle espèce dans le catalogue : ${e.species.nom.toLowerCase()}.`, 4500);
   }
+  if (inter && inter.api && inter.api.play) { const last = [...events].reverse().find((e) => e.plant); if (last) setTimeout(() => inter && inter.api.play(last.kind === 'stage' ? 'taille' : last.kind, last.plant.id), 1600); }
 }
 function milestones() {
   const n = totalDone(S), M = S.milestones;

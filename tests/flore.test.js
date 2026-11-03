@@ -90,3 +90,15 @@ test('achèvements : calculés depuis l’état', () => {
   const a = Object.fromEntries(achievements(S).map((x) => [x.id, x.done]));
   assert.equal(a.terre1, true); assert.equal(a.terre10, false); assert.equal(a.obj1, true); assert.equal(a['obj-g'], true); assert.equal(a['serre-bienetre'], false);
 });
+
+import { rand, RARE, rareName } from '../js/flore.js';
+test('variante rare : tirée à la pleine terre, une fois', () => {
+  for (const l of Object.values(SPECIES)) for (const s of l) assert.ok(RARE[s.id], s.id);
+  const S = defaultState(); many(S, 40); const { plant } = sow(S, 'bienetre', 'monstera', D).plant ? sow(S, 'bienetre', 'monstera', D) : { plant: null };
+  assert.equal(plant, null, 'monstera fermée au départ');
+  const a = sow(S, 'bienetre', 'thym', D).plant, keep = rand.f;
+  rand.f = () => 0.05; const r = pour(S, a.id, D, 19); rand.f = keep;
+  assert.ok(r.events.some((e) => e.kind === 'rare')); assert.equal(rareName(a), 'Thym à fleurs blanches');
+  rand.f = () => 0.05; const r2 = pour(S, a.id, D, 5); rand.f = keep; assert.ok(!r2.events.some((e) => e.kind === 'rare'), 'une seule fois');
+  assert.equal(Object.fromEntries(achievements(S).map((x) => [x.id, x.done])).rare1, true);
+});

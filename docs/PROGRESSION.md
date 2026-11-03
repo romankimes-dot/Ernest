@@ -72,3 +72,16 @@
   - **Travail, le cabinet d'étude** : ogive haute en fonte noire avec tirants, damier, bibliothèques basses, globe, échelle, lampes vertes.
   - **Vie perso, l'orangerie du cottage** : toit à deux pans en bois peint en blanc, gravier et pas japonais, planches peintes, fanions, brouette.
 - La cabane est texturée (chaux, pierre, chaume, bois, plancher, tapis) et meublée : manteau de cheminée et bocaux, marmite, casseroles de cuivre, bûches, fauteuil, tableau, balai, panier de pommes, livres, bouquets aux poutres, tresse d'ail, lanterne, basilic à la fenêtre.
+
+## Ernest, ses scènes, les variantes rares
+- Ernest parle de la mécanique avec ses propres répliques (`data/ernest/repliques.json`) : stade franchi, pleine terre, variante rare, semis, troc, dormance, réveil, bonsaï posé sur l'étagère, déplacement, entrée dans la cabane, entrée dans chaque serre selon son thème.
+- Dans la serre, il va jusqu'à la plante :
+  - il l'arrose, avec des gouttes ;
+  - il la taille à un changement de stade, et des feuilles tombent ;
+  - il la rempote à la pleine terre, et la terre gicle ;
+  - il s'émerveille devant une variante rare, entouré d'étincelles dorées ;
+  - quand on la range à la cabane, il la porte jusqu'à la porte.
+- En promenade dans le village, il salue quand une plante change de stade.
+- Variantes rares : une chance sur dix à la pleine terre, une par espèce (panachée, blanche, dorée, sombre, rose, bleue ou plus grande). Elles sont dessinées dans la serre, nommées dans la fiche et dans le livre, et comptent dans les achèvements.
+- Entrer sans attendre : les modules sont préchargés au démarrage. La cabane et la dernière serre visitée restent en pause à la sortie, et le contexte WebGL est gardé. Les plantes déjà dessinées sont mises en cache.
+- Promenade : le trajet automatique garde une marge le long des murs et des panneaux, et des points de passage contournent les panneaux. Ernest ne se cogne plus au panneau Travail en allant à la chaumière.

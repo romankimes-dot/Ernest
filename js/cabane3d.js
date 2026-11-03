@@ -197,5 +197,8 @@ export function mount(canvas, { onPick } = {}) {
     ernest.update(dt, { lantern: timeKey === 'night', lanternK: 1.5, groundY: 0, still: true });
     renderer.render(scene, camera); requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
-  return { set, resize, dispose() { on = false; window.removeEventListener('resize', resize); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* ignore */ } } };
+  return { set, resize,
+    pause() { if (!on) return; on = false; canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.enabled = false; },
+    resume() { if (on) return; on = true; canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); controls.enabled = true; last = performance.now(); resize(); requestAnimationFrame(loop); },
+    dispose() { this.pause(); window.removeEventListener('resize', resize); controls.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* ignore */ } } };
 }
