@@ -1,9 +1,9 @@
 // Ernest : interface. Quatre onglets (Aujourd'hui, Liste, Semaine, Carnet), réglages, rituel du soir, capture.
 import * as store from './store.js';
-import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot, organize, smallProposals } from './model.js';
+import { timeByCat, fmtMin, materialize, daysLabel, seriesDue, DOW_SHORT, CATS, catOf, catId, dayKey, addDays, dow, weekDays, isoWeek, uid, ensureDay, dayOf, doneOn, isActive, activeDays, totalDone, catCounts, estimate, moodAvg, moodLabel, jMinus, minimums, sortList, suggestions, nextDeadline, examPrep, reslot, organize, smallProposals } from './model.js';
 import { loadLines, env as ernestEnv, say, hourCtx, svg as ernestSvg, stateFor, plantName } from './ernest.js';
 import { Garden } from './garden2d.js';
-import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, FAMILLES } from './cards.js';
+import { loadCards, allCards, cardById, drawShort, drawLong, drawRare, drawEpisode, drawWater, FAMILLES } from './cards.js';
 import { decode, merge, plantHistory, forgetDay } from './bridge.js';
 import { icon } from './icons.js';
 import * as SY from './sync.js';
@@ -175,7 +175,7 @@ async function setupGarden3d() {
     const mod = await import('./garden3d.js');
     if (!mod.webglOk()) return;
     const c = $('#garden3d'); c.hidden = false;
-    g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today); if (lastErnestSt) g3d.setErnest(lastErnestSt);
+    g3d = mod.default; g3d.mount(c, { mode: 'band' }); g3d.update(S, today); if (lastErnestSt) g3d.setErnest(lastErnestSt); bind3d();
     $('#garden').hidden = true; garden.stop();
     c.addEventListener('click', openSerre);
     $('#serreClose').addEventListener('click', closeSerre);
@@ -193,13 +193,142 @@ function openSerre() {
   g3d.setMode('full');
   const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.walking) g3d.walkTo(b.dataset.house); else if (g3d.focus) g3d.focus(b.dataset.house); })); }
   if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
-  bindWalkUi(); setWalkUi(false);
+  bindWalkUi(); setWalkUi(false); document.body.classList.add('serre-open'); g3d.setFinds(todayFinds());
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
   g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
 }
 function closeSerre() {
   $('#serre').prepend($('#garden3d')); $('#serreFull').hidden = true;
+  document.body.classList.remove('serre-open'); hideBubble3d();
   if (g3d) { g3d.walk(false); g3d.onFps(null); g3d.setMode('band'); }
+}
+// ---------- Le monde 3D interactif ----------
+// Toucher une plante (la chose faite qui l'a fait pousser), un bonsaï (l'objectif et ses étapes), un panneau (les
+// choses du jour de la serre), la chaumière (le rituel du soir), Ernest (il parle). En promenade : arroser, graines
+// dorées à ramasser, et Ernest dit un mot en entrant dans une serre.
+const H_NAME = { travail: 'Travail', bienetre: 'Bien-être', perso: 'Vie perso' };
+const cap1 = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
+const hhmm = (iso) => (iso && iso.length > 11 ? iso.slice(11, 16).replace(':', ' h ') : '');
+const plantsOf = (house) => S.garden.plants.filter((p) => p.kind === 'plant' && catId(p.cat) === house).slice(-8).map(plantName);
+function bind3d() {
+  g3d.onPick(onPick3d); g3d.onFind(onFind3d); g3d.onNear((n) => { near3d = n; refreshAct(); });
+  g3d.setFinds(todayFinds());
+  $('#sfBubble').addEventListener('click', (e) => { e.stopPropagation(); hideBubble3d(); });
+}
+let near3d = null, lastPlaceTalk = 0, bubble3dT = null, bubble3dRaf = 0;
+function say3d(ctx, plants) {
+  const e = ernestEnv(S, today, plants && plants.length ? plants : plantNames());
+  const t = say(S, ctx, e); if (!t) return; store.save(S); showBubble3d(t);
+}
+function showBubble3d(text) {
+  const b = $('#sfBubble'); if (!b) return;
+  b.textContent = text; b.hidden = false; b.classList.remove('out');
+  clearTimeout(bubble3dT); bubble3dT = setTimeout(hideBubble3d, Math.max(4500, text.length * 70));
+  cancelAnimationFrame(bubble3dRaf);
+  const follow = () => { if (b.hidden) return; const p = g3d && g3d.ernestScreen(); b.classList.toggle('fixed', !p); if (p) { b.style.left = `${Math.max(140, Math.min(innerWidth - 140, p.x))}px`; b.style.top = `${Math.max(150, p.y)}px`; } else { b.style.left = ''; b.style.top = ''; } bubble3dRaf = requestAnimationFrame(follow); };
+  follow();
+}
+function hideBubble3d() { const b = $('#sfBubble'); if (!b || b.hidden) return; b.classList.add('out'); setTimeout(() => { b.hidden = true; b.classList.remove('out'); cancelAnimationFrame(bubble3dRaf); }, 250); }
+function placeTalk(place) {
+  if (place === 'chaumiere') { refreshAct(); if (Date.now() - lastPlaceTalk > 8000) { lastPlaceTalk = Date.now(); say3d('lieu.chaumiere'); } return; }
+  refreshAct();
+  if (!place || Date.now() - lastPlaceTalk < 15000) return;
+  lastPlaceTalk = Date.now(); say3d(`lieu.${place}`, plantsOf(place));
+}
+const ritualOpen = () => nowHour() >= RITUAL_HOUR && !dayOf(S, addDays(today, 1)).planned;
+// Bouton d'action de la promenade : arroser la plante d'à côté, lire le panneau, préparer demain à la chaumière.
+function refreshAct() {
+  const b = $('#sfAct'); if (!b) return;
+  let lbl = null, fn = null;
+  if (g3d && g3d.walking) {
+    if (near3d && near3d.kind === 'plant') { const p = S.garden.plants.find((x) => x.id === near3d.id); if (p) { lbl = `Arroser ${plantName(p)}`; fn = () => waterNow(p.id); } }
+    else if (near3d && near3d.kind === 'sign') { lbl = `Panneau ${H_NAME[near3d.house]}`; fn = () => houseSheet(near3d.house); }
+    else if (g3d.place === 'chaumiere' && ritualOpen()) { lbl = 'Préparer demain'; fn = () => ritualSheet(); }
+  }
+  b.hidden = !lbl; b.textContent = lbl || ''; b.onclick = fn ? (e) => { e.stopPropagation(); fn(); } : null;
+}
+function onPick3d(o) {
+  if (o.kind === 'plant') plantSheet(o.id);
+  else if (o.kind === 'bonsai') bonsaiSheet(o.goal);
+  else if (o.kind === 'sign') houseSheet(o.house);
+  else if (o.kind === 'cottage') cottageTap();
+  else if (o.kind === 'ernest') say3d('ernest.touche');
+  else if (o.kind === 'seed') toast(g3d.walking ? 'Une graine dorée. Approche-toi, Ernest la ramassera.' : 'Une graine dorée. Pars en promenade pour aller la ramasser.');
+}
+function cottageTap() {
+  if (ritualOpen()) { ritualSheet(); return; }
+  say3d('lieu.chaumiere');
+  toast(nowHour() >= RITUAL_HOUR ? 'Demain est déjà prêt.' : "La chaumière ouvre le rituel du soir dès 18 h.");
+}
+// La chose faite qui a fait pousser une plante. Les plantes récentes la portent ; pour les anciennes, on apparie
+// dans l'ordre : la n-ième plante du jour dans cette serre ↔ la n-ième chose faite ce jour-là dans cette catégorie.
+function originOf(p) {
+  if (p.thing) for (const [k, d] of Object.entries(S.days)) { const t = (d.things || []).find((x) => x.id === p.thing); if (t) return { t, day: k }; }
+  if (p.listId) { const l = S.list.find((x) => x.id === p.listId); if (l) return { l }; }
+  if (p.src) return { src: p.src };
+  const c = catId(p.cat), same = S.garden.plants.filter((x) => x.kind === 'plant' && x.day === p.day && catId(x.cat) === c && !x.src), i = same.indexOf(p);
+  const dn = doneOn(S, p.day), cands = [...dn.things.filter((t) => catId(t.cat) === c).map((t) => ({ t, at: t.doneAt || '' })), ...dn.list.filter((l) => catId(l.cat || 'perso') === c).map((l) => ({ l, at: l.doneAt || '' }))].sort((a, b) => (a.at < b.at ? -1 : 1));
+  return i >= 0 ? cands[i] || null : null;
+}
+function plantSheet(id) {
+  const p = S.garden.plants.find((x) => x.id === id); if (!p) return;
+  const o = originOf(p), house = catId(p.cat), w = S.garden.watered && S.garden.watered.day === today && S.garden.watered.houses.includes(house);
+  let what = '<p class="muted">Elle vient d\'un jour où tu as avancé ; le détail ne s\'est pas gardé.</p>';
+  if (o && o.t) what = `<div class="card"><b>${esc(o.t.title)}</b><div class="muted small">${esc(catOf(o.t.cat).nom)}${o.t.real ? ` · ${fmtMin(o.t.real)}` : ''}${o.t.doneAt ? ` · faite à ${hhmm(o.t.doneAt)}` : ''}</div></div>`;
+  else if (o && o.l) what = `<div class="card"><b>${esc(o.l.text)}</b><div class="muted small">Cochée dans la Liste${o.l.doneAt ? ` à ${hhmm(o.l.doneAt)}` : ''}</div></div>`;
+  else if (o && o.src) what = `<div class="card"><b>Une journée de travail</b><div class="muted small">Venue de ${esc(o.src === 'deonto' ? 'Deonto' : o.src)}</div></div>`;
+  openSheet(`<h2>${esc(cap1(plantName(p)))}</h2><div class="muted small" style="margin:-6px 0 12px">Serre ${H_NAME[house]} · plantée ${esc(fmtDay(p.day))}</div>${what}
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn" id="pWater">${w ? 'Arroser encore' : 'Arroser'}</button><button class="btn quiet" id="pClose">Fermer</button></div>`);
+  $('#pWater').addEventListener('click', () => { closeSheet(); waterNow(id); });
+  $('#pClose').addEventListener('click', closeSheet);
+}
+function waterNow(id) {
+  const p = S.garden.plants.find((x) => x.id === id); if (!p) return;
+  if (g3d.walking) toast(`Ernest va arroser ${plantName(p)}.`, 1800);
+  g3d.waterPlant(id, () => recordWater(p));
+}
+function recordWater(p) {
+  const house = catId(p.cat);
+  if (!S.garden.watered || S.garden.watered.day !== today) S.garden.watered = { day: today, houses: [] };
+  const w = S.garden.watered, first = !w.houses.includes(house); if (first) w.houses.push(house);
+  if (w.houses.length === 3 && first && S.garden.waterCard !== today) { S.garden.waterCard = today; const c = drawWater(S); toast(c ? `Les trois serres arrosées. Carnet : « ${c.titre || 'une carte'} »` : 'Les trois serres arrosées.', 4200); }
+  else if (first) toast(`Arrosé. ${w.houses.length} serre${w.houses.length > 1 ? 's' : ''} sur 3 aujourd'hui.`);
+  say3d('arrosage', [plantName(p)]); save();
+}
+function bonsaiSheet(goalId) {
+  const g = S.goals.find((x) => x.id === goalId); if (!g) { toast('Ce bonsaï garde son objectif pour lui.'); return; }
+  const done = g.milestones.filter((m) => m.done).length;
+  openSheet(`<h2>${esc(g.title)}</h2><div class="muted small" style="margin:-6px 0 12px">Bonsaï de la serre ${H_NAME[catId(g.cat)]} · ${done} branche${done > 1 ? 's' : ''}${g.due ? ` · pour ${esc(fmtDay(g.due))}` : ''}</div>
+    <div class="stack" id="bsMs">${g.milestones.map((m, i) => `<button class="ms-row ${m.done ? 'done' : ''}" data-i="${i}"><span class="check">${m.done ? icon('check') : ''}</span><span>${esc(m.text)}${m.due ? `<small class="muted"> · ${esc(new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}</small>` : ''}</span></button>`).join('') || '<p class="muted">Pas encore d\'étape.</p>'}</div>
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn quiet" id="bsEdit">Modifier l'objectif</button><button class="btn quiet" id="bsClose">Fermer</button></div>`);
+  $('#bsMs').querySelectorAll('[data-i]').forEach((el) => el.addEventListener('click', () => { action('goalMs', { id: g.id, i: el.dataset.i }); bonsaiSheet(goalId); }));
+  $('#bsEdit').addEventListener('click', () => goalSheet(g)); $('#bsClose').addEventListener('click', closeSheet);
+}
+function houseSheet(house) {
+  const d = dayOf(S, today), list = d.things.filter((t) => catId(t.cat) === house && !t.prep);
+  const row = (t) => `<div class="card row spread" style="gap:10px"><div><b>${esc(t.title)}</b><div class="muted small">${t.done ? `Faite${t.real ? ` · ${fmtMin(t.real)}` : ''}` : t.startedAt ? `En cours · ${elapsed(t)}` : t.est ? `Environ ${fmtMin(t.est)}` : 'À faire'}</div></div>
+    <div class="row" style="gap:6px">${t.done ? icon('check') : `${t.startedAt ? `<button class="hs-btn" data-h="pause" data-id="${t.id}">Pause</button>` : `<button class="hs-btn" data-h="start" data-id="${t.id}">Démarrer</button>`}<button class="hs-btn" data-h="done" data-id="${t.id}">Terminer</button>`}</div></div>`;
+  openSheet(`<div id="houseSheet" data-house="${house}"><h2>Serre ${H_NAME[house]}</h2><div class="muted small" style="margin:-6px 0 12px">Aujourd'hui, dans cette serre</div>
+    <div class="stack">${list.length ? list.map(row).join('') : '<p class="muted">Rien de prévu ici aujourd\'hui.</p>'}</div>
+    <div class="row" style="gap:8px;margin-top:14px"><button class="btn" id="hsAdd">Poser une chose ici</button><button class="btn quiet" id="hsClose">Fermer</button></div></div>`);
+  $('#houseSheet').querySelectorAll('[data-h]').forEach((el) => el.addEventListener('click', () => { action(el.dataset.h, { id: el.dataset.id }); if ($('#houseSheet')) houseSheet(house); }));
+  $('#hsAdd').addEventListener('click', () => thingSheet(null, today, house)); $('#hsClose').addEventListener('click', closeSheet);
+}
+// Graines dorées : trois par jour, à des emplacements tirés de la date ; les trois ramassées ouvrent une carte rare.
+function todayFinds() {
+  const n = g3d && g3d.findSpots ? g3d.findSpots() : 0; if (!n) return [];
+  let h = 2166136261; for (const ch of today) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const ids = []; while (ids.length < Math.min(3, n)) { h = Math.imul(h ^ (h >>> 13), 0x5bd1e995) >>> 0; const i = h % n; if (!ids.includes(i)) ids.push(i); }
+  const f = S.garden.finds && S.garden.finds.day === today ? S.garden.finds.got : [];
+  return ids.filter((i) => !f.includes(i));
+}
+function onFind3d(i) {
+  if (!S.garden.finds || S.garden.finds.day !== today) S.garden.finds = { day: today, got: [] };
+  const f = S.garden.finds; if (f.got.includes(i)) return; f.got.push(i); S.garden.findsTotal = (S.garden.findsTotal || 0) + 1;
+  label('la graine dorée');
+  if (f.got.length >= 3) { const c = drawRare(S, 'trouvailles'); toast(c ? `Les trois graines dorées. Carte rare : « ${c.titre || ''} »` : 'Les trois graines dorées du jour.', 4500); }
+  else toast(`Une graine dorée (${f.got.length}/3 aujourd'hui).`);
+  say3d('trouvaille'); save();
 }
 // Promenade avec Ernest : bouton, vue 3e / 1re personne, joystick, légende du lieu.
 let serreCap = '', houseN = () => 0;
@@ -223,9 +352,9 @@ function walkCap(place) {
 const f3dWalking = () => !!(g3d && g3d.walking);
 function bindWalkUi() {
   const w = $('#sfWalk'); if (w._b) return; w._b = 1;
-  w.addEventListener('click', (e) => { e.stopPropagation(); const on = !g3d.walking; g3d.walk(on); setWalkUi(on); });
+  w.addEventListener('click', (e) => { e.stopPropagation(); const on = !g3d.walking; g3d.walk(on); setWalkUi(on); refreshAct(); });
   $('#sfView').addEventListener('click', (e) => { e.stopPropagation(); g3d.walk(true, g3d.walkView === 'first' ? 'third' : 'first'); setWalkUi(true); });
-  g3d.onPlace((p) => walkCap(p));
+  g3d.onPlace((p) => { walkCap(p); placeTalk(p); });
   // joystick : un disque, le pouce le tire jusqu'à son bord
   const joy = $('#sfJoy'), knob = joy.querySelector('i'); let id = null;
   const move = (e) => { const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2; let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
@@ -536,7 +665,7 @@ function action(act, ds, el, v) {
     case 'done': if (thing) doneSheet(thing); break;
     case 'toggle': if (thing) { if (thing.done) { thing.done = false; thing.doneAt = null; save(); render(); } else doneSheet(thing); } break;
     case 'thingMenu': if (thing) thingSheet(thing); break;
-    case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; } else { l.done = true; l.doneAt = new Date().toISOString(); plant(l.cat || 'perso', 'plant', { list: true }); /* une vraie plante, dans Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
+    case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; } else { l.done = true; l.doneAt = new Date().toISOString(); plant(l.cat || 'perso', 'plant', { list: true, listId: l.id }); /* une vraie plante, dans Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
     case 'listEdit': listSheet(S.list.find((x) => x.id === ds.id)); break;
     case 'ideaAct': { const i = S.ideas.find((x) => x.id === ds.id); if (!i) return; if (ds.v === 'todo') { S.list.push({ id: uid(), text: i.text, cat: null, due: null, done: false, at: new Date().toISOString() }); i.status = 'done'; } else if (ds.v === 'keep') i.status = 'kept'; else if (ds.v === 'drop') i.status = 'dropped'; else if (ds.v === 'goal') { S.goals.push({ id: uid(), title: i.text, cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} }); i.status = 'done'; } save(); render(); break; }
     case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) t.real = 0; save(); render(); break; }
@@ -581,7 +710,7 @@ function markDone(t, real) {
   label('la chose faite');
   t.done = true; t.real = real; t.doneAt = new Date().toISOString(); t.spent = spentMs(t); t.startedAt = null;
   if (t.fromList) { const l = S.list.find((x) => x.id === t.fromList); if (l) { l.done = true; l.doneAt = t.doneAt; } }
-  plant(t.cat, 'plant'); tickMilestone(t.title); gardenWater(); setErnest('arrose'); setTimeout(() => setErnest(), 2500);
+  plant(t.cat, 'plant', { thing: t.id }); tickMilestone(t.title); gardenWater(); setErnest('arrose'); setTimeout(() => setErnest(), 2500);
   const d = dayOf(S, today), all = d.things.every((x) => x.done);
   const e = ernestEnv(S, today, plantNames()); e.three = d.things.length === 3; bubble(say(S, all ? 'coche.derniere' : 'coche', e));
   const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.');
@@ -595,13 +724,13 @@ function milestones() {
 }
 
 // Feuille : une chose (créer ou modifier)
-function thingSheet(t, k = today) {
-  const d = ensureDay(S, k), isNew = !t; t = t || { id: uid(), title: '', cat: 'perso', est: null, slot: null, done: false, real: 0 };
+function thingSheet(t, k = today, cat = null) {
+  const d = ensureDay(S, k), isNew = !t; t = t || { id: uid(), title: '', cat: cat || 'perso', est: null, slot: null, done: false, real: 0 };
   openSheet(`<h2>${isNew ? 'Une chose pour aujourd\'hui' : 'Cette chose'}</h2><input id="thTitle" placeholder="Quoi ?" value="${esc(t.title)}" autocomplete="off">${chips(t.cat)}<div class="kv"><label>Quand dans la journée</label>${blocksHtml(t.slot)}</div>${repeatHtml(t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : [])}<div class="row" style="gap:16px;flex-wrap:wrap"><label class="row" style="gap:8px"><input type="checkbox" id="thDone" style="width:auto" ${t.done ? 'checked' : ''}> Fait</label>${tracking() ? `<label class="row" style="gap:8px">Temps passé <input id="thEst" type="number" inputmode="numeric" min="0" value="${t.done ? t.real || 0 : Math.round(spentMs(t) / 60000)}" style="width:90px"> min</label>` : ''}</div><button class="btn" id="thSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="thTomorrow">${icon('arrow', 'sm')} Demain</button><button class="btn quiet" id="thIdea">${icon('bulb', 'sm')} En idée</button><button class="btn danger" id="thDrop">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh); let slot = t.slot; const repDays = bindRepeat(sh, t.seriesId ? (S.series.find((x) => x.id === t.seriesId) || {}).days : []);
   sh.querySelectorAll('[data-b]').forEach((b) => b.addEventListener('click', () => { slot = slot === b.dataset.b ? null : b.dataset.b; sh.querySelectorAll('[data-b]').forEach((x) => x.classList.toggle('on', x.dataset.b === slot)); }));
   $('#thSave').addEventListener('click', () => { label(isNew ? "l'ajout" : 'la modification'); const title = $('#thTitle').value.trim(); if (!title) { toast('Écris d\'abord quoi.'); $('#thTitle').focus(); return; } t.title = title; t.cat = chipValue(sh, 'cat') || 'perso'; const m = tracking() ? Math.max(0, Number($('#thEst').value) || 0) : 0, nowDone = $('#thDone').checked, wasDone = !!t.done;
-    if (nowDone) { t.done = true; t.real = tracking() ? m : t.real || 0; t.startedAt = null; if (!wasDone) { t.doneAt = k === today ? new Date().toISOString() : `${k}T20:00:00`; plant(t.cat, 'plant'); gardenWater(); } }
+    if (nowDone) { t.done = true; t.real = tracking() ? m : t.real || 0; t.startedAt = null; if (!wasDone) { t.doneAt = k === today ? new Date().toISOString() : `${k}T20:00:00`; plant(t.cat, 'plant', { thing: t.id }); gardenWater(); } }
     else { t.done = false; t.doneAt = null; if (tracking()) { t.spent = m * 60000; if (t.startedAt) t.startedAt = Date.now(); } }
     if (t.slot !== slot) delete t.slotAuto; t.slot = slot; saveSeries(t, repDays()); if (isNew) { d.things.push(t); d.planned = true; } save(); if (t.seriesId) toast(`Revient : ${daysLabel(repDays()).toLowerCase()}.`); closeSheet(); render(); });
   if (!isNew) {
@@ -641,7 +770,7 @@ function captureSheet(preset = 'today') {
       const d = ensureDay(S, today), t = { id: uid(), title: text, cat: cat || defCat(), est: estimate(S, cat || defCat()), slot, done: false, real: 0 }, rd = repGet();
       saveSeries(t, rd); const due = !rd.length || rd.includes(dow(today));
       const already = $('#capDone') && $('#capDone').checked;
-      if (already) { t.done = true; t.real = tracking() ? Math.max(0, Number(($('#capMin') || {}).value) || 0) : 0; t.doneAt = new Date().toISOString(); plant(t.cat, 'plant'); gardenWater(); }
+      if (already) { t.done = true; t.real = tracking() ? Math.max(0, Number(($('#capMin') || {}).value) || 0) : 0; t.doneAt = new Date().toISOString(); plant(t.cat, 'plant', { thing: t.id }); gardenWater(); }
       if (due || already) { d.things.push(t); d.planned = true; }
       if (already) { save(); closeSheet(); toast(`Noté comme fait${t.real ? `, ${fmtMin(t.real)}` : ''}.`); switchTab('today'); return; }
       save(); closeSheet(); toast(rd.length ? `Série posée : ${daysLabel(rd).toLowerCase()}.${due ? '' : " Pas aujourd'hui."}` : 'Placée dans ta journée.'); switchTab('today');

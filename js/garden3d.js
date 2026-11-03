@@ -259,6 +259,7 @@ function signTex(text, bg = '#6e4526') {
   x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 4; x.shadowOffsetY = 2; x.fillText(text, 256, 106);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
+const SIGNS = []; // panneaux des serres : on les touche pour voir les choses du jour de la serre
 const BAYS = 6, TBX = 1.75, TY = 0.82, TZ0 = -HD + 1.5, TZ1 = HD - 1.0; // tables : axe, hauteur, début et fin
 const lanterns = [], signMats = [], bulbMats = [];
 for (const h of HOUSES) {
@@ -297,7 +298,7 @@ for (const h of HOUSES) {
     boxAt('cloth', W, s * (TBX - 0.49), TY - 0.03, zc, 0.012, 0.13, L + 0.04, 0, acc); // et son retombé côté allée
   }
   // panneau de bois peint, à gauche de la porte, un peu tourné vers le chemin
-  const sg = new THREE.Group(); sg.position.set(-1.62, 0, HD + 0.75); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true);
+  const sg = new THREE.Group(); sg.position.set(-1.62, 0, HD + 0.75); sg.rotation.y = 0.22; g.add(sg); sg.updateMatrixWorld(true); sg.userData.pick = { kind: 'sign', house: h.id }; SIGNS.push(sg);
   const SW = sg.matrixWorld;
   for (const x of [-0.72, 0.72]) boxAt('dark', SW, x, 0.78, -0.04, 0.08, 1.56, 0.08);
   boxAt('wood', SW, 0, 1.25, 0, 1.88, 0.78, 0.05);
@@ -952,12 +953,12 @@ const pedestals = (() => {
 for (const h of HOUSES) h.bonsai = BONSAI_SPOTS.map(() => ({ obj: null, key: '' }));
 function setBonsai(h, list) {
   BONSAI_SPOTS.forEach(([x, z, s], j) => {
-    const b = list[j], B = h.bonsai[j], key = b ? `${b.seed}:${b.branches}` : '';
+    const b = list[j], B = h.bonsai[j], key = b ? `${b.seed}:${b.branches}:${b.goal}` : '';
     if (key === B.key) return; B.key = key;
     if (B.obj) { h.g.remove(B.obj); disposeObj(B.obj); B.obj = null; }
     if (j > 0) pedestals.set(h, j, !!b);
     if (!b) return;
-    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.48 * s, z); h.g.add(B.obj);
+    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.48 * s, z); B.obj.userData.pick = { kind: 'bonsai', goal: b.goal }; h.g.add(B.obj);
   });
 }
 // suspensions : trois par serre, elles descendent avec les choses faites de la serre
@@ -1110,7 +1111,7 @@ function updateWalk(dt, t) {
   if (mag > 0.05) walk.auto = null;
   else if (walk.auto) { // pilote automatique : de point en point
     const w = walk.auto.pts[walk.auto.i], dx = w.x - p.x, dz = w.z - p.z, d = Math.hypot(dx, dz);
-    if (d < (walk.auto.i === walk.auto.pts.length - 1 ? 0.12 : 0.45)) { walk.auto.i++; if (walk.auto.i >= walk.auto.pts.length) { const fin = walk.auto; walk.auto = null; if (fin.face != null) walk.faceTo = fin.face; if (fin.pose) { walk.pose = fin.pose; walk.poseUntil = t + 3.2; } } }
+    if (d < (walk.auto.i === walk.auto.pts.length - 1 ? 0.12 : 0.45)) { walk.auto.i++; if (walk.auto.i >= walk.auto.pts.length) { const fin = walk.auto; walk.auto = null; if (fin.face != null) walk.faceTo = fin.face; if (fin.pose) { walk.pose = fin.pose; walk.poseUntil = t + 3.2; } if (fin.then) fin.then(); } }
     else { mx = dx / d; mz = dz / d; mag = Math.min(1, d * 1.5 + 0.35); }
     // la caméra se range doucement derrière lui
     if (walk.auto && walk.view === 'third') { const h = Math.atan2(mx, mz); let dy = h - walk.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); walk.yaw += dy * Math.min(1, dt * 1.6); }
@@ -1189,6 +1190,93 @@ const glowTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 
 const halo = (parent, pos, size) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 })); sp.position.copy(pos); sp.scale.setScalar(size); sp.visible = false; sp.userData.size = size; parent.add(sp); return sp; };
 const setHalo = (sp, k) => { sp.material.opacity = Math.min(1, k); sp.visible = k > 0.01; };
 const halos = { lanterns: lanterns.map((l) => { const sp = halo(l.g, V(0, 0, 0), 2.1); sp.material.color.set('#ffffff').lerp(col(l.house.accent), 0.3); return sp; }), cottage: cottageB.glowPoints.map((g) => halo(cottage, g.p, g.s * 1.45)) };
+
+// ---------- Monde interactif ----------
+// Toucher : un tap court (sans glisser) lance un rayon depuis la caméra ; le premier objet « pickable » touché est
+// renvoyé à l'app (plante, bonsaï, panneau, chaumière, Ernest, graine dorée).
+let pickFn = null, nearFn = null, findFn = null, near = undefined, nearT = 0;
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+cottage.userData.pick = { kind: 'cottage' }; ernest.root.userData.pick = { kind: 'ernest' };
+function pickAt(cx, cy) {
+  if (!renderer || mode !== 'full' || !pickFn) return;
+  const r = renderer.domElement.getBoundingClientRect(); ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera); ray.far = 40;
+  const list = [...[...live.values()].map((L) => L.obj), ...HOUSES.flatMap((h) => h.bonsai.map((B) => B.obj).filter(Boolean)), ...SIGNS, cottage, ...FINDS.filter((f) => f.on).map((f) => f.g)];
+  if (!(walk.on && walk.view === 'first')) list.push(ernest.root);
+  const hit = ray.intersectObjects(list, true).find((x) => x.object.visible !== false && !x.object.isSprite && !x.object.isPoints);
+  if (!hit) return;
+  for (let o = hit.object; o; o = o.parent) if (o.userData.pick) { pickFn({ ...o.userData.pick, dist: hit.distance }); return; }
+}
+function bindPick(canvas) {
+  let d = null;
+  canvas.addEventListener('pointerdown', (e) => { d = e.isPrimary ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
+  canvas.addEventListener('pointerup', (e) => { if (!d || !e.isPrimary) return; const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y), dt = performance.now() - d.t; d = null; if (moved < 10 && dt < 450) pickAt(e.clientX, e.clientY); });
+}
+// En promenade : la plante ou le panneau le plus proche d'Ernest (pour un bouton « Arroser » ou « Le panneau »)
+const _w = new THREE.Vector3();
+function updateNear(t) {
+  if (t - nearT < 0.2 || !nearFn) return; nearT = t;
+  const p = ernest.root.position; let best = null, bd = 1.05;
+  for (const L of live.values()) { L.obj.getWorldPosition(_w); const d = Math.hypot(_w.x - p.x, _w.z - p.z); if (d < bd) { bd = d; best = { kind: 'plant', id: L.id }; } }
+  if (!best) for (const sg of SIGNS) { sg.getWorldPosition(_w); if (Math.hypot(_w.x - p.x, _w.z - p.z) < 1.3) { best = { ...sg.userData.pick }; break; } }
+  const key = best ? best.kind + (best.id || best.house) : '';
+  if (key !== near) { near = key; nearFn(best); }
+}
+// Arroser une plante : en promenade, Ernest va jusqu'à l'allée devant elle, se tourne et arrose ; sinon, la plante
+// frémit tout de suite. done() est appelé quand l'eau tombe.
+function waterPlant(id, done) {
+  const L = live.get(id); if (!L) { if (done) done(); return; }
+  const fire = () => { pop = { obj: L.obj, t: clock.elapsedTime }; poke(); if (done) done(); };
+  if (!walk.on) { fire(); return; }
+  const h = L.house, lp = L.obj.position, side = Math.sign(lp.x) || 1;
+  const [ax, az] = SLOTS[L.slot] && SLOTS[L.slot].floor ? [side * 0.9, HD - 1.0] : [side * 1.0, lp.z];
+  const to = toWorld(h, ax, 0, az); L.obj.getWorldPosition(_w);
+  const face = Math.atan2(_w.x - to.x, _w.z - to.z), p = ernest.root.position;
+  walk.auto = { pts: Math.hypot(p.x - to.x, p.z - to.z) < 0.4 ? [to] : route(V(p.x, 0, p.z), to), i: 0, face, pose: 'arrose', then: () => setTimeout(fire, 700) };
+}
+// Graines dorées : des emplacements cachés dans le jardin (sous les tables, derrière les serres, au bord de la mare,
+// près de la chaumière, au pied du muret) ; l'app en choisit trois par jour. On les ramasse en passant à côté.
+const FIND_SPOTS = (() => {
+  const out = [], add = (v) => { const q = V(v.x, 0, v.z), c = collide(q.clone(), 0.12); if (q.distanceTo(c) > 0.3) return; out.push(c); };
+  for (const h of HOUSES) {
+    for (const sd of [-1, 1]) add(toWorld(h, sd * (TBX - 0.42), 0, TZ0 + 0.5)); // sous le bord des tables, au fond
+    add(toWorld(h, 0.9, 0, -HD - 0.7)); add(toWorld(h, HW + 0.55, 0, -1.2)); add(toWorld(h, -HW - 0.55, 0, 1.4));
+  }
+  for (const [x, z] of [[9.4, -8.2], [5.0, -8.6], [7.3, -11.3], [-3.2, -10.6], [-8.7, -7.4], [0, 9.6], [-6.2, 11.0], [6.1, 10.8], [10.4, 2.0], [-10.4, 2.6], [2.6, -9.8], [-1.6, 5.6]]) add(V(x, 0, z));
+  return out;
+})();
+const FINDS = (() => {
+  const geo = new THREE.SphereGeometry(0.045, 16, 12); geo.scale(0.8, 1.25, 0.8);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xf2c24a, emissive: 0xf2a23d, emissiveIntensity: 1.6, roughness: 0.3, metalness: 0.4 });
+  const leafM = new THREE.MeshStandardMaterial({ color: 0x6aa84f });
+  return FIND_SPOTS.map((p, i) => {
+    const g = new THREE.Group(); g.position.set(p.x, groundAt(p.x, p.z) + 0.16, p.z); g.visible = false; scene.add(g);
+    const seed = new THREE.Group(); g.add(seed);
+    const m = new THREE.Mesh(geo, mat); m.castShadow = true; seed.add(m);
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.05, 6), leafM); leaf.position.y = 0.07; leaf.rotation.z = 0.4; seed.add(leaf);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0.85 })); glow.scale.setScalar(0.55); g.add(glow);
+    g.userData.pick = { kind: 'seed', id: i };
+    return { g, seed, glow, on: false, take: 0, i, y: g.position.y };
+  });
+})();
+function setFinds(ids) { const want = new Set(ids || []); for (const f of FINDS) { f.on = want.has(f.i); f.take = 0; f.g.visible = f.on; f.g.scale.setScalar(1); f.g.position.y = f.y; } poke(); }
+function updateFinds(t) {
+  const p = ernest.root.position;
+  for (const f of FINDS) {
+    if (!f.on && !f.take) continue;
+    if (f.take) { const k = (t - f.take) / 0.8; if (k >= 1) { f.take = 0; f.g.visible = false; continue; } f.g.position.y = f.y + k * 0.5; f.g.scale.setScalar(1 + k * 0.6); f.glow.material.opacity = 0.85 * (1 - k); continue; }
+    f.seed.rotation.y = t * 1.4 + f.i; f.seed.position.y = Math.sin(t * 2.2 + f.i) * 0.025; f.glow.material.opacity = 0.6 + Math.sin(t * 3 + f.i) * 0.25;
+    if (walk.on && Math.hypot(f.g.position.x - p.x, f.g.position.z - p.z) < 0.55) { f.on = false; f.take = t; if (findFn) findFn(f.i); }
+  }
+}
+// Position d'Ernest à l'écran (au-dessus du chapeau), pour la bulle ; null s'il n'est pas visible.
+function ernestScreen() {
+  if (!renderer || mode !== 'full' || (walk.on && walk.view === 'first')) return null;
+  ernest.parts.hatP.getWorldPosition(_w); _w.y += 0.45; _w.project(camera);
+  if (_w.z > 1 || Math.abs(_w.x) > 1.1 || Math.abs(_w.y) > 1.1) return null;
+  const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (_w.x + 1) / 2 * r.width, y: r.top + (1 - _w.y) / 2 * r.height };
+}
+
 
 // ---------- Ombres douces au sol (« blob shadows ») : un disque radial instancié, un seul appel de dessin ----------
 const blobTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(0,0,0,.62)'); g.addColorStop(0.5, 'rgba(0,0,0,.38)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
@@ -1312,7 +1400,7 @@ export function houseFromState(S, today, id, counts, n) {
   const plants = ps.filter((p) => p.kind === 'plant' && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
   const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
   const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || (goals.get(p.goal) || {}).status === 'active'))
-    .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0 }));
+    .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0, goal: p.goal || null }));
   return { n: hn, plants, moss: Math.min(MOSS_MAX, mossN * 8 + Math.max(0, hn - 10) * 3), vine: Math.min(1, hn / 80), hanging: [8, 25, 50].filter((k) => hn >= k).length, bonsai };
 }
 export function modelFromState(S, today) {
@@ -1335,7 +1423,7 @@ function applyModel(m) {
       let L = live.get(p.id);
       if (!L) {
         const slot = i < SLOTS.length && !h.used[i] ? i : h.used.indexOf(false); if (slot < 0) return; // serre pleine
-        h.used[slot] = true; L = { ...buildPlant(p, h, slot), slot, house: h, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L);
+        h.used[slot] = true; L = { ...buildPlant(p, h, slot), slot, house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
       }
       L.target = 0.35 + 0.65 * p.g;
     });
@@ -1469,7 +1557,7 @@ function frame(now) {
     return;
   }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
-  updateErnest(dt, t, false);
+  updateErnest(dt, t, false); updateFinds(t); if (walk.on) updateNear(t);
   if (walk.on) updateWalk(dt, t);
   else {
     if (fly) { const e = Math.min(1, (performance.now() - fly.s) / 1100), k = e < 0.5 ? 2 * e * e : 1 - (-2 * e + 2) ** 2 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k); if (e >= 1) fly = null; }
@@ -1542,7 +1630,7 @@ export function mount(canvas, opts = {}) {
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = false; controls.panSpeed = 0.7; controls.minDistance = 2.2; controls.maxDistance = 48; // la vue d'ensemble en portrait est à 47
   controls.maxPolarAngle = Math.PI * 0.49; controls.minPolarAngle = 0.25; controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.8;
-  onFps = opts.onFps || null; bindLook(canvas);
+  onFps = opts.onFps || null; bindLook(canvas); bindPick(canvas);
   setMode(opts.mode || 'band');
   window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', () => { visible = document.visibilityState === 'visible'; if (visible) clock.getDelta(); });
@@ -1572,6 +1660,9 @@ export const api = {
   setErnest(st) { if (st && st !== ernestState) { ernestState = st; poke(); } },
   walk(on, view) { setWalk(on, view); }, walkTo, get walking() { return walk.on; }, get walkView() { return walk.view; },
   walkInput(x, z) { walk.ix = x; walk.iz = z; },
+  // monde interactif : toucher (plantes, bonsaïs, panneaux, chaumière, Ernest, graines), arroser, graines dorées
+  onPick(fn) { pickFn = fn; }, onNear(fn) { nearFn = fn; near = undefined; }, onFind(fn) { findFn = fn; },
+  waterPlant, setFinds, findSpots: () => FIND_SPOTS.length, ernestScreen, get place() { return walk.place; },
   onPlace(fn) { walk.onPlace = fn; walk.place = undefined; },
   ernest,
   onFps(fn) { onFps = fn; frames = 0; fpsT = 0; },

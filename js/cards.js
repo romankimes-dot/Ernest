@@ -21,6 +21,8 @@ export function drawShort(state) {
   if (Math.random() < 0.5) return null;
   return remember(state, pickCard(CARDS, state.cards.seen, 'courante', ['botanique', 'blagues', 'encouragements']), 'coche');
 }
+// Les trois serres arrosées le même jour : une carte courante, toujours.
+export function drawWater(state) { return remember(state, pickCard(CARDS, state.cards.seen, 'courante', ['botanique', 'encouragements', 'blagues']), 'arrosage'); }
 export function drawLong(state, today) {
   if (state.cards.lastLong === today) return null;
   const c = pickCard(CARDS, state.cards.seen, 'longue', ['profession', 'tips']);

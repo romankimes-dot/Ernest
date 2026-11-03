@@ -2761,5 +2761,317 @@
 {
 "ctx": "absence",
 "t": "La serre ne compte pas les jours. Moi non plus."
+},
+{
+"ctx": "lieu.travail",
+"t": "La serre Travail. Ici, on chuchote, les fougères révisent."
+},
+{
+"ctx": "lieu.travail",
+"t": "{plante} pousse droit, comme un dossier bien rangé."
+},
+{
+"ctx": "lieu.travail",
+"t": "Je passe le chiffon sur les tables. Le travail mérite des tables propres."
+},
+{
+"ctx": "lieu.travail",
+"t": "Il fait bon ici. Le ficus prétend que c'est grâce à lui."
+},
+{
+"ctx": "lieu.travail",
+"t": "Chaque pot ici, c'est une heure que tu as tenue. Je les compte de temps en temps."
+},
+{
+"ctx": "lieu.travail",
+"t": "La lavande sent fort aujourd'hui. Elle dit que ça aide à se concentrer."
+},
+{
+"ctx": "lieu.travail",
+"t": "Le caoutchouc a une feuille neuve. Il ne dit rien, mais il est content."
+},
+{
+"ctx": "lieu.travail",
+"t": "J'ai rangé les étiquettes par ordre de taille. Ça ne sert à rien et ça me plaît."
+},
+{
+"ctx": "lieu.travail",
+"t": "Silence de bibliothèque. Même les gouttes du toit tombent en douce."
+},
+{
+"ctx": "lieu.travail",
+"t": "{plante} a pris la lumière du matin. Elle travaille à sa façon."
+},
+{
+"ctx": "lieu.travail",
+"t": "Ici, rien ne presse. Les plantes non plus ne finissent pas tout en un jour."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "La serre Bien-être. On respire plus lentement, ici, c'est la règle de la maison."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Le thym, le romarin, le basilic : la cuisine attend dans les pots."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "{plante} a l'air reposée. Elle a dormi plus que moi."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Les cactus ne demandent presque rien. J'admire."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "J'ai posé mes bottes à l'entrée. Ici, on marche doucement."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Il y a de la mousse sur la margelle. La mousse, c'est le temps qui se pose."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Le romarin sent la soupe du soir. Je ne sais pas laquelle, mais il insiste."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Chaque plante ici, c'est un moment pris pour toi. Elles le savent."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Je fais trois pas, je respire, je fais trois pas. Le basilic trouve ça ridicule."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "La plante grasse a gonflé d'un rien. Elle garde ses réserves, elle a raison."
+},
+{
+"ctx": "lieu.bienetre",
+"t": "Il fait tiède. Les succulentes appellent ça le paradis."
+},
+{
+"ctx": "lieu.perso",
+"t": "La serre Vie perso. Ici, ça pousse dans tous les sens, et c'est très bien."
+},
+{
+"ctx": "lieu.perso",
+"t": "Les géraniums ont pris toute la place près de la porte. Je les laisse faire."
+},
+{
+"ctx": "lieu.perso",
+"t": "{plante} a fleuri sans prévenir. C'est son style."
+},
+{
+"ctx": "lieu.perso",
+"t": "Les courses, les colis, la voiture : chaque petite chose a sa fleur ici."
+},
+{
+"ctx": "lieu.perso",
+"t": "Ça sent le foin et la confiture. Je ne sais pas d'où vient la confiture."
+},
+{
+"ctx": "lieu.perso",
+"t": "Les violettes se cachent sous les tables. Timides mais nombreuses."
+},
+{
+"ctx": "lieu.perso",
+"t": "Il y a des fleurs des champs dans un pot. Elles n'en reviennent pas elles-mêmes."
+},
+{
+"ctx": "lieu.perso",
+"t": "Cette serre est la plus en désordre. C'est ma préférée, ne le répète pas."
+},
+{
+"ctx": "lieu.perso",
+"t": "Une abeille est entrée. Je lui ai montré les géraniums, elle connaissait déjà."
+},
+{
+"ctx": "lieu.perso",
+"t": "{plante} penche vers la fenêtre. Elle regarde dehors, comme toi parfois."
+},
+{
+"ctx": "lieu.perso",
+"t": "Ici, les petites choses de la vie deviennent des pétales. C'est le contrat."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Ma chaumière. Le toit gratte un peu, mais il tient chaud."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "La porte est ronde, ça évite les coins. J'ai horreur des coins."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "La cheminée fume. J'ai mis une bûche pour ce soir."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Le soir, on s'assoit ici et on prépare demain. Trois choses, pas plus."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "J'ai une chaise de trop. Elle est pour toi, quand tu veux."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "La bouilloire est sur le feu. Elle siffle faux, je l'aime quand même."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Mes graines dorment dans une boîte à biscuits. C'est le meilleur endroit."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Le chaume sent la pluie d'hier. C'est un bon parfum pour une maison."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Le banc devant la porte a vu passer bien des soirs tranquilles."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "Ici, on ne fait rien de grand. On fait demain un peu plus simple."
+},
+{
+"ctx": "lieu.chaumiere",
+"t": "La lampe de la fenêtre reste allumée tant que quelqu'un se promène dans le jardin."
+},
+{
+"ctx": "ernest.touche",
+"t": "Oui, c'est moi. Toujours là."
+},
+{
+"ctx": "ernest.touche",
+"t": "Ça chatouille."
+},
+{
+"ctx": "ernest.touche",
+"t": "Mon chapeau est bien droit, merci de vérifier."
+},
+{
+"ctx": "ernest.touche",
+"t": "Je suis gobelin, pas peluche. Mais je ne dis pas non."
+},
+{
+"ctx": "ernest.touche",
+"t": "Tu as besoin de quelque chose. Je suis tout ouïe, et j'en ai beaucoup."
+},
+{
+"ctx": "ernest.touche",
+"t": "Ces oreilles entendent pousser {plante}. Littéralement."
+},
+{
+"ctx": "ernest.touche",
+"t": "Je réfléchissais à {plante}. Elle me donne des idées."
+},
+{
+"ctx": "ernest.touche",
+"t": "Attention au brin de thym sur mon chapeau, il est neuf."
+},
+{
+"ctx": "ernest.touche",
+"t": "Je fais le tour des serres. Tu viens."
+},
+{
+"ctx": "ernest.touche",
+"t": "J'ai les bottes pleines de terre. C'est bon signe pour un jardinier."
+},
+{
+"ctx": "ernest.touche",
+"t": "Bonjour, toi."
+},
+{
+"ctx": "ernest.touche",
+"t": "Un gobelin bien rangé, c'est un gobelin qui a fini d'arroser."
+},
+{
+"ctx": "arrosage",
+"t": "De l'eau pour {plante}. Elle boit en silence, c'est poli."
+},
+{
+"ctx": "arrosage",
+"t": "Voilà. {plante} brille un peu plus."
+},
+{
+"ctx": "arrosage",
+"t": "Une gorgée chacune, pas plus. Les racines aiment la mesure."
+},
+{
+"ctx": "arrosage",
+"t": "L'arrosoir chante quand il est plein. Il chante moins maintenant."
+},
+{
+"ctx": "arrosage",
+"t": "{plante} a soupiré. Je crois que c'était de l'aise."
+},
+{
+"ctx": "arrosage",
+"t": "J'arrose au pied, jamais sur les feuilles. Secret de gobelin."
+},
+{
+"ctx": "arrosage",
+"t": "La terre sent bon quand elle est mouillée. Ça a un nom, je l'ai oublié."
+},
+{
+"ctx": "arrosage",
+"t": "Un peu d'eau, un peu de temps. Le reste, elles le font seules."
+},
+{
+"ctx": "arrosage",
+"t": "Les gouttes ont fait trois petits cratères. {plante} trouve ça très joli."
+},
+{
+"ctx": "arrosage",
+"t": "Ça suffira pour aujourd'hui. Trop d'eau, c'est comme trop de choses à faire."
+},
+{
+"ctx": "arrosage",
+"t": "Arrosé. Je note dans ma tête, qui est grande."
+},
+{
+"ctx": "trouvaille",
+"t": "Une graine dorée. Je la mets dans la boîte à biscuits."
+},
+{
+"ctx": "trouvaille",
+"t": "Tiens, une graine qui brille. Il y en a d'autres, j'en suis presque sûr."
+},
+{
+"ctx": "trouvaille",
+"t": "Celle-là se cachait bien. Pas assez."
+},
+{
+"ctx": "trouvaille",
+"t": "Les graines dorées poussent la nuit, dans les histoires. Je vérifierai."
+},
+{
+"ctx": "trouvaille",
+"t": "Une de plus. Ma poche commence à tinter."
+},
+{
+"ctx": "trouvaille",
+"t": "Je l'ai vue briller de loin. Mes yeux sont petits mais bons."
+},
+{
+"ctx": "trouvaille",
+"t": "Ramassée. Elle est encore tiède."
+},
+{
+"ctx": "trouvaille",
+"t": "Une graine dorée sous les feuilles. Le jardin a ses secrets, j'en ai un de moins."
+},
+{
+"ctx": "trouvaille",
+"t": "Je ne sais pas d'où elles viennent. Je sais seulement qu'il faut les ramasser."
+},
+{
+"ctx": "trouvaille",
+"t": "Celle-ci sent le miel. C'est une bonne graine."
+},
+{
+"ctx": "trouvaille",
+"t": "Trouvée. On ne dira à personne où elle était."
 }
 ]
