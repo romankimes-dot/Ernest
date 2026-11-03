@@ -426,3 +426,5 @@ body.cabane-open .toast,body.serre-open .toast{bottom:auto;top:calc(var(--sat) +
 .cabane:not([hidden])::after,.serre-full:not([hidden])::after{content:"";position:absolute;inset:0;background:#0b1511;pointer-events:none;z-index:1;animation:veil .5s ease-out .08s both}
 @keyframes veil{from{opacity:1}to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){.cabane:not([hidden])::after,.serre-full:not([hidden])::after{animation-duration:.01s}}
+.cap-i{cursor:pointer}
+.cap-i u{text-decoration:none;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--fg2);font-size:10.5px;margin-left:4px;vertical-align:1px}

@@ -495,17 +495,24 @@ export function setProgress(p) {
 let LIVE = null, nightNow = false, lastSky = 0, walking = false;
 // Se déplacer : un joystick (move) ou toucher le sol (la vue et Ernest y vont).
 const nav = { mx: 0, mz: 0 };
-export function move(x, z) { nav.mx = x; nav.mz = z; if (x || z) { idleIn.last = performance.now() / 1000; if (scene3 && (scene3.kind === 'walk' || scene3.idle)) stopIdle(); } }
-// Ernest s'occupe seul : après quelques secondes sans geste, il va arroser ou tailler une plante, ou fait un tour
-// dans l'allée (simple jeu : rien ne change dans les données) ; un geste l'arrête.
-const idleIn = { last: 0, next: 0 };
-function stopIdle() { if (!scene3) return; scene3 = null; if (carried) { scene.remove(carried); carried = null; } if (ernest) { ernest.setWalk(0); ernest.setPose('attend'); } }
+export function move(x, z) { nav.mx = x; nav.mz = z; if (x || z) { idleIn.last = performance.now() / 1000; stopIdle(); if (scene3 && scene3.kind === 'walk') scene3 = null; } }
+// Ernest s'occupe seul, sur place : après quelques secondes sans geste, il se tourne vers la plante la plus proche,
+// l'arrose un peu, la salue ou s'assoit ; il ne bouge pas de là où on l'a laissé (la vue non plus). Un geste l'arrête.
+const idleIn = { last: 0, next: 0, until: 0, pose: null, aim: null };
+function stopIdle() { if (!idleIn.pose) return; idleIn.pose = null; idleIn.aim = null; if (ernest) ernest.setPose('attend'); }
 function idleTick(t) {
-  if (scene3 || walking || slotMarks || t - idleIn.last < 5 || t < idleIn.next || !ernest) return;
-  const mine = plants.filter((p) => p.it.pid), r = Math.random(), done = () => { idleIn.next = performance.now() / 1000 + 4 + Math.random() * 5; };
-  if (mine.length && r < 0.7) { const pl = mine[Math.floor(Math.random() * mine.length)]; playScene(r < 0.45 ? 'arrose' : 'taille', pl.it.pid, done); }
-  else { walkErnest(V((Math.random() - 0.5) * 1.2, 0, -4 + Math.random() * 9)); }
-  if (scene3) { scene3.idle = true; if (scene3.kind === 'walk') idleIn.next = t + scene3.walk + 3 + Math.random() * 4; } else done();
+  if (idleIn.pose && t > idleIn.until) { stopIdle(); idleIn.next = t + 5 + Math.random() * 6; }
+  if (idleIn.pose || scene3 || walking || slotMarks || t - idleIn.last < 6 || t < idleIn.next || !ernest) return;
+  const p = ernest.root.position; let best = null, bd = 2.6;
+  for (const pl of plants) { if (!pl.it.pid) continue; const q = plantPos(pl.it.pid); if (!q) continue; const d = Math.hypot(q.x - p.x, q.z - p.z); if (d < bd) { bd = d; best = q; } }
+  const r = Math.random();
+  if (best) { ernestFace = Math.atan2(best.x - p.x, best.z - p.z); idleIn.pose = bd < 1.6 && r < 0.5 ? 'arrose' : r < 0.75 ? 'salue' : 'assis'; idleIn.aim = idleIn.pose === 'arrose' ? best : null; }
+  else { ernestFace += (Math.random() - 0.5) * 1.6; idleIn.pose = r < 0.5 ? 'salue' : 'assis'; }
+  idleIn.until = t + 2.6 + Math.random() * 1.5; ernest.setPose(idleIn.pose);
+}
+function idleFx(t) { // un filet d'eau vers la plante, le temps du geste
+  if (idleIn.pose !== 'arrose' || !idleIn.aim || t > idleIn.until - 0.6) return; const p = ernest.root.position, d = V(idleIn.aim.x - p.x, 0, idleIn.aim.z - p.z).normalize(), tip = p.clone().add(V(0, 0.55, 0)).addScaledVector(d, 0.35);
+  if (Math.random() < 0.5) spawn(2, tip, (q) => { q.vel.set((idleIn.aim.x - tip.x) * 0.9 + (Math.random() - 0.5) * 0.2, 0.4 + Math.random() * 0.3, (idleIn.aim.z - tip.z) * 0.9 + (Math.random() - 0.5) * 0.2); q.c.set('#9fd0f0'); q.drag = 0; q.sway = 0; });
 }
 // Où Ernest peut marcher : l'allée et le devant de la serre (pas dans les plates-bandes, ni sur les établis ni dans le bassin).
 function blocked(x, z) {
@@ -571,6 +578,7 @@ function atLen(P, d) { // point et direction à la distance d le long du chemin
 let ernestFace = Math.PI; // cap voulu d'Ernest : il s'y tourne en douceur
 function walkErnest(p) { const to = freeSpot(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(), path = pathTo(from, to); scene3 = { kind: 'walk', t: to, from, to, path, t0: performance.now() / 1000, walk: Math.max(0.3, path.len / 1.5), phase: 0 }; }
 export function playScene(kind, pid, done) {
+  stopIdle();
   const t = plantPos(pid); if (!t || !ernest) { if (done) done(); return; }
   const from = ernest.root.position.clone(), to = standFor(t), path = pathTo(from, to), door = V(0, 0, HALL.d - 0.4);
   scene3 = { kind, pid, t, from, to, path, t0: performance.now() / 1000, walk: Math.max(0.25, path.len / 1.6), done, phase: 0, door, dpath: pathTo(to, door) };
@@ -645,16 +653,29 @@ function renderAll() {
   for (const k in pools) { const pl = pools[k]; pl.im.count = pl.n; pl.im.instanceMatrix.needsUpdate = true; if (pl.im.instanceColor) pl.im.instanceColor.needsUpdate = true; pl.im.computeBoundingSphere(); }
   // décors
   for (const d of DECORS) if (decorObjs[d.id]) decorObjs[d.id].visible = hasDecor(d.id);
-  labelMeshes.forEach(({ m, pl }) => (m.visible = hasDecor('etiquettes') && pl.mode === 'ground'));
+  labelMeshes.forEach(({ m, pl, pot }) => (m.visible = pot || (hasDecor('etiquettes') && pl.mode === 'ground')));
   applyTime();
 }
 
 // Étiquettes plantées devant les emplacements du plan.
 const LABEL_G = new THREE.BoxGeometry(0.06, 0.16, 0.012);
+const TAG_G = new THREE.PlaneGeometry(0.3, 0.128), TAG_STICK = new THREE.BoxGeometry(0.014, 0.2, 0.008), TAG_WOOD = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.8 }), TAGS = new Map();
+function tagMat(id) { // étiquette crème, nom de l'espèce à la main
+  if (TAGS.has(id)) return TAGS.get(id);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 108; const x = c.getContext('2d'), nom = SP[id] ? SP[id].nom : id;
+  x.fillStyle = '#f4ecd6'; x.beginPath(); x.roundRect(2, 2, 252, 104, 14); x.fill(); x.strokeStyle = 'rgba(90,70,40,.35)'; x.lineWidth = 3; x.stroke();
+  x.fillStyle = '#2c2418'; let fs = 46; x.font = `italic ${fs}px Georgia, serif`; while (x.measureText(nom).width > 228 && fs > 22) { fs -= 2; x.font = `italic ${fs}px Georgia, serif`; }
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(nom, 128, 58);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.75, side: THREE.DoubleSide }); TAGS.set(id, m); return m;
+}
 function buildLabels() {
   for (const { m } of labelMeshes) scene.remove(m); labelMeshes = [];
   const lab = new THREE.MeshStandardMaterial({ color: SERRE.id === 'perso' ? 0xe8c8a0 : SERRE.id === 'travail' ? 0x2a2a2a : 0xf1ead8, roughness: 0.7 });
-  for (const pl of plants) { const { it } = pl; if (it.nursery || pl.ground.basket || pl.ground.bed || it.x === undefined) continue; const m = new THREE.Mesh(LABEL_G, lab); m.position.set(it.x + 0.22 * Math.sign(-it.x || 1), 0.3, it.z + 0.3); m.rotation.set(-0.3, 0, 0); m.castShadow = true; scene.add(m); labelMeshes.push({ m, pl }); }
+  // les pots de l'établi : une étiquette au nom de l'espèce, tournée vers l'allée
+  for (const pl of plants) { const { it } = pl; if (pl.mode !== 'bench' || !it.pid || !BENCH[it.bench]) continue; const b = BENCH[it.bench], sd = Math.sign(b.x) || 1, g = new THREE.Group();
+    const stick = new THREE.Mesh(TAG_STICK, TAG_WOOD); stick.position.y = -0.12; g.add(stick); const face = new THREE.Mesh(TAG_G, tagMat(it.id)); g.add(face);
+    g.position.set(b.x - sd * 0.15, b.y + 0.36, b.z); g.rotation.set(0, -sd * Math.PI / 2, 0); g.rotateX(-0.25); scene.add(g); labelMeshes.push({ m: g, pl, pot: true }); }
+  for (const pl of plants) { const { it } = pl; if (pl.mode === 'bench' || it.nursery || pl.ground.basket || pl.ground.bed || it.x === undefined) continue; const m = new THREE.Mesh(LABEL_G, lab); m.position.set(it.x + 0.22 * Math.sign(-it.x || 1), 0.3, it.z + 0.3); m.rotation.set(-0.3, 0, 0); m.castShadow = true; scene.add(m); labelMeshes.push({ m, pl }); }
 }
 // Lueur posée au sol (disque additif) : la lumière des photophores sans calcul d'éclairage.
 function glowTex() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,200,120,1)'); g.addColorStop(0.35, 'rgba(255,170,90,0.45)'); g.addColorStop(1, 'rgba(255,150,60,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -804,7 +825,7 @@ export function mount(canvas, opts = {}) {
   if (opts.data) setData(opts.data); else setProgress(opts.progress ?? 0.5);
   // toucher une plante : l'instance la plus proche renvoie l'identifiant de sa plante
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
-  const onDown = (e) => { idleIn.last = performance.now() / 1000; if (scene3 && scene3.idle) stopIdle(); down = [e.clientX, e.clientY]; if (follow) { cam.pts.set(e.pointerId, [e.clientX, e.clientY]); cam.pinch = 0; } };
+  const onDown = (e) => { idleIn.last = performance.now() / 1000; stopIdle(); down = [e.clientX, e.clientY]; if (follow) { cam.pts.set(e.pointerId, [e.clientX, e.clientY]); cam.pinch = 0; } };
   const onMove = (e) => { if (!follow || !cam.pts.has(e.pointerId)) return; const [lx, ly] = cam.pts.get(e.pointerId); cam.pts.set(e.pointerId, [e.clientX, e.clientY]); cam.touched = performance.now() / 1000;
     if (cam.pts.size === 2) { const [a, b] = [...cam.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (cam.pinch) cam.dist = Math.max(1.4, Math.min(6.5, cam.dist * (cam.pinch / d))); cam.pinch = d; return; }
     cam.yaw -= (e.clientX - lx) * 0.0065; cam.pitch = Math.max(0.06, Math.min(1.2, cam.pitch + (e.clientY - ly) * 0.005)); };
@@ -833,7 +854,7 @@ export function mount(canvas, opts = {}) {
     if (decorObjs.horloge && decorObjs.horloge.visible) { const d = new Date(), [hh, mh] = decorObjs.horloge.userData.hands; mh.rotation.z = -(d.getMinutes() / 60) * Math.PI * 2; hh.rotation.z = -((d.getHours() % 12) / 12 + d.getMinutes() / 720) * Math.PI * 2; }
     if (chime && decorObjs.carillon && decorObjs.carillon.visible) chime.forEach((p, i) => { p.rotation.z = Math.sin(t * 1.1 + i) * 0.08; p.rotation.x = Math.cos(t * 0.9 + i * 2) * 0.06; });
     if (fireflies && fireflies.visible) { fireflies.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; fireflies.rotation.y = Math.sin(t * 0.05) * 0.2; }
-    if (follow) idleTick(t); stepScene(t, dt); stepParticles(dt, t);
+    if (follow) { idleTick(t); idleFx(t); } stepScene(t, dt); stepParticles(dt, t);
     if (timeKey === 'auto' && now - lastSky > 30000) { lastSky = now; applyTime(); }
     { // Ernest marche au joystick, dans le repère de la vue ; il accélère, se tourne en douceur, glisse le long de ce qui le bloque
       const p = ernest.root.position, inp = Math.min(1, Math.hypot(nav.mx, nav.mz));
@@ -851,7 +872,7 @@ export function mount(canvas, opts = {}) {
       { let dh = ernestFace - ernest.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); ernest.root.rotation.y += dh * Math.min(1, dt * 10); }
       if (follow) { // la vue : un bras derrière Ernest
         cam.tg.lerp(V(p.x, 0.6, p.z), Math.min(1, dt * 9));
-        if (scene3 && t - cam.touched > 2.5) { let dy = ernestFace - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); cam.yaw += dy * Math.min(1, dt * (scene3.idle ? 0.45 : 0.9)); } // promenade guidée : la vue se range derrière lui
+        if (scene3 && t - cam.touched > 2.5) { let dy = ernestFace - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); cam.yaw += dy * Math.min(1, dt * 0.9); } // promenade guidée : la vue se range derrière lui
         const cp = Math.cos(cam.pitch), dx = -Math.sin(cam.yaw) * cp, dy = Math.sin(cam.pitch), dz = -Math.cos(cam.yaw) * cp, m = armMax(cam.tg, dx, dy, dz, cam.dist);
         cam.cur = m < cam.cur ? m : cam.cur + (m - cam.cur) * Math.min(1, dt * 3);
         camera.position.set(cam.tg.x + dx * cam.cur, cam.tg.y + dy * cam.cur, cam.tg.z + dz * cam.cur); camera.lookAt(cam.tg.x, cam.tg.y + 0.3, cam.tg.z); controls.target.copy(cam.tg); // Ernest un peu sous le centre : on voit la serre devant lui

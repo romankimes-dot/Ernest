@@ -277,11 +277,12 @@ const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: 
 const joyVal = (dx, dy) => { const m = Math.hypot(dx, dy); if (m < 0.12) return [0, 0]; const k = Math.min(1, (m - 0.12) / 0.8) / m; return [dx * k, dy * k]; };
 // Légende du bas des vues 3D : un titre, une ligne d'état, un conseil qui s'efface, un bouton à droite.
 const capT = {};
-function setCap(sel, { title, info = '', hint = '', btn = null }) {
+function setCap(sel, { title, info = '', hint = '', btn = null, infoOn = null }) {
   const el = $(sel); if (!el) return;
-  el.innerHTML = `<div class="cap-t"><b>${title}</b>${info ? `<span>${info}</span>` : ''}${hint ? `<em>${hint}</em>` : ''}</div>${btn ? `<button class="cap-b" id="${btn.id}">${esc(btn.label)}</button>` : ''}`;
+  el.innerHTML = `<div class="cap-t"><b>${title}</b>${info ? `<span${infoOn ? ' class="cap-i" role="button"' : ''}>${info}${infoOn ? ' <u>?</u>' : ''}</span>` : ''}${hint ? `<em>${hint}</em>` : ''}</div>${btn ? `<button class="cap-b" id="${btn.id}">${esc(btn.label)}</button>` : ''}`;
   el.classList.remove('calm'); clearTimeout(capT[sel]); if (hint) capT[sel] = setTimeout(() => el.classList.add('calm'), 6500); // le conseil, le temps de le lire
   if (btn) $('#' + btn.id).addEventListener('click', (e) => { e.stopPropagation(); btn.on(); });
+  if (infoOn) el.querySelector('.cap-i').addEventListener('click', (e) => { e.stopPropagation(); infoOn(); });
 }
 function goTo(place) {
   closeSheet();
@@ -301,7 +302,7 @@ function interCap() {
   const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
   const g = ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length;
   setCap('#serreInCap', { title: `Serre ${H_NAME[house]}${mod ? ` · ${esc(mod.themeName(house))}` : ''}`, info: `${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}${g ? `, ${g} en pleine terre` : ''}` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''}`,
-    hint: interHint ? '' : 'Touche une plante pour l\'arroser, le sol pour y aller. Glisse pour tourner, pince pour reculer.', btn: { id: 'inSow', label: cans ? 'Semer' : 'Panneau', on: () => (cans ? sowSheet(house) : houseSheet(house)) } });
+    hint: interHint ? '' : 'Touche une plante pour l\'arroser, le sol pour y aller. Glisse pour tourner, pince pour reculer.', infoOn: howSheet, btn: { id: 'inSow', label: cans ? 'Semer' : 'Panneau', on: () => (cans ? sowSheet(house) : houseSheet(house)) } });
   interHint = true;
 }
 function refreshInterior() { if (inter && inter.api) { inter.api.setData(interData(interHouse)); interCap(); } }
@@ -339,7 +340,7 @@ async function openCabane() {
   if (cab || cabLoading || !g3d) { if (!g3d) livreSheet(); return; }
   const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop(); bindGo();
   const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
-  setCap('#cabCap', { title: 'Chez Ernest', info: `${n} graine${n > 1 ? 's' : ''} · ${b} bonsaï${b > 1 ? 's' : ''} · ${r} à la réserve`, hint: 'Touche le livre, le bocal, l\'étagère ou la réserve.' });
+  setCap('#cabCap', { title: 'Chez Ernest', infoOn: howSheet, info: `${n} graine${n > 1 ? 's' : ''} · ${b} bonsaï${b > 1 ? 's' : ''} · ${r} à la réserve`, hint: 'Touche le livre, le bocal, l\'étagère ou la réserve.' });
   if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try { if (cabKeep) { cab = cabKeep; cab.resume(); } else { cabLoading = true; const mod = await import('./cabane3d.js'); cabKeep = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cabLoading = false; if ($('#cabane').hidden) { cabKeep.pause(); return; } /* refermée pendant le chargement */ cab = cabKeep; } cab.set(cabData()); setTimeout(() => cab && ernestLine('lieu.cabane'), 900); }
   catch (e) { cabLoading = false; closeCabane(); livreSheet(); }
@@ -435,7 +436,18 @@ function floreBlock(house) {
   return `<h3 style="margin-top:18px">Les plantes</h3><div class="muted small" style="margin-bottom:8px">${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''} · ${seeds} graine${seeds > 1 ? 's' : ''}</div>
     <div class="fl-grid">${here.map(pl).join('') || '<p class="muted">Pas encore de plante ici.</p>'}</div>
     ${cab.length ? `<div class="muted small" style="margin-top:8px">À la cabane : ${cab.map((p) => `<button class="linkish" data-fp="${p.id}">${esc((FL.speciesById(p.sp) || {}).nom)}</button>`).join(', ')}</div>` : ''}
-    <div class="row" style="gap:8px;margin-top:10px">${cans ? '<button class="btn quiet" id="flSow">Semer une graine</button>' : ''}</div>`;
+    <div class="row" style="gap:8px;margin-top:10px;align-items:center">${cans ? '<button class="btn quiet" id="flSow">Semer une graine</button>' : ''}<button class="linkish" id="flHow">D'où viennent arrosoirs et graines ?</button></div>`;
+}
+// Les règles en clair : arrosoirs (une chose finie) et graines (stades, pleine terre, journée pleine, graines dorées).
+function howSheet() {
+  const cans = FL.cansOf(S).length, seeds = FL.seedsOf(S);
+  openSheet(`<div id="howS"><h2>Arrosoirs et graines</h2><div class="muted small" style="margin:-6px 0 12px">Tu as ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''} et ${seeds} graine${seeds > 1 ? 's' : ''}.</div>
+    <h3>Un arrosoir</h3><p>Chaque chose terminée remplit un arrosoir pour la serre de sa catégorie : Travail, Bien-être ou Vie perso.</p>
+    <p class="muted small">Un arrosoir sert à semer une nouvelle plante, ou à arroser une plante de cette serre. Chaque arrosage la fait grandir : graine (1), pousse (2), plante (5), grande (10), pleine terre (20).</p>
+    <h3 style="margin-top:14px">Des graines</h3><ul style="margin:6px 0 0 18px;line-height:1.6"><li><b>1 graine</b> à chaque nouveau stade (Ernest taille la plante)</li><li><b>3 graines</b> quand une plante part en pleine terre</li><li><b>1 graine</b> pour une journée pleine (au moins trois choses, toutes faites)</li><li><b>1 graine dorée</b> pour chacune des trois cachées au village chaque jour (en Promenade)</li></ul>
+    <p class="muted small" style="margin-top:8px">Les graines servent au troc : ouvrir une espèce plus tôt, ou un décor pour la serre.</p>
+    <button class="btn quiet" id="howClose" style="margin-top:12px">Fermer</button></div>`);
+  $('#howClose').addEventListener('click', closeSheet);
 }
 function sowSheet(house) {
   const cat = FL.catalogue(S, house), seeds = FL.seedsOf(S);
@@ -493,6 +505,7 @@ function houseSheet(house) {
   if ($('#hsIn')) $('#hsIn').addEventListener('click', () => openInterior(house));
   $('#houseSheet').querySelectorAll('[data-fp]').forEach((b) => b.addEventListener('click', () => plantSheet(b.dataset.fp)));
   if ($('#flSow')) $('#flSow').addEventListener('click', () => sowSheet(house));
+  if ($('#flHow')) $('#flHow').addEventListener('click', howSheet);
   $('#houseSheet').querySelectorAll('[data-h]').forEach((el) => el.addEventListener('click', () => { action(el.dataset.h, { id: el.dataset.id }); if ($('#houseSheet')) houseSheet(house); }));
   $('#hsAdd').addEventListener('click', () => thingSheet(null, today, house)); $('#hsClose').addEventListener('click', closeSheet);
 }
