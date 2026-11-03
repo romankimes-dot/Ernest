@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Serre de botaniste</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#08131c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="./icons/icon-192.png">
+  <style>
+    :root{--bg:#0b1511;--bg2:#12201a;--fg:#efe6d2;--fg2:#a9b5a3;--amber:#f2b23d;--line:#243b31;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);color-scheme:dark}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:#08131c;color:var(--fg);font-family:-apple-system,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+    canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+    button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+    .top{position:fixed;left:0;right:0;top:0;padding:calc(var(--sat) + 10px) 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(rgba(8,19,28,.75),rgba(8,19,28,0));pointer-events:none}
+    .top > *{pointer-events:auto}
+    .back{display:flex;align-items:center;gap:4px;padding:8px 12px 8px 8px;border-radius:999px;background:rgba(11,21,17,.6);border:1px solid var(--line);color:var(--fg);text-decoration:none;font-size:14px}
+    .back svg{width:20px;height:20px}
+    .title{font-family:Georgia,"Times New Roman",serif;font-size:17px;text-align:right;line-height:1.2}
+    .title small{display:block;font-family:-apple-system,system-ui,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber)}
+    .panel{position:fixed;left:0;right:0;bottom:0;padding:14px 16px calc(12px + var(--sab));background:linear-gradient(rgba(8,19,28,0),rgba(8,19,28,.88) 28%);display:flex;flex-direction:column;gap:10px}
+    .when{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+    .when b{font-family:Georgia,serif;font-size:18px;font-weight:normal}
+    .when span{font-size:12px;color:var(--fg2);text-align:right}
+    input[type=range]{width:100%;accent-color:var(--amber);height:28px;margin:0}
+    .ticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--fg2);margin-top:-6px}
+    .row{display:flex;gap:8px}
+    .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1}
+    .seg button,.cat-btn{padding:9px 4px;border-radius:10px;border:1px solid var(--line);background:rgba(18,32,26,.85);font-size:13px}
+    .seg button.on{border-color:var(--amber);color:var(--amber)}
+    .cat-btn{padding:9px 14px;border-color:var(--amber);color:var(--amber)}
+    .fps{position:fixed;right:16px;top:calc(var(--sat) + 62px);font:11px ui-monospace,monospace;color:var(--fg2);background:rgba(11,21,17,.6);padding:3px 7px;border-radius:6px}
+    .toast{position:fixed;left:16px;right:16px;top:calc(var(--sat) + 96px);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+    .toast div{max-width:420px;background:rgba(18,32,26,.94);border:1px solid var(--amber);border-radius:12px;padding:9px 13px;font-size:13.5px;line-height:1.35;animation:in .3s ease-out, out .5s ease-in 3.2s forwards}
+    @keyframes in{from{opacity:0;transform:translateY(-8px)}}
+    @keyframes out{to{opacity:0;transform:translateY(-8px)}}
+    .sheet{position:fixed;inset:0;background:rgba(5,10,8,.6);display:none;align-items:flex-end;justify-content:center}
+    .sheet.on{display:flex}
+    .book{width:100%;max-width:640px;max-height:82vh;overflow:auto;background:#efe6d2;color:#2a2418;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + var(--sab));font-family:Georgia,serif}
+    .book h2{margin:0 0 2px;font-size:22px;font-weight:normal}
+    .book h3{margin:18px 0 8px;font-size:15px;font-weight:normal;letter-spacing:.08em;text-transform:uppercase;color:#7a5a2a;font-family:-apple-system,system-ui,sans-serif}
+    .book p.sub{margin:0;color:#6b604c;font-size:13px;font-family:-apple-system,system-ui,sans-serif}
+    .close{float:right;font-size:14px;font-family:-apple-system,system-ui,sans-serif;color:#7a5a2a;padding:4px 8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .card{background:#f8f2e4;border:1px solid #d8ccb2;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px}
+    .card svg{width:100%;height:70px}
+    .card .n{font-size:15px}
+    .card .l{font-size:11.5px;font-style:italic;color:#7a6f5a}
+    .card .t{font-size:11px;font-family:-apple-system,system-ui,sans-serif;color:#7a5a2a;text-transform:uppercase;letter-spacing:.06em}
+    .card .s{font-size:12px;font-family:-apple-system,system-ui,sans-serif;color:#4a4232}
+    .card.locked{background:#e6dcc6;color:#7a705c}
+    .card.locked svg{opacity:.55}
+    .dots{display:flex;gap:4px}
+    .dots i{width:9px;height:9px;border-radius:50%;border:1px solid #9a8a6a;display:block}
+    .dots i.on{background:#5f8a3c;border-color:#5f8a3c}
+    .rare{font-size:11.5px;color:#8a5a9a;font-family:-apple-system,system-ui,sans-serif}
+    .deco{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #d8ccb2;font-size:14px}
+    .deco span{font-family:-apple-system,system-ui,sans-serif;font-size:12px;color:#7a5a2a}
+    .loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--fg2);font-size:14px}
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js" } }
+  </script>
+</head>
+<body>
+  <div class="loading" id="loading">La serre se prépare…</div>
+  <div class="top">
+    <a class="back" href="./index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"/></svg>Ernest</a>
+    <div class="title"><small>Maquette</small>Serre Bien-être</div>
+  </div>
+  <div class="fps" id="fps"></div>
+  <div class="toast" id="toast"></div>
+  <div class="panel">
+    <div class="when"><b id="when">Six mois</b><span id="stat"></span></div>
+    <input type="range" id="p" min="0" max="1000" value="500" aria-label="Progression">
+    <div class="ticks"><span>Vide</span><span>1 mois</span><span>3 mois</span><span>6 mois</span><span>9 mois</span><span>Accomplie</span></div>
+    <div class="row">
+      <div class="seg" id="time"><button data-t="day">Jour</button><button data-t="dusk">Soir</button><button data-t="night">Nuit</button></div>
+      <button class="cat-btn" id="open">Catalogue</button>
+    </div>
+  </div>
+  <div class="sheet" id="sheet"><div class="book" id="book"></div></div>
+  <script type="module" src="./js/botaniste.js"></script>
+</body>
+</html>

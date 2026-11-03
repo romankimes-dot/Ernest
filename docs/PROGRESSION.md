@@ -37,3 +37,10 @@
 1. Maquette de la serre Bien-être accomplie, avec curseur de serre vide à serre accomplie. Fluide sur l'iPhone actuel.
 2. Validation, puis Travail et Vie perso.
 3. Mécanique (arrosoirs, stades, migration), puis cabane, livre, troc.
+
+## Maquette Bien-être (`botaniste.html`)
+- Page à part, sans effet sur l'app : `js/botaniste3d.js` (serre, plan, espèces, décors), `js/botaniste.js` (curseur, heure, livre).
+- Le curseur rejoue une année : l'espèce se débloque, elle est semée en pot sur l'établi, puis passe en pleine terre dans son emplacement du plan.
+- Pleine terre se fait dans les emplacements du plan de la serre (massif, rocaille, géantes, lianes, suspensions). Le jardin extérieur prendrait le surplus. À confirmer.
+- Douze espèces : thym, basilic, romarin, camomille (massif), aloès (rocaille), fougère arborescente, citronnier, monstera (géantes), lierre, jasmin étoilé (lianes), misère, capucine (suspensions).
+- Six décors à troquer : arrosoir de cuivre, étiquettes, banc, lanternes, bassin et fontaine, carillon.
