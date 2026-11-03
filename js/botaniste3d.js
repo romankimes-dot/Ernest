@@ -635,7 +635,7 @@ function renderAll() {
     if (pl.mode === 'bench') { // en pot sur l'établi
       usedBench.add(it.bench); const b = BENCH[it.bench], big = SP[it.id].type === 'Géante';
       _P.compose(b, _q.setFromEuler(_e.set(0, it.i * 1.7, 0)), _s.setScalar(1)); push('pot', _P, POTC[it.i % 3], own);
-      const sc = big ? 0.32 : 0.5; _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(g * 1.6) : g, _P, own);
+      const sc = big ? 0.45 : 0.75; // jeunes plantes de l'établi : assez grandes pour qu'on les voie _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(g * 1.6) : g, _P, own);
     } else { // pleine terre, dans son emplacement du plan
       const gr = pl.ground;
       if (gr.basket) { _P.compose(gr.pos.clone().add(V(0, -0.1, 0)), _q.identity(), _s.set(1.3, 0.7, 1.3)); push('pot', _P, BASKET_C, own); const top = roofY(gr.pos.x) - 0.05; _P.compose(gr.pos.clone().add(V(0, 0.05, 0)), _q.identity(), _s.set(0.006, Math.max(0.2, top - gr.pos.y - 0.05), 0.006)); push('stem', _P, CHAIN_C); }
@@ -659,7 +659,7 @@ function renderAll() {
 
 // Étiquettes plantées devant les emplacements du plan.
 const LABEL_G = new THREE.BoxGeometry(0.06, 0.16, 0.012);
-const TAG_G = new THREE.PlaneGeometry(0.3, 0.128), TAG_STICK = new THREE.BoxGeometry(0.014, 0.2, 0.008), TAG_WOOD = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.8 }), TAGS = new Map();
+const TAG_G = new THREE.PlaneGeometry(0.24, 0.1), TAG_STICK = new THREE.BoxGeometry(0.012, 0.16, 0.007), TAG_WOOD = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.8 }), TAGS = new Map();
 function tagMat(id) { // étiquette crème, nom de l'espèce à la main
   if (TAGS.has(id)) return TAGS.get(id);
   const c = document.createElement('canvas'); c.width = 256; c.height = 108; const x = c.getContext('2d'), nom = SP[id] ? SP[id].nom : id;
@@ -673,8 +673,8 @@ function buildLabels() {
   const lab = new THREE.MeshStandardMaterial({ color: SERRE.id === 'perso' ? 0xe8c8a0 : SERRE.id === 'travail' ? 0x2a2a2a : 0xf1ead8, roughness: 0.7 });
   // les pots de l'établi : une étiquette au nom de l'espèce, tournée vers l'allée
   for (const pl of plants) { const { it } = pl; if (pl.mode !== 'bench' || !it.pid || !BENCH[it.bench]) continue; const b = BENCH[it.bench], sd = Math.sign(b.x) || 1, g = new THREE.Group();
-    const stick = new THREE.Mesh(TAG_STICK, TAG_WOOD); stick.position.y = -0.12; g.add(stick); const face = new THREE.Mesh(TAG_G, tagMat(it.id)); g.add(face);
-    g.position.set(b.x - sd * 0.15, b.y + 0.36, b.z); g.rotation.set(0, -sd * Math.PI / 2, 0); g.rotateX(-0.25); scene.add(g); labelMeshes.push({ m: g, pl, pot: true }); }
+    const stick = new THREE.Mesh(TAG_STICK, TAG_WOOD); stick.position.y = -0.1; g.add(stick); const face = new THREE.Mesh(TAG_G, tagMat(it.id)); g.add(face);
+    g.position.set(b.x - sd * 0.19, b.y + 0.17, b.z + 0.14) /* au bord du pot, bas et de côté : la plante reste visible */; g.rotation.set(0, -sd * Math.PI / 2, 0); g.rotateX(-0.55); scene.add(g); labelMeshes.push({ m: g, pl, pot: true }); }
   for (const pl of plants) { const { it } = pl; if (pl.mode === 'bench' || it.nursery || pl.ground.basket || pl.ground.bed || it.x === undefined) continue; const m = new THREE.Mesh(LABEL_G, lab); m.position.set(it.x + 0.22 * Math.sign(-it.x || 1), 0.3, it.z + 0.3); m.rotation.set(-0.3, 0, 0); m.castShadow = true; scene.add(m); labelMeshes.push({ m, pl }); }
 }
 // Lueur posée au sol (disque additif) : la lumière des photophores sans calcul d'éclairage.
