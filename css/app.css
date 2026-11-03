@@ -316,7 +316,6 @@ body.running .view,body.running main{padding-bottom:190px}
   .sheet.closing{transform:scale(.97)!important;opacity:0}
   .rfoot{bottom:-22px;padding-bottom:6px}
   .sf-close,.sf-pick{top:16px}
-  .sf-cap{padding-bottom:22px}
 }
 @media (min-width:960px) and (hover:hover) and (pointer:fine){
   .btn,.chip,.tabs button,.mini,.gear,.thing .go,.list-item .x,.dest button,.blocks button,.moods button,.dow,.sf-pick button,.linkrow,.runbar button{transition:background-color .15s,border-color .15s,color .15s,filter .15s}
@@ -396,10 +395,34 @@ body.cabane-open .toast{z-index:41!important}
 .lv-ach:not(.done){opacity:.6}
 .lv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
 .fl-rare{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:rgba(242,178,61,.16);color:var(--amber);font-size:12px;font-family:-apple-system,system-ui,sans-serif;vertical-align:middle}
-.in-joy{bottom:calc(var(--sab) + 150px)}
 .go-bar{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 114px);display:flex;align-items:center;gap:2px;padding:3px 4px 3px 10px;border-radius:999px;background:rgba(11,21,17,.72);border:1px solid var(--line);backdrop-filter:blur(8px);z-index:2;max-width:calc(100% - 24px)}
 .go-bar span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-right:4px}
 .go-bar button{padding:8px 10px;min-height:36px;border-radius:999px;font-size:12.5px;color:var(--fg);white-space:nowrap;background:none;border:0}
 .go-bar button.here{color:var(--amber);background:rgba(242,178,61,.16)}
-#serreIn .go-bar,#cabane .go-bar{top:calc(var(--sat) + 12px);left:auto;right:12px;transform:none}
-@media (max-width:420px){#serreIn .go-bar,#cabane .go-bar{top:calc(var(--sat) + 62px);right:50%;transform:translateX(50%)}}
+
+
+/* Vues 3D (village, serres, cabane) : la même disposition partout. En haut, le retour et la barre des lieux ; en
+   bas, une légende compacte (titre, état, conseil qui s'efface, un bouton) ; le joystick et les boutons au-dessus. */
+.sf-pick{display:none!important}
+.go-bar{top:calc(var(--sat) + 12px);left:auto;right:max(12px,env(safe-area-inset-right,0px));transform:none;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 140px)}
+.go-bar::-webkit-scrollbar{display:none}
+@media (max-width:560px){.go-bar{top:calc(var(--sat) + 62px);left:max(12px,env(safe-area-inset-left,0px));max-width:none;justify-content:space-between}}
+.sf-cap{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));bottom:calc(var(--sab) + 10px);padding:10px 10px 10px 16px;border-radius:20px;background:rgba(11,21,17,.76);border:1px solid var(--line);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;text-align:left;pointer-events:auto;min-height:56px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.sf-cap:empty{display:none}
+.cap-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cap-t b{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cap-t span{color:var(--fg2);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cap-t em{font-style:normal;color:var(--fg2);font-size:12px;line-height:1.35;max-height:2.8em;overflow:hidden;transition:max-height .45s ease,opacity .45s ease}
+.sf-cap.calm .cap-t em{max-height:0;opacity:0}
+.cap-b{flex:none;padding:10px 18px;min-height:44px;border-radius:999px;background:rgba(242,178,61,.92);color:#1b1408;font-weight:600;font-size:14px;border:0}
+.sf-joy,.in-joy{bottom:calc(var(--sab) + 104px);width:108px;height:108px;opacity:.85}
+.sf-joy i{transition:transform .18s ease-out}
+.sf-joy.drag i{transition:none}
+.sf-joy.drag{opacity:1}
+.sf-walk{bottom:calc(var(--sab) + 104px)}
+body.cabane-open .toast,body.serre-open .toast{bottom:auto;top:calc(var(--sat) + 116px);max-width:min(420px,calc(100vw - 32px))}
+@media (min-width:561px){body.cabane-open .toast,body.serre-open .toast{top:calc(var(--sat) + 70px)}}
+/* entrée dans un lieu : la vue est opaque tout de suite (rien ne se mélange), un voile sombre se lève sur la scène */
+.cabane:not([hidden])::after,.serre-full:not([hidden])::after{content:"";position:absolute;inset:0;background:#0b1511;pointer-events:none;z-index:1;animation:veil .5s ease-out .08s both}
+@keyframes veil{from{opacity:1}to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.cabane:not([hidden])::after,.serre-full:not([hidden])::after{animation-duration:.01s}}

@@ -1585,7 +1585,7 @@ let mode = 'band', running = false, visible = true, last = 0, onFps = null, fram
 // Sélecteur de serre : la caméra glisse vers une serre (vue de trois quarts, porte en face) ou vers l'ensemble.
 let fly = null;
 // vue d'ensemble : plus haute et plus loin en portrait, pour que les trois serres tiennent dans l'écran
-const overview = () => (camera.aspect < 1 ? [new THREE.Vector3(0, 22, 39), new THREE.Vector3(0, 0.4, -3)] : [new THREE.Vector3(2.2, 11.5, 19.5), new THREE.Vector3(0, 0.6, -1.8)]);
+const overview = () => (camera.aspect < 1 ? [new THREE.Vector3(0, 30, 31), new THREE.Vector3(0, 0, -2.2)] : [new THREE.Vector3(2.2, 11.5, 19.5), new THREE.Vector3(0, 0.6, -1.8)]);
 function focus(id) {
   if (!renderer) return;
   let p1, t1;

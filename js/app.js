@@ -193,7 +193,7 @@ function openSerre() {
   if (!g3d || !$('#serreFull').hidden) return;
   const n = totalDone(S), pl = S.garden.plants.filter((p) => p.kind === 'plant').length;
   const hs = g3d.modelFromState ? g3d.modelFromState(S, today).houses : null, hn = (k) => (hs && hs[k] ? hs[k].n : 0);
-  serreCap = `<b>Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}</b><br><span>Glisse pour tourner, pince pour approcher. Le sélecteur en haut passe d'une serre à l'autre ; Promenade pour marcher avec Ernest.</span>`;
+  serreCap = { title: `Travail ${hn('travail')} · Bien-être ${hn('bienetre')} · Vie perso ${hn('perso')}`, hint: 'Glisse pour tourner, pince pour approcher. Promenade pour marcher avec Ernest.' };
   houseN = hn;
   const f = $('#serreFull'); f.hidden = false; f.prepend($('#garden3d'));
   g3d.setMode('full');
@@ -201,8 +201,7 @@ function openSerre() {
   if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
   bindWalkUi(); setWalkUi(false); bindGo(); document.body.classList.add('serre-open'); g3d.setFinds(todayFinds());
   { const r = FL.toRest(S, today); if (r.length && S.garden.restAsked !== today) { S.garden.restAsked = today; save(); setTimeout(() => ernestLine('flore.dormance', { espece: plantName(r[0]) }, `${cap1(plantName(r[0]))} attend depuis trois semaines. Ernest propose la cabane.`), 600); } const c = FL.cansOf(S).length; if (c && !r.length) toast(`${c} arrosoir${c > 1 ? 's' : ''} plein${c > 1 ? 's' : ''} à verser. Promenade, ou le panneau d'une serre.`, 3500); }
-  if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
-  g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
+  if (/[?&]fps/.test(location.search)) { if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); } g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; }); } // compteur : seulement pour les essais
 }
 function closeSerre() {
   $('#serre').prepend($('#garden3d')); $('#serreFull').hidden = true;
@@ -274,6 +273,16 @@ let cab = null, cabKeep = null, cabLoading = false; // cab : la cabane ouverte ;
 const timeNow = () => { const d = new Date(); return phaseName(d.getHours() + d.getMinutes() / 60, d.getMonth()); }; // le même soleil que le village
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
 // Se téléporter : la cabane ou une serre, directement (depuis le village ou depuis un autre intérieur).
+// Joystick : une zone morte au centre, puis une montée progressive (pas de saut à la sortie de la zone morte).
+const joyVal = (dx, dy) => { const m = Math.hypot(dx, dy); if (m < 0.12) return [0, 0]; const k = Math.min(1, (m - 0.12) / 0.8) / m; return [dx * k, dy * k]; };
+// Légende du bas des vues 3D : un titre, une ligne d'état, un conseil qui s'efface, un bouton à droite.
+const capT = {};
+function setCap(sel, { title, info = '', hint = '', btn = null }) {
+  const el = $(sel); if (!el) return;
+  el.innerHTML = `<div class="cap-t"><b>${title}</b>${info ? `<span>${info}</span>` : ''}${hint ? `<em>${hint}</em>` : ''}</div>${btn ? `<button class="cap-b" id="${btn.id}">${esc(btn.label)}</button>` : ''}`;
+  el.classList.remove('calm'); clearTimeout(capT[sel]); if (hint) capT[sel] = setTimeout(() => el.classList.add('calm'), 6500); // le conseil, le temps de le lire
+  if (btn) $('#' + btn.id).addEventListener('click', (e) => { e.stopPropagation(); btn.on(); });
+}
 function goTo(place) {
   closeSheet();
   if (place === (inter ? interHouse : cab ? 'cabane' : null)) return;
@@ -286,12 +295,14 @@ function bindGo() {
 }
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
 // ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
-let inter = null, interHouse = null, interKeep = null; // interKeep : la dernière serre visitée, en pause
+let inter = null, interHouse = null, interKeep = null, interHint = false; // interKeep : la dernière serre visitée, en pause
 const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: 'auto' });
 function interCap() {
   const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
-  $('#serreInCap').innerHTML = `<b>${mod ? esc(mod.themeName(house)) : ''} · Serre ${H_NAME[house]}</b><br><span>${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}, ${ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length} en pleine terre` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''} plein${cans > 1 ? 's' : ''}. Touche une plante pour l'arroser, le sol pour y aller.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="inSow">${cans ? 'Semer une graine' : 'Le panneau de la serre'}</button></div>`;
-  $('#inSow').addEventListener('click', () => (cans ? sowSheet(house) : houseSheet(house)));
+  const g = ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length;
+  setCap('#serreInCap', { title: `Serre ${H_NAME[house]}${mod ? ` · ${esc(mod.themeName(house))}` : ''}`, info: `${ps.length ? `${ps.length} plante${ps.length > 1 ? 's' : ''}${g ? `, ${g} en pleine terre` : ''}` : 'Pas encore de plante'} · ${cans} arrosoir${cans > 1 ? 's' : ''}`,
+    hint: interHint ? '' : 'Touche une plante pour l\'arroser, le sol pour y aller. Glisse pour tourner, pince pour reculer.', btn: { id: 'inSow', label: cans ? 'Semer' : 'Panneau', on: () => (cans ? sowSheet(house) : houseSheet(house)) } });
+  interHint = true;
 }
 function refreshInterior() { if (inter && inter.api) { inter.api.setData(interData(interHouse)); interCap(); } }
 async function openInterior(house) {
@@ -300,9 +311,9 @@ async function openInterior(house) {
   const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop(); bindGo();
   if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior);
     const joy = $('#inJoy'), knob = joy.querySelector('i'); let id = null; // joystick : se promener dans la serre
-    const mv = (e) => { const r = joy.getBoundingClientRect(), R = r.width / 2; let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; if (inter && inter.api) inter.api.move(Math.abs(dx) < 0.12 ? 0 : dx, Math.abs(dy) < 0.12 ? 0 : -dy); };
-    const end = () => { id = null; knob.style.transform = ''; if (inter && inter.api) inter.api.move(0, 0); };
-    joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.setPointerCapture(id); mv(e); }); joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) mv(e); }); joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
+    const mv = (e) => { const r = joy.getBoundingClientRect(), R = r.width / 2; let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; const [jx, jy] = joyVal(dx, dy); if (inter && inter.api) inter.api.move(jx, -jy); };
+    const end = () => { id = null; joy.classList.remove('drag'); knob.style.transform = ''; if (inter && inter.api) inter.api.move(0, 0); };
+    joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.classList.add('drag'); joy.setPointerCapture(id); mv(e); }); joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) mv(e); }); joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try {
     if (interKeep && interKeep.api.serre === house) { inter.mod = interKeep.mod; inter.api = interKeep.api; inter.api.resume(); inter.api.setData(interData(house)); }
     else { const mod = await import('./botaniste3d.js'); if (inter !== me) return; /* refermée pendant le chargement */ if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }
@@ -313,8 +324,7 @@ function closeInterior() { moving = null; const knob = $('#inJoy i'); if (knob) 
 let moving = null; // plante qu'on change de place
 function startMove(p) {
   if (!inter || !inter.api) return; closeSheet(); moving = p.id; inter.api.showSlots(p.id, p.sp);
-  $('#serreInCap').innerHTML = `<b>Changer ${esc(plantName(p))} de place</b><br><span>Touche un anneau vert (libre) ou bleu (occupé : les deux plantes échangent). L'anneau ambre est sa place actuelle.</span><div style="margin-top:8px;pointer-events:auto"><button class="btn quiet" id="mvCancel">Annuler</button></div>`;
-  $('#mvCancel').addEventListener('click', endMove);
+  setCap('#serreInCap', { title: `Changer ${esc(plantName(p))} de place`, info: 'Anneau vert : libre. Bleu : les deux échangent. Ambre : sa place.', btn: { id: 'mvCancel', label: 'Annuler', on: endMove } });
 }
 function endMove() { moving = null; if (inter && inter.api) inter.api.hideSlots(); if (inter) interCap(); }
 function onPickInterior(o) {
@@ -329,7 +339,7 @@ async function openCabane() {
   if (cab || cabLoading || !g3d) { if (!g3d) livreSheet(); return; }
   const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop(); bindGo();
   const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
-  $('#cabCap').innerHTML = `<b>Chez Ernest</b><br><span>Le livre sur la table, ${n} graine${n > 1 ? 's' : ''} dans le bocal. ${b ? `${b} bonsaï${b > 1 ? 's' : ''} sur l'étagère` : "L'étagère attend un objectif atteint"}, ${r ? `${r} plante${r > 1 ? 's' : ''} à la réserve` : 'la réserve est vide'}.</span>`;
+  setCap('#cabCap', { title: 'Chez Ernest', info: `${n} graine${n > 1 ? 's' : ''} · ${b} bonsaï${b > 1 ? 's' : ''} · ${r} à la réserve`, hint: 'Touche le livre, le bocal, l\'étagère ou la réserve.' });
   if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try { if (cabKeep) { cab = cabKeep; cab.resume(); } else { cabLoading = true; const mod = await import('./cabane3d.js'); cabKeep = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cabLoading = false; if ($('#cabane').hidden) { cabKeep.pause(); return; } /* refermée pendant le chargement */ cab = cabKeep; } cab.set(cabData()); setTimeout(() => cab && ernestLine('lieu.cabane'), 900); }
   catch (e) { cabLoading = false; closeCabane(); livreSheet(); }
@@ -503,7 +513,7 @@ function onFind3d(i) {
   say3d('trouvaille'); save();
 }
 // Promenade avec Ernest : bouton, vue 3e / 1re personne, joystick, légende du lieu.
-let serreCap = '', houseN = () => 0;
+let serreCap = { title: '' }, houseN = () => 0, walkHint = false;
 const PLACE = { travail: 'Dans la serre Travail', bienetre: 'Dans la serre Bien-être', perso: 'Dans la serre Vie perso', chaumiere: 'Devant la chaumière' };
 function setWalkUi(on) {
   const f = $('#serreFull'); f.classList.toggle('walking', on);
@@ -516,10 +526,10 @@ function setWalkUi(on) {
   walkCap(null);
 }
 function walkCap(place) {
-  if (!f3dWalking()) { $('#sfCap').innerHTML = serreCap; return; }
+  if (!f3dWalking()) { setCap('#sfCap', serreCap); return; }
   const kb = matchMedia('(pointer: fine)').matches ? 'ZQSD ou flèches pour marcher' : 'Le joystick pour marcher';
-  const where = place && PLACE[place] ? `<b>${PLACE[place]}${houseN(place) ? ` · ${houseN(place)} plante${houseN(place) > 1 ? 's' : ''}` : ''}</b><br>` : '<b>Au jardin</b><br>';
-  $('#sfCap').innerHTML = `${where}<span>${kb}, glisse pour regarder. Touche une serre en haut : Ernest y va tout seul.</span>`;
+  const where = place && PLACE[place] ? `${PLACE[place]}${houseN(place) ? ` · ${houseN(place)} plante${houseN(place) > 1 ? 's' : ''}` : ''}` : 'Au jardin';
+  setCap('#sfCap', { title: where, hint: walkHint ? '' : `${kb}, glisse pour regarder.` }); walkHint = true;
 }
 const f3dWalking = () => !!(g3d && g3d.walking);
 function bindWalkUi() {
@@ -530,9 +540,9 @@ function bindWalkUi() {
   // joystick : un disque, le pouce le tire jusqu'à son bord
   const joy = $('#sfJoy'), knob = joy.querySelector('i'); let id = null;
   const move = (e) => { const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2; let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
-    knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; g3d.walkInput(Math.abs(dx) < 0.12 ? 0 : dx, Math.abs(dy) < 0.12 ? 0 : -dy); };
-  const end = () => { id = null; knob.style.transform = ''; g3d.walkInput(0, 0); };
-  joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.setPointerCapture(id); move(e); });
+    knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; const [jx, jy] = joyVal(dx, dy); g3d.walkInput(jx, -jy); };
+  const end = () => { id = null; joy.classList.remove('drag'); knob.style.transform = ''; g3d.walkInput(0, 0); };
+  joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.classList.add('drag'); joy.setPointerCapture(id); move(e); });
   joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
   joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end);
   joy.addEventListener('click', (e) => e.stopPropagation());

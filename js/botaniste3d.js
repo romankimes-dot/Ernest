@@ -501,7 +501,7 @@ function blocked(x, z) {
   if (Math.abs(x) > HALL.w - 0.35 || z < -D + 0.45 || z > D - 0.3) return true;
   if (Math.abs(x) > 0.78 && z < -0.5) return true;
   if (Math.abs(x) < 0.9 && z < -4.25) return true;
-  if (Math.hypot(x, z + 2.6) < 0.82) return true;
+  if (Math.hypot(x, z + 2.6) < 0.62) return true; // le rond du croisement : on passe sur l'anneau de dalles
   if (Math.abs(x) > 2.3 && z > 0.55 && z < 5.65) return true;
   return false;
 }
@@ -543,21 +543,36 @@ function standFor(t) {
   if (Math.hypot(x, z + 2.6) < 0.85) x = Math.sign(x || 1) * 0.85;
   return V(x, 0, z);
 }
-function walkErnest(p) { const to = freeSpot(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(); scene3 = { kind: 'walk', t: to, from, to, t0: performance.now() / 1000, walk: Math.min(2.5, from.distanceTo(to) / 1.4), phase: 0 }; }
+// Chemin d'Ernest : par l'allée (pas à travers les plates-bandes), en contournant le rond du croisement.
+function pathTo(a, b) {
+  const aisle = (x) => Math.max(-0.6, Math.min(0.6, x)), pts = [a.clone()];
+  if ((a.z > -0.55) !== (b.z > -0.55)) pts.push(V(aisle(a.z > -0.55 ? b.x : a.x), 0, -0.35));
+  pts.push(b.clone());
+  for (let i = 0; i < pts.length - 1; i++) { const p = pts[i], q = pts[i + 1], z0 = Math.min(p.z, q.z), z1 = Math.max(p.z, q.z);
+    if (z0 < -2.6 && z1 > -2.6 && Math.abs(p.x + (q.x - p.x) * ((-2.6 - p.z) / ((q.z - p.z) || 1))) < 0.7) { pts.splice(i + 1, 0, V(Math.sign(p.x + q.x) || 1, 0, -2.6).multiply(V(0.71, 1, 1))); i++; } }
+  let len = 0; for (let i = 1; i < pts.length; i++) len += pts[i].distanceTo(pts[i - 1]);
+  return { pts, len };
+}
+function atLen(P, d) { // point et direction à la distance d le long du chemin
+  for (let i = 1; i < P.pts.length; i++) { const a = P.pts[i - 1], b = P.pts[i], L = a.distanceTo(b); if (d <= L || i === P.pts.length - 1) { const k = L ? Math.min(1, d / L) : 1; return [a.clone().lerp(b, k), Math.atan2(b.x - a.x, b.z - a.z)]; } d -= L; }
+  return [P.pts[0].clone(), ernestFace];
+}
+let ernestFace = Math.PI; // cap voulu d'Ernest : il s'y tourne en douceur
+function walkErnest(p) { const to = freeSpot(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(), path = pathTo(from, to); scene3 = { kind: 'walk', t: to, from, to, path, t0: performance.now() / 1000, walk: Math.max(0.3, path.len / 1.5), phase: 0 }; }
 export function playScene(kind, pid, done) {
   const t = plantPos(pid); if (!t || !ernest) { if (done) done(); return; }
-  const from = ernest.root.position.clone(), to = standFor(t);
-  scene3 = { kind, pid, t, from, to, t0: performance.now() / 1000, walk: Math.min(1.6, from.distanceTo(to) / 1.6), done, phase: 0, door: V(0, 0, HALL.d - 0.4) };
+  const from = ernest.root.position.clone(), to = standFor(t), path = pathTo(from, to), door = V(0, 0, HALL.d - 0.4);
+  scene3 = { kind, pid, t, from, to, path, t0: performance.now() / 1000, walk: Math.max(0.25, path.len / 1.6), done, phase: 0, door, dpath: pathTo(to, door) };
 }
 function stepScene(now, dt) {
   const S3 = scene3; if (!S3) return; const e = ernest, el = now - S3.t0;
-  const face = (a, b) => { const d = b.clone().sub(a); if (d.lengthSq() > 1e-4) e.root.rotation.y = Math.atan2(d.x, d.z); };
-  if (el < S3.walk) { const k = smooth(0, 1, el / S3.walk); e.root.position.lerpVectors(S3.from, S3.to, k); e.setWalk(1); face(S3.from, S3.to); return; }
+  const face = (a, b) => { const d = b.clone().sub(a); if (d.lengthSq() > 1e-4) ernestFace = Math.atan2(d.x, d.z); };
+  if (el < S3.walk) { const [pos, h] = atLen(S3.path, smooth(0, 1, el / S3.walk) * S3.path.len); e.root.position.copy(pos); ernestFace = h; e.setWalk(1); return; }
   const a = el - S3.walk; e.root.position.copy(S3.to); if (S3.kind === 'walk') { e.setWalk(0); scene3 = null; applyTime(); return; } face(S3.to, V(S3.t.x, 0, S3.t.z));
   if (S3.kind === 'cabane') {
     if (!carried) { carried = new THREE.Mesh(potG, new THREE.MeshStandardMaterial({ color: 0xb8693f, roughness: 0.8 })); carried.scale.setScalar(1.1); scene.add(carried); }
     if (a < 0.8) { e.setWalk(0); e.setPose('assis'); }
-    else { const k = Math.min(1, (a - 0.8) / 2.2); e.root.position.lerpVectors(S3.to, S3.door, smooth(0, 1, k)); face(S3.to, S3.door); e.setWalk(1); e.setPose('attend'); }
+    else { const k = Math.min(1, (a - 0.8) / 2.2), [pos, h] = atLen(S3.dpath, smooth(0, 1, k) * S3.dpath.len); e.root.position.copy(pos); ernestFace = h; e.setWalk(1); e.setPose('attend'); }
     carried.position.copy(e.root.position).add(V(0, 0.42, 0)).addScaledVector(V(Math.sin(e.root.rotation.y), 0, Math.cos(e.root.rotation.y)), 0.22);
     if (a > 3.0) { scene.remove(carried); carried = null; e.setWalk(0); const d = S3.done; scene3 = null; applyTime(); if (d) d(); }
     return;
@@ -768,27 +783,39 @@ export function mount(canvas, opts = {}) {
   ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0, 0, 3.4); ernest.root.rotation.y = Math.PI; scene.add(ernest.root); ernest.attach(scene); // dos à la caméra, face à l'allée
   scene3 = null; carried = null; buildParticles();
   controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 1.1, 1.6); controls.minDistance = 1.2; controls.maxDistance = 7; controls.maxPolarAngle = Math.PI * 0.62; controls.enablePan = true; controls.screenSpacePanning = false;
-  camera.position.set(0.2, 2.1, 5.7); let lastE = ernest.root.position.clone(); // la vue suit Ernest (troisième personne, comme dehors)
+  camera.position.set(0.2, 2.1, 5.7); let lastE = ernest.root.position.clone();
+  // Dans l'app, la vue suit Ernest comme dehors (js/garden3d.js) : un bras derrière lui, glisser pour tourner, pincer
+  // pour reculer ; le bras raccourcit contre le vitrage au lieu de coincer la caméra. La maquette garde la vue libre.
+  const follow = !!opts.data, cam = { yaw: Math.PI, pitch: 0.36, dist: 3.7, cur: 3.7, tg: V(0, 0.6, 3.4), pts: new Map(), pinch: 0, touched: -9, speed: 0, dir: V(0, 0, -1) };
+  ernestFace = Math.PI; if (follow) controls.enabled = false;
   const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix(); };
   window.addEventListener('resize', resize); resize();
   if (opts.data) setData(opts.data); else setProgress(opts.progress ?? 0.5);
   // toucher une plante : l'instance la plus proche renvoie l'identifiant de sa plante
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
-  const onDown = (e) => { down = [e.clientX, e.clientY]; };
-  const onUp = (e) => { if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
+  const onDown = (e) => { down = [e.clientX, e.clientY]; if (follow) { cam.pts.set(e.pointerId, [e.clientX, e.clientY]); cam.pinch = 0; } };
+  const onMove = (e) => { if (!follow || !cam.pts.has(e.pointerId)) return; const [lx, ly] = cam.pts.get(e.pointerId); cam.pts.set(e.pointerId, [e.clientX, e.clientY]); cam.touched = performance.now() / 1000;
+    if (cam.pts.size === 2) { const [a, b] = [...cam.pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (cam.pinch) cam.dist = Math.max(1.4, Math.min(6.5, cam.dist * (cam.pinch / d))); cam.pinch = d; return; }
+    cam.yaw -= (e.clientX - lx) * 0.0065; cam.pitch = Math.max(0.06, Math.min(1.2, cam.pitch + (e.clientY - ly) * 0.005)); };
+  const onEnd = (e) => { cam.pts.delete(e.pointerId); cam.pinch = 0; };
+  const onWheel = (e) => { if (!follow) return; e.preventDefault(); cam.dist = Math.max(1.4, Math.min(6.5, cam.dist * (1 + Math.sign(e.deltaY) * 0.1))); };
+  const onUp = (e) => { onEnd(e); if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
     if (slotMarks) { const sh = ray.intersectObjects(slotMarks.children, true)[0]; if (sh) { opts.onPick(sh.object.userData.pick); return; } }
     const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
     for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } }
     // le sol : la vue s'y rend, Ernest aussi
     const hit = ray.ray.intersectPlane(new THREE.Plane(UP, 0), V()); if (hit && Math.abs(hit.x) < HALL.w - 0.3 && Math.abs(hit.z) < D - 0.3 && (!scene3 || scene3.kind === 'walk')) walkErnest(hit); };
-  canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
+  const listen = (on) => { const f = on ? 'addEventListener' : 'removeEventListener'; canvas[f]('pointerdown', onDown); canvas[f]('pointerup', onUp); canvas[f]('pointermove', onMove); canvas[f]('pointercancel', onEnd); canvas[f]('wheel', onWheel, { passive: false }); };
+  listen(true);
+  // le bras de la caméra : jusqu'où on peut reculer sans sortir de la serre
+  const armMax = (tg, dx, dy, dz, d) => { let ok = 0.5; for (let t = 0.5; t <= d + 1e-6; t += 0.1) { const x = tg.x + dx * t, y = tg.y + dy * t, z = tg.z + dz * t; if (Math.abs(x) > HALL.w - 0.3 || z > D - 0.2 || z < -D + 0.3 || y > roofY(x) - 0.25) break; ok = t; } return ok; };
   let last = performance.now(), frames = 0, acc = 0;
   const loop = () => {
     const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; frames++; acc += dt; if (acc > 1 && onFps) { onFps(Math.round(frames / acc)); frames = 0; acc = 0; }
-    controls.update();
+    if (!follow) controls.update();
     // rester dans la serre
-    const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D - 0.25, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
-    controls.target.x = Math.max(-HALL.w + 0.3, Math.min(HALL.w - 0.3, controls.target.x)); controls.target.z = Math.max(-D + 0.3, Math.min(D, controls.target.z)); controls.target.y = Math.max(0.2, Math.min(4.5, controls.target.y));
+    const c = camera.position; if (!follow) { c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D - 0.25, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
+    controls.target.x = Math.max(-HALL.w + 0.3, Math.min(HALL.w - 0.3, controls.target.x)); controls.target.z = Math.max(-D + 0.3, Math.min(D, controls.target.z)); controls.target.y = Math.max(0.2, Math.min(4.5, controls.target.y)); }
     const t = now / 1000;
     if (slotMarks) slotMarks.children.forEach((m, i) => m.scale.setScalar(1 + Math.sin(t * 4 + i) * 0.08));
     if (water) water.material.color.setHSL(0.5, 0.3, 0.32 + Math.sin(t * 1.3) * 0.02);
@@ -797,15 +824,26 @@ export function mount(canvas, opts = {}) {
     if (fireflies && fireflies.visible) { fireflies.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; fireflies.rotation.y = Math.sin(t * 0.05) * 0.2; }
     stepScene(t, dt); stepParticles(dt, t);
     if (timeKey === 'auto' && now - lastSky > 30000) { lastSky = now; applyTime(); }
-    { // Ernest marche au joystick, dans le repère de la vue ; il glisse le long de ce qui le bloque
+    { // Ernest marche au joystick, dans le repère de la vue ; il accélère, se tourne en douceur, glisse le long de ce qui le bloque
       const p = ernest.root.position, inp = Math.min(1, Math.hypot(nav.mx, nav.mz));
       if (inp > 0 && (!scene3 || scene3.kind === 'walk')) { scene3 = null;
-        const f = V(controls.target.x - camera.position.x, 0, controls.target.z - camera.position.z); if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); const rgt = V(-f.z, 0, f.x);
-        const dir = rgt.multiplyScalar(nav.mx).addScaledVector(f, nav.mz).normalize(), step = 1.7 * inp * dt, nx = p.x + dir.x * step, nz = p.z + dir.z * step;
-        if (!blocked(nx, nz)) p.set(nx, 0, nz); else if (!blocked(nx, p.z)) p.x = nx; else if (!blocked(p.x, nz)) p.z = nz;
-        ernest.root.rotation.y = Math.atan2(dir.x, dir.z); ernest.setWalk(inp * 1.2); ernest.setPose('attend'); walking = true;
-      } else if (walking) { walking = false; ernest.setWalk(0); applyTime(); }
-      const d = p.clone().sub(lastE); if (d.lengthSq() > 0) { camera.position.add(d); controls.target.add(d); lastE.copy(p); } // la vue suit
+        const f = follow ? V(Math.sin(cam.yaw), 0, Math.cos(cam.yaw)) : V(controls.target.x - camera.position.x, 0, controls.target.z - camera.position.z); if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); const rgt = V(-f.z, 0, f.x);
+        cam.dir.copy(rgt.multiplyScalar(nav.mx).addScaledVector(f, nav.mz).normalize()); ernestFace = Math.atan2(cam.dir.x, cam.dir.z); ernest.setPose('attend'); walking = true;
+      }
+      if (!scene3) { cam.speed += ((inp > 0 ? 1.7 * inp : 0) - cam.speed) * Math.min(1, dt * (inp > 0 ? 7 : 12));
+        if (cam.speed > 0.02) { const step = cam.speed * dt; let nx = p.x + cam.dir.x * step, nz = p.z + cam.dir.z * step;
+          const rc = Math.hypot(nx, nz + 2.6); if (rc < 0.64) { nx *= 0.64 / rc; nz = -2.6 + (nz + 2.6) * 0.64 / rc; } // le rond : on glisse autour
+          if (!blocked(nx, nz)) p.set(nx, 0, nz); else if (!blocked(nx, p.z)) p.x = nx; else if (!blocked(p.x, nz)) p.z = nz; }
+        ernest.setWalk(cam.speed / 1.4);
+        if (walking && inp === 0 && cam.speed < 0.05) { walking = false; cam.speed = 0; ernest.setWalk(0); applyTime(); } }
+      { let dh = ernestFace - ernest.root.rotation.y; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); ernest.root.rotation.y += dh * Math.min(1, dt * 10); }
+      if (follow) { // la vue : un bras derrière Ernest
+        cam.tg.lerp(V(p.x, 0.6, p.z), Math.min(1, dt * 9));
+        if (scene3 && t - cam.touched > 2.5) { let dy = ernestFace - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); cam.yaw += dy * Math.min(1, dt * 0.9); } // promenade guidée : la vue se range derrière lui
+        const cp = Math.cos(cam.pitch), dx = -Math.sin(cam.yaw) * cp, dy = Math.sin(cam.pitch), dz = -Math.cos(cam.yaw) * cp, m = armMax(cam.tg, dx, dy, dz, cam.dist);
+        cam.cur = m < cam.cur ? m : cam.cur + (m - cam.cur) * Math.min(1, dt * 3);
+        camera.position.set(cam.tg.x + dx * cam.cur, cam.tg.y + dy * cam.cur, cam.tg.z + dz * cam.cur); camera.lookAt(cam.tg.x, cam.tg.y + 0.3, cam.tg.z); controls.target.copy(cam.tg); // Ernest un peu sous le centre : on voit la serre devant lui
+      } else { const d = p.clone().sub(lastE); if (d.lengthSq() > 0) { camera.position.add(d); controls.target.add(d); lastE.copy(p); } } // la vue suit
     }
     ernest.update(dt, { lantern: nightNow, lanternK: 2.0, groundY: 0, still: !scene3 });
     renderer.render(scene, camera);
@@ -814,8 +852,8 @@ export function mount(canvas, opts = {}) {
   let paused = false;
   return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, play: playScene, move, camera, controls, renderer, scene, serre: SERRE.id,
     // pause : on garde tout (rentrer à nouveau est immédiat) ; reprise : même scène, données fraîches
-    pause() { if (paused) return; paused = true; renderer.setAnimationLoop(null); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.enabled = false; },
-    resume() { if (!paused) return; paused = false; canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp); controls.enabled = true; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },
+    pause() { if (paused) return; paused = true; renderer.setAnimationLoop(null); listen(false); cam.pts.clear(); controls.enabled = false; },
+    resume() { if (!paused) return; paused = false; listen(true); controls.enabled = !follow; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },
     dispose() { this.pause(); window.removeEventListener('resize', resize); controls.dispose(); } };
 }
 export const themeName = (id) => (THEMES[id] || THEMES.bienetre).nom;
