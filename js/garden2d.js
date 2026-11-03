@@ -134,7 +134,7 @@ export class Garden {
       ctx.fillStyle = hs.accent; ctx.fillRect(x0 + 3, table - 1, sw - 6, 3); ctx.fillRect(x0 + 3, table + 2, sw - 6, 4); // chemin de table de la couleur de la serre
       // plantes de la serre : les plus récentes sur la table, puis au sol ; bonsaïs des objectifs actifs au sol ; mousse au pied
       const mine = plants.filter((p) => houseOf(p.cat) === hs.id);
-      const pl = mine.filter((p) => p.kind !== 'moss' && p.kind !== 'bonsai'), moss = mine.filter((p) => p.kind === 'moss');
+      const pl = mine.filter((p) => p.kind !== 'moss' && p.kind !== 'bonsai' && !p.dormant), moss = mine.filter((p) => p.kind === 'moss');
       const bons = mine.filter((p) => p.kind === 'bonsai' && (!goals || !p.goal || (goals.find((g) => g.id === p.goal) || {}).status === 'active')).sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, 2);
       const per = Math.max(2, Math.floor((sw - 16) / 15)), onTable = pl.slice(-per), nFloor = Math.max(0, per - bons.length * 2), onFloor = nFloor ? pl.slice(-per * 2, -per).slice(-nFloor) : [];
       const draw = (p, x, y, kind) => { const r = rnd(p.seed), gr = (0.35 + 0.65 * growth(p, st, this.today)) * (p === last && pulse ? 1 + pulse * .15 : 1), c = COLS[lookOf(p)] || COLS.perso;

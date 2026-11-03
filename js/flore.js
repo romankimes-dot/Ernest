@@ -1,0 +1,193 @@
+// La flore d'Ernest (docs/PROGRESSION.md) : arrosoirs, plantes qui grandissent, stades, graines, espèces à débloquer.
+// Fonctions pures sur l'état ; aucune dépendance au DOM. Testées dans tests/flore.test.js.
+//
+// Terminer une chose donne un arrosoir plein (S.garden.cans) pour la serre de sa catégorie. On le verse sur la
+// plante de son choix : chaque arrosoir versé est gardé dans la plante (waters), son nombre fait le stade.
+// Graine 1, pousse 2, plante 5, grande 10, pleine terre 20. Chaque passage de stade : Ernest taille, une graine ;
+// la pleine terre : trois graines. Les choses venues d'un pont nourrissent seules la plante de ce pont.
+// Tout est rangé dans des tableaux à identifiants : la synchronisation réunit sans rien perdre.
+import { catId } from './model.js';
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const seedNum = () => Math.floor(Math.random() * 1e9);
+
+export const STAGES = [['Graine', 1], ['Pousse', 2], ['Plante', 5], ['Grande', 10], ['Pleine terre', 20]];
+export const GROUND = 20;
+export const DORMANT_DAYS = 21;
+export const stageOf = (n) => { let s = -1; STAGES.forEach(([, k], i) => { if (n >= k) s = i; }); return s; };
+export const stageName = (n) => { const s = stageOf(n); return s < 0 ? 'Pas encore semée' : STAGES[s][0]; };
+
+// Douze espèces par serre, dans l'ordre du déblocage. look : le dessin utilisé par les serres (garden3d, garden2d).
+// [id, nom, avec l'article, latin, type, look]
+const L = (id, nom, art, latin, type, look) => ({ id, nom, art, latin, type, look });
+export const SPECIES = {
+  bienetre: [
+    L('thym', 'Thym', 'le thym', 'Thymus vulgaris', 'Massif', 'thyme'),
+    L('basilic', 'Basilic', 'le basilic', 'Ocimum basilicum', 'Massif', 'basil'),
+    L('romarin', 'Romarin', 'le romarin', 'Salvia rosmarinus', 'Massif', 'rosemary'),
+    L('aloes', 'Aloès', "l'aloès", 'Aloe vera', 'Rocaille', 'succulent'),
+    L('camomille', 'Camomille', 'la camomille', 'Matricaria chamomilla', 'Massif', 'wildflowers'),
+    L('lierre', 'Lierre', 'le lierre', 'Hedera helix', 'Liane', 'mossy'),
+    L('tradescantia', 'Misère', 'la misère', 'Tradescantia zebrina', 'Tombante', 'violet'),
+    L('fougere', 'Fougère arborescente', 'la fougère arborescente', 'Dicksonia antarctica', 'Géante', 'fern'),
+    L('capucine', 'Capucine', 'la capucine', 'Tropaeolum majus', 'Tombante', 'geranium'),
+    L('jasmin', 'Jasmin étoilé', 'le jasmin étoilé', 'Trachelospermum jasminoides', 'Liane', 'flowering'),
+    L('citronnier', 'Citronnier', 'le citronnier', 'Citrus limon', 'Géante', 'ficus'),
+    L('monstera', 'Monstera', 'la monstera', 'Monstera deliciosa', 'Géante', 'broadleaf'),
+  ],
+  travail: [
+    L('pensee', 'Pensée', 'la pensée', 'Viola × wittrockiana', 'Massif', 'violet'),
+    L('lavande', 'Lavande', 'la lavande', 'Lavandula angustifolia', 'Massif', 'lavender'),
+    L('iris', 'Iris', "l'iris", 'Iris germanica', 'Massif', 'flowering'),
+    L('sansevieria', 'Sansevière', 'la sansevière', 'Dracaena trifasciata', 'Rocaille', 'succulent'),
+    L('calathea', 'Calathéa', 'le calathéa', 'Goeppertia orbifolia', 'Massif', 'broadleaf'),
+    L('philodendron', 'Philodendron', 'le philodendron', 'Philodendron hederaceum', 'Liane', 'broadleaf'),
+    L('pothos', 'Pothos', 'le pothos', 'Epipremnum aureum', 'Tombante', 'mossy'),
+    L('kentia', 'Palmier kentia', 'le palmier kentia', 'Howea forsteriana', 'Géante', 'fern'),
+    L('orchidee', 'Orchidée', "l'orchidée", 'Phalaenopsis', 'Tombante', 'flowering'),
+    L('glycine', 'Glycine', 'la glycine', 'Wisteria sinensis', 'Liane', 'lavender'),
+    L('ficus', 'Figuier lyre', 'le figuier lyre', 'Ficus lyrata', 'Géante', 'ficus'),
+    L('strelitzia', 'Oiseau de paradis', "l'oiseau de paradis", 'Strelitzia reginae', 'Géante', 'broadleaf'),
+  ],
+  perso: [
+    L('marguerite', 'Marguerite', 'la marguerite', 'Leucanthemum vulgare', 'Massif', 'wildflowers'),
+    L('coquelicot', 'Coquelicot', 'le coquelicot', 'Papaver rhoeas', 'Massif', 'wildflowers'),
+    L('bleuet', 'Bleuet', 'le bleuet', 'Centaurea cyanus', 'Massif', 'violet'),
+    L('graminees', 'Graminées', 'les graminées', 'Pennisetum alopecuroides', 'Prairie', 'tallgrass'),
+    L('cosmos', 'Cosmos', 'le cosmos', 'Cosmos bipinnatus', 'Massif', 'flowering'),
+    L('chevrefeuille', 'Chèvrefeuille', 'le chèvrefeuille', 'Lonicera periclymenum', 'Liane', 'flowering'),
+    L('geranium', 'Géranium-lierre', 'le géranium-lierre', 'Pelargonium peltatum', 'Tombante', 'geranium'),
+    L('hortensia', 'Hortensia', "l'hortensia", 'Hydrangea macrophylla', 'Géante', 'flowering'),
+    L('fuchsia', 'Fuchsia', 'le fuchsia', 'Fuchsia magellanica', 'Tombante', 'geranium'),
+    L('rosier', 'Rosier grimpant', 'le rosier grimpant', 'Rosa', 'Liane', 'flowering'),
+    L('figuier', 'Figuier', 'le figuier', 'Ficus carica', 'Géante', 'ficus'),
+    L('olivier', 'Olivier', "l'olivier", 'Olea europaea', 'Géante', 'ficus'),
+  ],
+};
+// Conditions de déblocage, par rang dans la serre : départ, plantes en pleine terre (dans cette serre), ou graines.
+export const UNLOCK = [{ start: 1 }, { start: 1 }, { ground: 1 }, { seeds: 5 }, { ground: 2 }, { seeds: 8 }, { ground: 3 }, { seeds: 12 }, { ground: 5 }, { seeds: 15 }, { ground: 7 }, { seeds: 25 }];
+// La plante de chaque pont : elle reçoit seule ce que le pont coche.
+export const BRIDGE_SPECIES = { deonto: 'ficus', revision: 'lavande', memoire: 'iris' };
+const ALL = Object.entries(SPECIES).flatMap(([house, l]) => l.map((s, i) => ({ ...s, house, rank: i })));
+export const speciesById = (id) => ALL.find((s) => s.id === id) || null;
+
+// ---------- Lecture ----------
+const G = (S) => S.garden;
+export const isNew = (p) => p && p.kind === 'plant' && p.v === 2;
+export const waterCount = (p) => (Array.isArray(p.waters) ? p.waters.length : 0);
+export const lastWater = (p) => (Array.isArray(p.waters) && p.waters.length ? p.waters.map((w) => w.day).sort().pop() : p.day);
+export const plantsOf = (S, house) => (G(S).plants || []).filter((p) => isNew(p) && catId(p.cat) === house);
+export const cansOf = (S, house) => (G(S).cans || []).filter((c) => !house || catId(c.cat) === house).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+export const seedsOf = (S) => (G(S).seeds || []).reduce((a, x) => a + (Number(x.n) || 0), 0);
+export const groundCount = (S, house) => plantsOf(S, house).filter((p) => waterCount(p) >= GROUND).length;
+// Croissance affichée (0..1) d'une plante nouvelle : suit le stade, et continue un peu au-delà de la pleine terre.
+export const growthOf = (p) => { const n = waterCount(p); if (n <= 0) return 0.08; if (n >= GROUND) return Math.min(1, 0.86 + (n - GROUND) * 0.007); return [0.16, 0.3, 0.52, 0.72][stageOf(n)] + 0.1 * Math.min(1, (n - STAGES[stageOf(n)][1]) / Math.max(1, (STAGES[stageOf(n) + 1] || [0, GROUND])[1] - STAGES[stageOf(n)][1])); };
+
+// Espèces d'une serre et leur état : ouverte, à troquer (graines), ou en attente (plantes en pleine terre).
+export function catalogue(S, house) {
+  const g = groundCount(S, house), seeds = seedsOf(S), un = G(S).unlocked || {};
+  return SPECIES[house].map((s, i) => {
+    const u = UNLOCK[i], open = !!(u.start || (u.ground && g >= u.ground) || un[s.id]);
+    const cond = u.start ? 'Au départ' : u.ground ? `${u.ground} plante${u.ground > 1 ? 's' : ''} en pleine terre` : `${u.seeds} graines`;
+    const best = plantsOf(S, house).filter((p) => p.sp === s.id).reduce((a, p) => Math.max(a, waterCount(p)), 0);
+    return { ...s, house, open, cond, price: u.seeds || 0, canTrade: !open && !!u.seeds && seeds >= u.seeds, best };
+  });
+}
+
+// ---------- Écriture ----------
+function ensure(S) { const g = G(S); if (!Array.isArray(g.cans)) g.cans = []; if (!Array.isArray(g.seeds)) g.seeds = []; if (!g.unlocked || typeof g.unlocked !== 'object') g.unlocked = {}; if (!Array.isArray(g.plants)) g.plants = []; return g; }
+export function addSeeds(S, n, why, day) { if (!n) return; ensure(S).seeds.push({ id: uid(), n, why, day }); }
+
+// Passe d'un nombre d'arrosages à un autre : stades franchis, graines gagnées, espèces débloquées par la pleine terre.
+function grew(S, p, before, openBefore, day) {
+  const ev = [], house = catId(p.cat), s0 = stageOf(before), s1 = stageOf(waterCount(p));
+  if (s1 <= s0) return ev;
+  for (let s = s0 + 1; s <= s1; s++) {
+    if (s <= 0) continue; // la graine elle-même
+    if (s === STAGES.length - 1) { addSeeds(S, 3, 'pleine terre', day); ev.push({ kind: 'ground', plant: p, seeds: 3 }); }
+    else { addSeeds(S, 1, 'taille', day); ev.push({ kind: 'stage', plant: p, stage: STAGES[s][0], seeds: 1 }); }
+  }
+  for (const x of catalogue(S, house)) if (x.open && !openBefore.includes(x.id)) ev.push({ kind: 'unlock', species: x });
+  return ev;
+}
+function feed(S, p, can, day) { const before = waterCount(p), open = catalogue(S, catId(p.cat)).filter((x) => x.open).map((x) => x.id); if (!Array.isArray(p.waters)) p.waters = []; p.waters.push({ id: can.id, day, t: can.title || null }); if (p.dormant) delete p.dormant; return grew(S, p, before, open, day); }
+
+// La plante d'un pont (créée au besoin, sans condition de déblocage).
+function bridgePlant(S, src, cat, day) {
+  const g = ensure(S); let p = g.plants.find((x) => isNew(x) && x.src === src);
+  if (!p) { const house = catId(cat), sp = BRIDGE_SPECIES[src] && speciesById(BRIDGE_SPECIES[src]).house === house ? BRIDGE_SPECIES[src] : SPECIES[house][0].id; p = { id: `b-${src}`, kind: 'plant', v: 2, cat: house, sp, day, seed: seedNum(), src, waters: [] }; g.plants.push(p); }
+  return p;
+}
+
+// Une chose faite : un arrosoir plein (ou, venue d'un pont, versé tout de suite sur la plante du pont).
+// → { can } ou { plant, events }
+export function addCan(S, { cat, day, title = null, thing = null, listId = null, src = null, id = null }) {
+  const g = ensure(S), can = { id: id || uid(), cat: catId(cat || 'perso'), day, title: title ? String(title).slice(0, 120) : null };
+  if (thing) can.thing = thing; if (listId) can.listId = listId;
+  if (g.cans.some((c) => c.id === can.id) || g.plants.some((p) => Array.isArray(p.waters) && p.waters.some((w) => w.id === can.id))) return { dup: true };
+  if (src) { can.src = src; const p = bridgePlant(S, src, can.cat, day); return { plant: p, events: feed(S, p, can, day) }; }
+  g.cans.push(can); return { can };
+}
+// Retirer l'arrosoir d'une chose décochée, s'il n'a pas encore été versé.
+export function dropCan(S, { thing = null, listId = null }) {
+  const g = ensure(S), i = g.cans.findIndex((c) => (thing && c.thing === thing) || (listId && c.listId === listId));
+  if (i < 0) return false; g.cans.splice(i, 1); return true;
+}
+
+// Verser n arrosoirs de la serre de la plante (les plus anciens d'abord). → { poured, events }
+export function pour(S, plantId, day, n = 1) {
+  const g = ensure(S), p = g.plants.find((x) => x.id === plantId); if (!isNew(p)) return { poured: 0, events: [] };
+  const house = catId(p.cat), take = cansOf(S, house).slice(0, n), events = [];
+  for (const c of take) { g.cans.splice(g.cans.indexOf(c), 1); events.push(...feed(S, p, c, day)); }
+  return { poured: take.length, events };
+}
+
+// Planter une graine : il faut un arrosoir plein de la serre et une espèce ouverte. → { plant, events } ou { error }
+export function sow(S, house, spId, day) {
+  const g = ensure(S), sp = catalogue(S, house).find((x) => x.id === spId);
+  if (!sp) return { error: 'espèce' }; if (!sp.open) return { error: 'fermée' };
+  const can = cansOf(S, house)[0]; if (!can) return { error: 'arrosoir' };
+  const p = { id: uid(), kind: 'plant', v: 2, cat: house, sp: spId, day, seed: seedNum(), waters: [] }; g.plants.push(p);
+  g.cans.splice(g.cans.indexOf(can), 1); const events = feed(S, p, can, day);
+  return { plant: p, events };
+}
+
+// Troc : ouvrir une espèce contre des graines.
+export function trade(S, spId, day) {
+  const s = speciesById(spId); if (!s) return { error: 'espèce' };
+  const c = catalogue(S, s.house).find((x) => x.id === spId); if (c.open) return { error: 'ouverte' }; if (!c.canTrade) return { error: 'graines' };
+  addSeeds(S, -c.price, `troc:${spId}`, day); ensure(S).unlocked[spId] = day; return { ok: true, species: c };
+}
+
+// Dormance : trois semaines sans arrosage, Ernest propose de ranger la plante à la cabane (sauf si on l'a fixée).
+const diff = (a, b) => Math.round((Date.UTC(...b.split('-').map((x, i) => Number(x) - (i === 1 ? 1 : 0))) - Date.UTC(...a.split('-').map((x, i) => Number(x) - (i === 1 ? 1 : 0)))) / 86400000);
+export const resting = (S, house) => plantsOf(S, house).filter((p) => p.dormant);
+export const toRest = (S, today) => (G(S).plants || []).filter((p) => isNew(p) && !p.fixed && !p.dormant && !p.src && diff(lastWater(p), today) >= DORMANT_DAYS);
+export function rest(S, id, day) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; p.dormant = day; return true; }
+export function wake(S, id) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p) || !p.dormant) return false; delete p.dormant; return true; }
+export function fix(S, id, on = true) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; if (on) p.fixed = true; else delete p.fixed; return true; }
+
+// Ce qui a nourri une plante : les titres des choses, avec leur nombre, du plus fréquent au plus rare.
+export function fedBy(p) { const m = new Map(); for (const w of p.waters || []) { const t = w.t || 'Sans titre'; m.set(t, (m.get(t) || 0) + 1); } return [...m.entries()].sort((a, b) => b[1] - a[1]); }
+
+// ---------- Migration : les anciens pots (une plante par chose faite) deviennent des arrosoirs à verser ----------
+// Les pots venus d'un pont nourrissent la plante de ce pont. Les identifiants sont tirés des pots : deux appareils
+// qui migrent chacun de leur côté produisent les mêmes arrosoirs, la synchronisation les réunit sans doublon.
+export function migrateGarden(S) {
+  const g = ensure(S); g.v = 2; if (!g.plants.some((p) => p && p.kind === 'plant' && p.v !== 2)) return 0;
+  const things = new Map(); for (const d of Object.values(S.days || {})) for (const t of (d && d.things) || []) things.set(t.id, t);
+  const list = new Map((S.list || []).map((l) => [l.id, l]));
+  let n = 0; const keep = [];
+  for (const p of g.plants) {
+    if (!p || p.kind !== 'plant' || p.v === 2) { keep.push(p); continue; }
+    const t = p.thing && things.get(p.thing), l = p.listId && list.get(p.listId);
+    const can = { id: `m${p.id}`, cat: catId(p.cat), day: p.day, title: t ? t.title : l ? l.text : null };
+    if (p.thing) can.thing = p.thing; if (p.listId) can.listId = p.listId;
+    g.plants = keep; // bridgePlant cherche dans g.plants
+    if (p.src) { const bp = bridgePlant(S, p.src, can.cat, p.day); can.src = p.src; if (!(bp.waters || []).some((w) => w.id === can.id)) feed(S, bp, can, p.day); }
+    else g.cans.push(can);
+    n++;
+  }
+  g.plants = keep; g.migrated = { n: ((g.migrated && g.migrated.n) || 0) + n, at: new Date().toISOString().slice(0, 10), seen: false };
+  return n;
+}

@@ -2,6 +2,7 @@
 // Rien n'est jamais écrasé sans copie : texte illisible conservé, sauvegarde automatique (au plus une toutes
 // les 3 h), état précédent gardé avant un import ou un effacement. Repris de Dec-Deonto.
 import { migrateCats } from './model.js';
+import { migrateGarden } from './flore.js';
 const KEY = 'ernest.state.v1';
 const BACKUP_KEY = 'ernest.state.backup';
 const BACKUP_T_KEY = 'ernest.state.backup.t';
@@ -22,7 +23,7 @@ export const defaultState = () => ({
   series: [],   // { id, title, cat, est, slot, days: [0..6], start, active }
   seriesMade: {}, // 'serieId|YYYY-MM-DD' -> 1 (déjà placée ce jour-là)
   weeks: {},    // 'YYYY-Www' -> { reviewedAt, note }
-  garden: { plants: [], objects: [] }, // plants : { id, cat, day, seed, kind }
+  garden: { plants: [], objects: [], cans: [], seeds: [], unlocked: {}, v: 2 }, // js/flore.js : plantes, arrosoirs, graines
   cards: { seen: {}, feuilleton: 0, lastLong: null, log: [] }, // log : [{ id, at, ctx }]
   ernest: { lastOpen: null, said: {}, firstSeq: 0, lastGreetDay: null, lastGreetCtx: null },
   bridges: {},  // src -> { last, days: { day: [titles] } }
@@ -39,7 +40,7 @@ export function hydrate(s) {
   if (isObj(s)) migrateCats(s); // six anciennes catégories → trois serres
   if (isObj(s) && isObj(s.garden) && Array.isArray(s.garden.plants)) for (const p of s.garden.plants) if (p && p.kind === 'moss') { p.kind = 'plant'; p.list = true; } // entrées de Liste : de vraies plantes (avant : de la mousse)
   const d = defaultState();
-  return {
+  const out = {
     ...d, ...s,
     settings: { ...d.settings, ...(isObj(s.settings) ? s.settings : {}), minimums: { ...d.settings.minimums, ...((s.settings || {}).minimums || {}) } },
     days: isObj(s.days) ? s.days : {},
@@ -50,6 +51,8 @@ export function hydrate(s) {
     ernest: { ...d.ernest, ...(isObj(s.ernest) ? s.ernest : {}) },
     bridges: isObj(s.bridges) ? s.bridges : {}, milestones: isObj(s.milestones) ? s.milestones : {},
   };
+  migrateGarden(out); // anciens pots → arrosoirs (une fois)
+  return out;
 }
 
 function parseState(raw) {

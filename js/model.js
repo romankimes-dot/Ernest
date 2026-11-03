@@ -1,5 +1,6 @@
 // Fonctions pures : dates, semaines, estimations, comptes, choix des répliques et des cartes.
 // Aucune dépendance au DOM ni au stockage ; testées dans tests/model.test.js.
+import { speciesById, growthOf } from './flore.js';
 
 // Trois catégories, une par serre. Les anciennes (révision, corps…) sont converties à la lecture.
 export const CATS = [
@@ -16,7 +17,8 @@ export const FLORA = {
   bienetre: [['succulent', 'la plante grasse'], ['cactus', 'le cactus'], ['thyme', 'le thym'], ['basil', 'le basilic'], ['rosemary', 'le romarin'], ['mossy', 'la mousse']],
   perso: [['wildflowers', 'les fleurs des champs'], ['wildflowers', 'les fleurs des champs'], ['geranium', 'le géranium'], ['violet', 'la violette'], ['geranium', 'le géranium']],
 };
-export const floraOf = (p) => { const l = FLORA[catId(p.cat)]; const h = Math.imul((p.seed >>> 0) ^ 0x9e3779b9, 0x85ebca6b) >>> 0; return l[h % l.length]; };
+// Plantes nouvelles (js/flore.js) : leur espèce donne le dessin et le nom.
+export const floraOf = (p) => { if (p && p.v === 2 && p.sp) { const s = speciesById(p.sp); if (s) return [s.look, s.art]; } const l = FLORA[catId(p.cat)]; const h = Math.imul((p.seed >>> 0) ^ 0x9e3779b9, 0x85ebca6b) >>> 0; return l[h % l.length]; };
 // Convertit un état ancien (six catégories) vers les trois serres. Sans effet sur un état déjà converti.
 export function migrateCats(state) {
   const fix = (o) => { if (o && o.cat !== undefined && o.cat !== null && !CATS.some((x) => x.id === o.cat)) o.cat = catId(o.cat); };
@@ -236,6 +238,7 @@ export function pickCard(cards, seen, rarete, families) {
 
 // Plantes : une par chose faite (kind 'plant'), une mousse par entrée de liste (kind 'moss').
 export function growth(plant, state, today) {
+  if (plant && plant.v === 2) return growthOf(plant);
   // Nombre de jours actifs depuis la plantation (jour inclus), plafonné à 7 : 0..1
   let n = 0;
   for (let i = 0; i <= 60; i++) {

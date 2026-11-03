@@ -370,3 +370,12 @@ body.serre-open .toast{z-index:41!important}
 .ms-row.done .check{background:var(--amber);border-color:var(--amber);color:#1b1408}
 .ms-row.done > span:last-child{color:var(--fg2);text-decoration:line-through}
 .hs-btn{padding:8px 12px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:var(--bg3);color:var(--fg);font-size:13px;white-space:nowrap}
+/* Flore : plantes d'une serre, espèces à semer, stades */
+.fl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.fl-plant,.fl-sp{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);font:inherit;cursor:pointer}
+.fl-sp.locked{opacity:.55}
+.fl-sp:disabled{cursor:default}
+.fl-dots{display:inline-flex;gap:4px}
+.fl-dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--fg2);display:block}
+.fl-dot.on{background:#5fae6d;border-color:#5fae6d}
+.linkish{background:none;border:0;padding:0;color:var(--amber);font:inherit;text-decoration:underline;cursor:pointer}

@@ -47,3 +47,8 @@
 - Travail : pensée, lavande, iris, calathéa, sansevière, palmier kentia, figuier lyre, oiseau de paradis, philodendron, glycine, pothos, orchidée. Décors : arrosoir, étiquettes, banc de lecture, lampes de bibliothèque, cadran solaire, horloge de gare.
 - Vie perso : marguerite, coquelicot, bleuet, cosmos, graminées, hortensia, figuier, olivier, chèvrefeuille, rosier grimpant, géranium-lierre, fuchsia. Décors : arrosoir, étiquettes peintes, banc, guirlande lumineuse, vasque aux oiseaux, carillon.
 - Photophores au sol le soir et la nuit, dans l'allée et sous les massifs.
+
+## Mécanique dans l'app (`js/flore.js`)
+- Fait : arrosoirs, semis, versement (un ou tous), stades et événements, graines (taille, pleine terre, journée pleine, graines dorées), espèces ouvertes par la pleine terre ou troquées, plantes des ponts, dormance proposée, plante fixée, ranger et ressortir, migration des anciens pots.
+- Rendu : les plantes vont dans les petites serres actuelles, avec le dessin de leur espèce le plus proche et une taille selon le stade. Le rendu de botaniste dans l'app reste à faire.
+- À venir : la cabane (étagère à bonsaïs, réserve, livre), le livre (catalogue, herbier, achèvements), le troc des décors.

@@ -93,7 +93,7 @@ test('plan déposé par Deonto : ajouté une fois, jamais remis après suppressi
   const r = await d.sync();
   assert.deepEqual(r.bridged.map((x) => [x.src, x.things]), [['deonto', 2]]);
   assert.equal(d.S.days[T].things.length, 2);
-  assert.equal(d.S.garden.plants.filter((p) => p.src === 'deonto').length, 2);
+  assert.equal(d.S.garden.plants.filter((p) => p.src === 'deonto').length, 1); assert.equal(d.S.garden.plants.find((p) => p.src === 'deonto').waters.length, 2);
   assert.equal((await d.sync()).bridged.length, 0, 'même plan : rien de plus');
   d.edit((s) => { s.days[T].things = s.days[T].things.filter((t) => t.title !== 'Déonto · Schéma'); });
   kv.set('pont:deonto', { value: JSON.stringify({ ...pont, things: [...pont.things, { title: 'Déonto · Jeu', day: T }] }), rev: 'p2' });

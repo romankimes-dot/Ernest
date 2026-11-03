@@ -71,7 +71,7 @@ test('hydratation tolérante', () => {
 test('trois catégories : les six anciennes converties à la lecture', () => {
   const h = hydrate({ days: { '2026-11-02': { things: [{ id: 'a', title: 'x', cat: 'revision' }, { id: 'b', title: 'y', cat: 'cuisine' }] } }, goals: [{ id: 'g', cat: 'boulot', milestones: [] }], garden: { plants: [{ id: 'p', cat: 'esprit', seed: 1, kind: 'plant' }] }, settings: { minimums: { corps: 4, esprit: 3 } } });
   assert.deepEqual(h.days['2026-11-02'].things.map((t) => t.cat), ['travail', 'bienetre']);
-  assert.equal(h.goals[0].cat, 'travail'); assert.equal(h.garden.plants[0].cat, 'bienetre'); assert.deepEqual(h.settings.minimums, { bienetre: 4 });
+  assert.equal(h.goals[0].cat, 'travail'); assert.equal(h.garden.cans[0].cat, 'bienetre'); assert.deepEqual(h.settings.minimums, { bienetre: 4 });
   assert.equal(catOf('corps').id, 'bienetre'); assert.equal(catOf('inconnue').id, 'perso'); assert.equal(CATS.length, 3);
 });
 
@@ -145,5 +145,5 @@ test('équilibre des serres : la Liste compte pour Vie perso, une petite chose p
   s.days['2026-11-04'] = { things: [{ id: 'd', title: 'Rendre le colis', cat: 'perso', done: false }] };
   assert.ok(!smallProposals(s, '2026-11-04').some((o) => o.title === 'Rendre le colis')); // déjà posée
   const h = hydrate({ ...defaultState(), garden: { plants: [{ id: 'm', cat: 'perso', day: '2026-11-01', seed: 1, kind: 'moss' }], objects: [] } });
-  assert.equal(h.garden.plants[0].kind, 'plant'); assert.equal(h.garden.plants[0].list, true);
+  assert.equal(h.garden.plants.length, 0); assert.equal(h.garden.cans[0].cat, 'perso'); // ancien pot → arrosoir
 });

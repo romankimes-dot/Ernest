@@ -46,7 +46,7 @@ test('tâche faite dans Deonto : cochée dans Ernest, avec sa plante, jamais dé
   assert.equal(r.done, 2); assert.equal(r.things, 1);
   const [sh, jeu, lire] = s.days[day].things;
   assert.ok(sh.done && sh.doneAt); assert.equal(jeu.done, false); assert.ok(lire.done);
-  assert.equal(s.garden.plants.length, 2);
+  assert.equal(s.garden.plants.length, 1); assert.equal(s.garden.plants[0].waters.length, 2); // la plante du pont, deux arrosages
   assert.equal(merge(s, { v: 1, src: 'deonto', things: [{ title: 'Shorts', day, done: true }], goals: [] }, day).done, 0, 'une seule fois');
   merge(s, { v: 1, src: 'deonto', things: [{ title: 'Shorts', day, done: false }], goals: [] }, day);
   assert.equal(sh.done, true);
