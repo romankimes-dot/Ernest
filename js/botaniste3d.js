@@ -476,10 +476,15 @@ let LIVE = null;
 const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 export function setData(data) {
   LIVE = { decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
-  const slots = Object.fromEntries(Object.entries(SLOTS_T).map(([k, v]) => [k, v.slice()])), items = []; let bench = 0;
-  for (const p of (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n)) {
-    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id };
-    if (p.n >= 20 && slots[s.type] && slots[s.type].length) { const [x, z] = slots[s.type].shift(); Object.assign(it, { x, z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
+  // emplacements : d'abord ceux choisis (place), puis les autres dans l'ordre, la plante la plus arrosée d'abord
+  const taken = {}, items = []; let bench = 0; LIVE.assign = {};
+  const list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), typeOf = (p) => (SP[p.sp].type === 'Prairie' ? 'Rocaille' : SP[p.sp].type);
+  for (const p of list) { const T = typeOf(p); if (p.n >= 20 && Number.isInteger(p.place) && SLOTS_T[T] && p.place >= 0 && p.place < SLOTS_T[T].length && !(taken[T] || {})[p.place]) { (taken[T] = taken[T] || {})[p.place] = p.id; LIVE.assign[p.id] = p.place; } }
+  for (const p of list) { const T = typeOf(p); if (p.n < 20 || LIVE.assign[p.id] !== undefined || !SLOTS_T[T]) continue; const k = SLOTS_T[T].findIndex((_, j) => !(taken[T] || {})[j]); if (k >= 0) { (taken[T] = taken[T] || {})[k] = p.id; LIVE.assign[p.id] = k; } }
+  LIVE.taken = taken;
+  for (const p of list) {
+    const s = SP[p.sp], it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id }, k = LIVE.assign[p.id];
+    if (k !== undefined) { const [x, z] = SLOTS_T[typeOf(p)][k]; Object.assign(it, { x, z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
     else if (bench < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: bench++, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
     else continue;
     items.push(it);
@@ -487,6 +492,20 @@ export function setData(data) {
   plants.length = 0; for (const it of items) addPlant(it); for (const pl of plants) { pl.mode = pl.it.mode; pl.g = pl.it.g; }
   buildPools(); buildLabels(); renderAll(); if (data.time) setTime(data.time);
 }
+// Changer une plante de place : les emplacements de son type s'allument (l'actuel en ambre), on en touche un.
+let slotMarks = null;
+const slotPos = (T, x, z) => (T === 'Liane' ? V(x * (HALL.w - 0.45), 0.05, z) : T === 'Tombante' ? V(x, 2.6, z) : V(x, 0.24, z));
+export function showSlots(pid, sp) {
+  hideSlots(); if (!LIVE || !SP[sp]) return 0; const T = SP[sp].type === 'Prairie' ? 'Rocaille' : SP[sp].type, list = SLOTS_T[T] || []; slotMarks = new THREE.Group(); scene.add(slotMarks);
+  const ringG = new THREE.TorusGeometry(T === 'Géante' ? 0.55 : 0.24, 0.035, 8, 32);
+  const hitG = new THREE.CircleGeometry(T === 'Géante' ? 0.7 : 0.38, 16), hitM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+  list.forEach(([x, z], j) => { const who = (LIVE.taken[T] || {})[j], mine = who === pid, m = new THREE.Mesh(ringG, new THREE.MeshBasicMaterial({ color: mine ? 0xf2b23d : who ? 0x9fc3e8 : 0x8fe0a0, transparent: true, opacity: 0.9, depthTest: false }));
+    m.rotation.x = Math.PI / 2; m.position.copy(slotPos(T, x, z)); m.renderOrder = 9; m.userData.pick = { kind: 'slot', idx: j, mine, who: who || null }; slotMarks.add(m);
+    const hit = new THREE.Mesh(hitG, hitM); hit.position.z = 0.0; hit.userData.pick = m.userData.pick; m.add(hit); }); // disque invisible : une cible assez grande pour le doigt
+  return list.length;
+}
+export function hideSlots() { if (slotMarks) { scene.remove(slotMarks); slotMarks = null; } }
+export const assignOf = (pid) => (LIVE && LIVE.assign ? LIVE.assign[pid] : undefined);
 const hasDecor = (id) => (LIVE ? LIVE.decors.has(id) : P >= (DECORS.find((d) => d.id === id) || { u: 9 }).u);
 function renderAll() {
   for (const k in pools) pools[k].n = 0;
@@ -660,6 +679,7 @@ export function mount(canvas, opts = {}) {
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
   const onDown = (e) => { down = [e.clientX, e.clientY]; };
   const onUp = (e) => { if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
+    if (slotMarks) { const sh = ray.intersectObjects(slotMarks.children, true)[0]; if (sh) { opts.onPick(sh.object.userData.pick); return; } }
     const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
     for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } } };
   canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
@@ -671,6 +691,7 @@ export function mount(canvas, opts = {}) {
     const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D + 1.5, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
     controls.target.x = Math.max(-HALL.w + 0.3, Math.min(HALL.w - 0.3, controls.target.x)); controls.target.z = Math.max(-D + 0.3, Math.min(D, controls.target.z)); controls.target.y = Math.max(0.2, Math.min(4.5, controls.target.y));
     const t = now / 1000;
+    if (slotMarks) slotMarks.children.forEach((m, i) => m.scale.setScalar(1 + Math.sin(t * 4 + i) * 0.08));
     if (water) water.material.color.setHSL(0.5, 0.3, 0.32 + Math.sin(t * 1.3) * 0.02);
     if (decorObjs.horloge && decorObjs.horloge.visible) { const d = new Date(), [hh, mh] = decorObjs.horloge.userData.hands; mh.rotation.z = -(d.getMinutes() / 60) * Math.PI * 2; hh.rotation.z = -((d.getHours() % 12) / 12 + d.getMinutes() / 720) * Math.PI * 2; }
     if (chime && decorObjs.carillon && decorObjs.carillon.visible) chime.forEach((p, i) => { p.rotation.z = Math.sin(t * 1.1 + i) * 0.08; p.rotation.x = Math.cos(t * 0.9 + i * 2) * 0.06; });
@@ -678,7 +699,7 @@ export function mount(canvas, opts = {}) {
     ernest.update(dt, { lantern: timeKey === 'night', lanternK: 2.0, groundY: 0, still: true });
     renderer.render(scene, camera);
   });
-  return { setProgress, setTime, setData, camera, controls, renderer, scene,
+  return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, camera, controls, renderer, scene,
     dispose() { renderer.setAnimationLoop(null); window.removeEventListener('resize', resize); canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp); controls.dispose(); renderer.dispose(); try { renderer.forceContextLoss(); } catch { /* ignore */ } } };
 }
 export const themeName = (id) => (THEMES[id] || THEMES.bienetre).nom;

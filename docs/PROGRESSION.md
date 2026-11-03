@@ -64,7 +64,8 @@
 - Placement automatique :
   - une plante en pleine terre prend l'emplacement de son type (massif, rocaille, géante, liane, suspension), la plus arrosée d'abord ;
   - les autres restent en pot sur l'établi, près de la porte.
-- Choisir soi-même l'emplacement reste à faire.
+- Changer de place : la fiche d'une plante en pleine terre propose « Changer de place » quand on est dans la serre. Les emplacements de son type s'allument : vert s'il est libre, bleu s'il est occupé (les deux plantes échangent), ambre pour la place actuelle. La place choisie est gardée ; les autres plantes se rangent autour.
+- Dehors, chaque serre du village a l'architecture de son intérieur : voûte ronde en fonte verte, briques et épis en boule (Bien-être) ; ogive en fonte noire avec tirants, soubassement de pierre sombre, allée en damier et flèches de faîtage (Travail) ; deux pans en bois blanc, planches peintes et jardinières fleuries (Vie perso).
 - Toucher une plante ouvre sa fiche pour l'arroser. Les décors troqués apparaissent.
 - Trois thèmes, trois architectures :
   - **Bien-être, l'herboristerie** : voûte ronde en fonte verte, briques, dalles de pierre, bouquets qui sèchent, pile de pots.

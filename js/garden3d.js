@@ -186,6 +186,16 @@ const toWorld = (h, x, y, z) => V(h.x + x * h.cos + z * h.sin, y, h.z - x * h.si
 const toLocal = (h, x, z) => { const dx = x - h.x, dz = z - h.z; return [dx * h.cos - dz * h.sin, dx * h.sin + dz * h.cos]; };
 const inHouse = (x, z, m = 0) => HOUSES.some((h) => { const [lx, lz] = toLocal(h, x, z); return Math.abs(lx) < HW + m && Math.abs(lz) < HD + m; });
 const roofY = (x) => HH + (HR - HH) * (1 - Math.abs(x) / HW);
+// Chaque serre a dehors l'architecture de son intérieur (js/botaniste3d.js) : voûte ronde, ogive ou deux pans,
+// la couleur de son ossature, son soubassement et son sol.
+const STYLE = {
+  bienetre: { roof: 'vault', top: 3.75, frame: '#3a5a48', base: '#9a5038', tiles: ['#b9b2a0'], beam: 0.055 },
+  travail: { roof: 'ogive', top: 4.4, frame: '#2a2e33', base: '#57524c', tiles: ['#ece6d8', '#2c2c30'], beam: 0.05 },
+  perso: { roof: 'gable', top: HR, frame: '#ffffff', base: '#f2ede0', tiles: ['#cfc6b4'], beam: 0.075 },
+};
+const roofOf = (h, x) => { const st = STYLE[h.id], u = Math.min(1, Math.abs(x) / HW); if (st.roof === 'gable') return HH + (st.top - HH) * (1 - u);
+  const k = st.roof === 'ogive' ? 0.4 : 0; return HH + (st.top - HH) * Math.sqrt(Math.max(0, (1 + k) ** 2 - (u + k) ** 2)) / Math.sqrt(1 + 2 * k); };
+const roofPts = (h) => { const n = STYLE[h.id].roof === 'gable' ? 1 : 10, out = []; for (let i = 0; i <= n; i++) { const x = HW * (1 - i / n); out.push([x, roofOf(h, x)]); } return out; };
 // Fusion de géométries (une seule passe de dessin pour des tiges, des chaînes, des vitrages…)
 function mergeGeos(parts) {
   const P = [], N = [], U = [];
@@ -220,7 +230,8 @@ const ibDef = (k, geo, mat, cast = true, receive = true) => IB.set(k, { geo, mat
 const ibPut = (k, base, pos, quat, scl, color) => { m4.compose(pos, quat, scl); IB.get(k).items.push([base ? base.clone().multiply(m4) : m4.clone(), color]); };
 const qY = (a) => (a ? new THREE.Quaternion().setFromAxisAngle(UP, a) : Q0);
 const boxAt = (k, base, x, y, z, sx, sy, sz, ry = 0, color) => ibPut(k, base, V(x, y, z), qY(ry), V(sx, sy, sz), color);
-const beam = (base, a, b, t = 0.06) => { const d = new THREE.Vector3().subVectors(b, a); ibPut('frame', base, a.clone().addScaledVector(d, 0.5), new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(t, d.length(), t)); };
+let frameCol = null; // couleur de l'ossature de la serre en cours de construction
+const beam = (base, a, b, t = 0.06) => { const d = new THREE.Vector3().subVectors(b, a); ibPut('frame', base, a.clone().addScaledVector(d, 0.5), new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize()), V(t, d.length(), t), frameCol); };
 function ibFlush(parent) {
   for (const b of IB.values()) {
     const im = new THREE.InstancedMesh(b.geo, b.mat, b.items.length), hasCol = b.items.some(([, c]) => c);
@@ -231,24 +242,23 @@ function ibFlush(parent) {
 }
 {
   const box1 = new THREE.BoxGeometry(1, 1, 1), floorGeo = new THREE.PlaneGeometry(HW * 2, HD * 2); floorGeo.rotateX(-Math.PI / 2);
-  ibDef('frame', box1, M.frame); ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0x6b3f2a, roughness: 1 }));
+  ibDef('frame', box1, M.frame); ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
   ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, metalness: 0 })); // portes peintes : couleur de la serre (par instance)
   ibDef('cloth', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), false, true); // chemins de table
   ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
 }
-// Vitrages d'une serre, fusionnés : murs, toit, pignon arrière plein, pignon avant ouvert sur la porte.
-const glassGeo = (() => {
+// Vitrages d'une serre, fusionnés : murs, toit (sa coupe extrudée), pignon arrière plein, pignon avant ouvert sur la porte.
+const glassGeoOf = (h) => {
   const parts = [], mk = (g, x, y, z, rx = 0, ry = 0, rz = 0) => parts.push([g, new THREE.Matrix4().compose(V(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), V(1, 1, 1))]);
-  const slope = Math.hypot(HW, HR - HH), ang = Math.atan2(HR - HH, HW);
-  for (const s of [-1, 1]) {
-    mk(new THREE.PlaneGeometry(HD * 2, HH - 0.5), s * HW, 0.5 + (HH - 0.5) / 2, 0, 0, Math.PI / 2, 0);
-    const rg = new THREE.PlaneGeometry(slope, HD * 2); rg.rotateX(-Math.PI / 2); mk(rg, s * HW / 2, (HH + HR) / 2, 0, 0, 0, -s * ang);
-  }
-  const v2 = (x, y) => new THREE.Vector2(x, y);
-  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), v2(HW, 0.5), v2(HW, HH), v2(0, HR), v2(-HW, HH)])), 0, 0, -HD);
-  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), v2(-0.6, 0.5), v2(-0.6, 2.1), v2(0.6, 2.1), v2(0.6, 0.5), v2(HW, 0.5), v2(HW, HH), v2(0, HR), v2(-HW, HH)])), 0, 0, HD);
+  for (const s of [-1, 1]) mk(new THREE.PlaneGeometry(HD * 2, HH - 0.5), s * HW, 0.5 + (HH - 0.5) / 2, 0, 0, Math.PI / 2, 0);
+  const pr = roofPts(h), sec = [...pr.map(([x, y]) => [-x, y]), ...pr.slice(0, -1).reverse()], P = [];
+  for (let i = 0; i < sec.length - 1; i++) { const [ax, ay] = sec[i], [bx, by] = sec[i + 1]; P.push(ax, ay, -HD, bx, by, -HD, bx, by, HD, ax, ay, -HD, bx, by, HD, ax, ay, HD); }
+  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); rg.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((P.length / 3) * 2).fill(0), 2)); rg.computeVertexNormals(); parts.push([rg, null]);
+  const v2 = (x, y) => new THREE.Vector2(x, y), gable = sec.map(([x, y]) => v2(x, y));
+  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), ...gable, v2(HW, 0.5)])), 0, 0, -HD);
+  mk(new THREE.ShapeGeometry(new THREE.Shape([v2(-HW, 0.5), ...gable, v2(HW, 0.5), v2(0.6, 0.5), v2(0.6, 2.1), v2(-0.6, 2.1), v2(-0.6, 0.5)])), 0, 0, HD);
   return mergeGeos(parts);
-})();
+};
 // Panneau peint : planche de bois, nom en lettres crème (empattements, un peu penchées comme à la main).
 function signTex(text, bg = '#6e4526') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 200; const x = c.getContext('2d'), r = rngOf(text.length * 97);
@@ -266,20 +276,32 @@ const lanterns = [], signMats = [], bulbMats = [];
 for (const h of HOUSES) {
   const g = h.g, W = g.matrixWorld, r = rngOf(3 + HOUSES.indexOf(h) * 31);
   ibPut('floor', W, V(0, 0, 0), Q0, V(1, 1, 1));
-  for (let i = 0; i < 21; i++) { const z = HD - 0.3 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; boxAt('tile', W, x, 0.015, z, 0.52 + r() * 0.1, 0.04, 0.34 + r() * 0.04, (r() - 0.5) * 0.2, vary(col('#b9b2a0'), r, 0.08)); }
-  // soubassement de briques
-  for (const s of [-1, 1]) { boxAt('brick', W, s * HW, 0.25, 0, 0.16, 0.5, HD * 2); boxAt('brick', W, s * (HW + 0.62) / 2, 0.25, HD, HW - 0.62, 0.5, 0.16); }
-  boxAt('brick', W, 0, 0.25, -HD, HW * 2, 0.5, 0.16);
-  // armature : poteaux, chevrons, faîtage, lisses, pignons
-  for (let i = 0; i <= BAYS; i++) { const z = -HD + (i * 2 * HD) / BAYS; for (const s of [-1, 1]) { beam(W, V(s * HW, 0.5, z), V(s * HW, HH, z)); beam(W, V(s * HW, HH, z), V(0, HR, z)); } }
-  for (const s of [-1, 1]) { beam(W, V(s * HW, HH, -HD), V(s * HW, HH, HD)); beam(W, V(s * HW, 1.25, -HD), V(s * HW, 1.25, HD), 0.035); beam(W, V(s * HW * 0.5, (HH + HR) / 2, -HD), V(s * HW * 0.5, (HH + HR) / 2, HD), 0.035); }
-  beam(W, V(0, HR, -HD), V(0, HR, HD), 0.09);
-  for (const x of [-HW / 2, 0, HW / 2]) beam(W, V(x, 0.5, -HD), V(x, roofY(x), -HD), 0.05);
+  const st = STYLE[h.id], top = roofOf(h, 0), pr = roofPts(h), bt = st.beam; frameCol = col(st.frame);
+  for (let i = 0; i < 21; i++) { const z = HD - 0.3 - i * 0.39, x = (i % 2 ? 0.28 : -0.28) + (r() - 0.5) * 0.06; boxAt('tile', W, x, 0.015, z, 0.52 + r() * 0.1, 0.04, 0.34 + r() * 0.04, (r() - 0.5) * 0.2, vary(col(st.tiles[i % st.tiles.length]), r, st.tiles.length > 1 ? 0.02 : 0.08)); }
+  // soubassement : briques (Bien-être), pierre sombre (Travail), planches peintes (Vie perso)
+  const bc = () => vary(col(st.base), r, 0.05);
+  for (const s of [-1, 1]) { boxAt('brick', W, s * HW, 0.25, 0, 0.16, 0.5, HD * 2, 0, bc()); boxAt('brick', W, s * (HW + 0.62) / 2, 0.25, HD, HW - 0.62, 0.5, 0.16, 0, bc()); }
+  boxAt('brick', W, 0, 0.25, -HD, HW * 2, 0.5, 0.16, 0, bc());
+  // armature : poteaux, chevrons qui suivent la coupe, faîtage, lisses, pignons
+  for (let i = 0; i <= BAYS; i++) { const z = -HD + (i * 2 * HD) / BAYS; for (const s of [-1, 1]) { beam(W, V(s * HW, 0.5, z), V(s * HW, HH, z), bt); for (let k = 0; k < pr.length - 1; k++) beam(W, V(s * pr[k][0], pr[k][1], z), V(s * pr[k + 1][0], pr[k + 1][1], z), bt); }
+    if (st.roof === 'ogive') beam(W, V(-HW * 0.62, roofOf(h, HW * 0.62), z), V(HW * 0.62, roofOf(h, HW * 0.62), z), 0.02); }
+  for (const s of [-1, 1]) { beam(W, V(s * HW, HH, -HD), V(s * HW, HH, HD), bt); beam(W, V(s * HW, 1.25, -HD), V(s * HW, 1.25, HD), 0.035); beam(W, V(s * HW * 0.5, roofOf(h, HW * 0.5), -HD), V(s * HW * 0.5, roofOf(h, HW * 0.5), HD), 0.035); }
+  beam(W, V(0, top, -HD), V(0, top, HD), bt * 1.5);
+  for (const x of [-HW / 2, 0, HW / 2]) beam(W, V(x, 0.5, -HD), V(x, roofOf(h, x), -HD), 0.05);
   beam(W, V(-HW, 1.25, -HD), V(HW, 1.25, -HD), 0.035);
-  for (const x of [-HW / 2, HW / 2]) beam(W, V(x, 0.5, HD), V(x, roofY(x), HD), 0.05);
-  beam(W, V(0, 2.1, HD), V(0, HR, HD), 0.05);
+  for (const x of [-HW / 2, HW / 2]) beam(W, V(x, 0.5, HD), V(x, roofOf(h, x), HD), 0.05);
+  beam(W, V(0, 2.1, HD), V(0, top, HD), 0.05);
   for (const s of [-1, 1]) beam(W, V(s * HW, 1.25, HD), V(s * 0.6, 1.25, HD), 0.035);
-  const gl = new THREE.Mesh(glassGeo, M.glass); gl.renderOrder = 2; g.add(gl);
+  frameCol = null;
+  const gl = new THREE.Mesh(glassGeoOf(h), M.glass); gl.renderOrder = 2; g.add(gl);
+  // de loin : épis de faîtage (boules vertes, flèches noires, épis blancs), jardinières devant l'orangerie
+  { const fm = new THREE.MeshStandardMaterial({ color: st.frame, roughness: 0.5, metalness: st.roof === 'gable' ? 0 : 0.6 });
+    for (const z of [-HD, HD]) { const f = st.roof === 'ogive' ? new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.6, 8), fm) : st.roof === 'vault' ? new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), fm) : new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 4), fm);
+      f.position.set(0, top + (st.roof === 'ogive' ? 0.3 : 0.1), z); f.castShadow = true; g.add(f); }
+    if (st.roof === 'gable') for (const x of [-1.6, 1.6]) { const bx = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.18, 0.22), new THREE.MeshStandardMaterial({ color: 0x9fb8c8, roughness: 0.6 })); bx.position.set(x, 0.62, HD + 0.14); g.add(bx);
+      for (let k = 0; k < 9; k++) { const fl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshStandardMaterial({ color: ['#e8708a', '#f2d27a', '#f0f0e8', '#c060a0'][k % 4], roughness: 0.7 })); fl.position.set(x - 0.34 + k * 0.085, 0.76 + r() * 0.05, HD + 0.14 + (r() - 0.5) * 0.1); g.add(fl); } }
+    if (st.roof === 'vault') for (let k = 0; k < 9; k++) { const b = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.22, 5), new THREE.MeshStandardMaterial({ color: [0x7a8a5a, 0x9a7ab0, 0xc8b060][k % 3], roughness: 1 })); b.rotation.x = Math.PI; b.position.set(-1.6 + k * 0.4, HH - 0.15, HD - 0.15); g.add(b); }
+  }
   // porte et marche
   const acc = col(h.accent);
   for (const x of [-0.6, 0.6]) boxAt('door', W, x, 1.05, HD + 0.02, 0.1, 2.1, 0.09, 0, acc);
@@ -312,7 +334,7 @@ for (const h of HOUSES) {
   const cap = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.08, 6), M.chain); cap.position.y = 0.15; lg.add(cap);
   const tint = col('#ffb85c').lerp(acc, 0.3), bulbM = M.bulb.clone(); bulbM.emissive = col('#f2b23d').lerp(acc, 0.35); bulbMats.push(bulbM);
   lg.add(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), bulbM));
-  const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, HR - ly - 0.15, 4), M.chain); ch.position.y = (HR - ly - 0.15) / 2 + 0.15; lg.add(ch);
+  const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, roofOf(h, 0) - ly - 0.15, 4), M.chain); ch.position.y = (roofOf(h, 0) - ly - 0.15) / 2 + 0.15; lg.add(ch);
   const light = new THREE.PointLight(tint, 9, 9, 1.5); lg.add(light);
   lg.position.set(0, ly, 0.3); g.add(lg); lanterns.push({ g: lg, light, house: h, tint });
   // pots de la serre : deux teintes de sa matière (grès, terre cuite, peint)
@@ -968,7 +990,7 @@ function setBonsai(h, list) {
 // suspensions : trois par serre, elles descendent avec les choses faites de la serre
 const hanging = [];
 for (const h of HOUSES) [[-0.8, 1.7], [0.8, -0.5], [-0.8, -2.5]].forEach(([x, z], i) => {
-  const rng = rngOf(900 + i + HOUSES.indexOf(h) * 10), g = new THREE.Group(), topY = roofY(x), y0 = 1.95;
+  const rng = rngOf(900 + i + HOUSES.indexOf(h) * 10), g = new THREE.Group(), topY = roofOf(h, x), y0 = 1.95;
   const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.terra); bowl.castShadow = true; g.add(bowl);
   for (let c = 0; c < 3; c++) { const a = (c / 3) * Math.PI * 2; const p = V(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15), q = V(0, topY - y0, 0); const d = q.clone().sub(p); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, d.length(), 4), M.chain); m.position.copy(p).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); g.add(m); }
   const strands = 9, im = inst(GEO.heart, M.leaf, strands * 16); let k = 0;
@@ -985,7 +1007,7 @@ const vines = [];
 for (const h of HOUSES) [[HW - 0.08, 1], [-HW + 0.08, 3], [HW - 0.08, 5]].forEach(([x, bay], i) => {
   const z = -HD + (2 * HD) / BAYS * bay, rng = rngOf(300 + i + HOUSES.indexOf(h) * 10), s = Math.sign(x), pts = [];
   for (let k = 0; k <= 10; k++) { const t = k / 10; pts.push(V(x - s * 0.04 * Math.sin(t * 9), 0.5 + t * (HH - 0.5), z + 0.05 * Math.cos(t * 7))); }
-  for (let k = 1; k <= 10; k++) { const t = k / 10; pts.push(V(lerp(x, s * 0.4, t) - s * 0.05, lerp(HH, roofY(0.4), t) - 0.08 + 0.04 * Math.sin(t * 8), z + 0.06 * Math.sin(t * 6))); }
+  for (let k = 1; k <= 10; k++) { const t = k / 10; pts.push(V(lerp(x, s * 0.4, t) - s * 0.05, lerp(HH, roofOf(h, 0.4), t) - 0.08 + 0.04 * Math.sin(t * 8), z + 0.06 * Math.sin(t * 6))); }
   const curve = new THREE.CatmullRomCurve3(pts), geo = new THREE.TubeGeometry(curve, 100, 0.012, 5, false), mesh = new THREE.Mesh(geo, M.stem); mesh.castShadow = true;
   const n = 110, im = inst(GEO.heart, M.leaf, n);
   for (let k = 0; k < n; k++) { const t = k / n, p = curve.getPoint(t), tan = curve.getTangent(t); const side = new THREE.Vector3().crossVectors(tan, V(s, 0, 0)).normalize(); dummy.position.copy(p).addScaledVector(side, (k % 2 ? 1 : -1) * 0.02); dummy.quaternion.setFromUnitVectors(UP, V(-s, 0.6 + rng() * 0.4, (rng() - 0.5)).normalize()); dummy.rotateY((rng() - 0.5) * 1.2); dummy.scale.setScalar(1.6 + rng() * 1.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k, vary(col('#4f8a4a'), rng, 0.12)); }
