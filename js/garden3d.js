@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { buildCottage } from './cottage3d.js';
-import { growth, totalDone, moodAvg, catCounts, catId, floraOf } from './model.js';
+import { growth, totalDone, moodAvg, catCounts, catId, floraOf, DAYLEN, NOON, phaseAt } from './model.js';
 import { bonsaiInSerre } from './flore.js';
 
 // ---------- Outils ----------
@@ -223,7 +223,7 @@ function compact(g) {
   }
   return g;
 }
-function disposeObj(o) { o.traverse((c) => { if (c.isInstancedMesh) c.dispose(); else if (c.isMesh && c.userData.own) c.geometry.dispose(); }); }
+export function disposeObj(o) { o.traverse((c) => { if (c.isInstancedMesh) c.dispose(); else if (c.isMesh && c.userData.own) c.geometry.dispose(); }); }
 // Pièces répétées des trois serres (armature, briques, tables, dalles, portes, panneaux) : un InstancedMesh par matériau.
 const IB = new Map(), m4 = new THREE.Matrix4(), Q0 = new THREE.Quaternion(), WHITE = col('#ffffff');
 const ibDef = (k, geo, mat, cast = true, receive = true) => IB.set(k, { geo, mat, cast, receive, items: [] });
@@ -242,7 +242,7 @@ function ibFlush(parent) {
 }
 {
   const box1 = new THREE.BoxGeometry(1, 1, 1), floorGeo = new THREE.PlaneGeometry(HW * 2, HD * 2); floorGeo.rotateX(-Math.PI / 2);
-  ibDef('frame', box1, M.frame); ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
+  M.frame.color.set(0xffffff); ibDef('frame', box1, M.frame); // ossature : la couleur de l'instance (STYLE.frame), sans teinte du matériau ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
   ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, metalness: 0 })); // portes peintes : couleur de la serre (par instance)
   ibDef('cloth', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), false, true); // chemins de table
   ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
@@ -1481,23 +1481,15 @@ const TIMES = {
 };
 const amb = { cur: null, to: null, fixed: null };
 // Heure réelle → ambiance, avec fondus à l'aube et au crépuscule.
-const DAYLEN = [8.4, 9.9, 11.8, 13.6, 15.2, 16.1, 15.7, 14.3, 12.5, 10.7, 9.1, 8.2];
-const NOON = [12.9, 13.1, 13.2, 13.9, 13.8, 13.9, 14.1, 14.0, 13.8, 13.6, 12.7, 12.8];
 function sunTimes(d = new Date()) { const m = d.getMonth(), L = DAYLEN[m], n = NOON[m]; return { rise: n - L / 2, set: n + L / 2, maxEl: [0.36, 0.48, 0.66, 0.85, 1.0, 1.1, 1.06, 0.95, 0.78, 0.58, 0.42, 0.33][m] }; }
 function sunDirAt(h) {
   const { rise, set, maxEl } = sunTimes(), t = (h - rise) / (set - rise), el = Math.sin(Math.PI * Math.max(-0.15, Math.min(1.15, t))) * maxEl - (t < 0 || t > 1 ? 0.25 : 0), az = Math.PI * t;
   return new THREE.Vector3(Math.cos(az) * Math.cos(el), Math.sin(el), -Math.sin(az) * Math.cos(el) - 0.35).normalize();
 }
 function timeFor(h) {
-  const { rise, set } = sunTimes();
   const mix = (a, b, t) => { const o = {}; for (const k of Object.keys(a)) o[k] = typeof a[k] === 'number' ? lerp(a[k], b[k], t) : Array.isArray(a[k]) ? a[k].map((v, i) => lerp(v, b[k][i], t)) : '#' + col(a[k]).lerp(col(b[k]), t).getHexString(); return o; };
-  const T = TIMES;
-  if (h < rise - 1.2 || h >= set + 1.6) return T.night;
-  if (h < rise) return mix(T.night, T.dusk, (h - rise + 1.2) / 1.2);
-  if (h < rise + 1.2) return mix(T.dusk, T.day, (h - rise) / 1.2);
-  if (h < set - 1.2) return T.day;
-  if (h < set) return mix(T.day, T.dusk, (h - set + 1.2) / 1.2);
-  return mix(T.dusk, T.night, (h - set) / 1.6);
+  const [a, b, t] = phaseAt(h, new Date().getMonth()); // le même soleil que les serres et la cabane (model.js)
+  return a === b ? TIMES[a] : mix(TIMES[a], TIMES[b], t);
 }
 const nowHour = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
 function updateAmbience(dt, t) {

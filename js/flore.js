@@ -97,12 +97,12 @@ export const growthOf = (p) => { const n = waterCount(p); if (n <= 0) return 0.0
 
 // Espèces d'une serre et leur état : ouverte, à troquer (graines), ou en attente (plantes en pleine terre).
 export function catalogue(S, house) {
-  const g = groundCount(S, house), seeds = seedsOf(S), un = G(S).unlocked || {};
+  const mine = plantsOf(S, house), g = mine.filter((p) => waterCount(p) >= GROUND).length, seeds = seedsOf(S), un = G(S).unlocked || {};
   return SPECIES[house].map((s, i) => {
     const u = UNLOCK[i], open = !!(u.start || (u.ground && g >= u.ground) || un[s.id]);
     const cond = u.start ? 'Au départ' : u.ground ? `${u.ground} plante${u.ground > 1 ? 's' : ''} en pleine terre` : `${u.seeds} graines`;
-    const best = plantsOf(S, house).filter((p) => p.sp === s.id).reduce((a, p) => Math.max(a, waterCount(p)), 0);
-    const rare = plantsOf(S, house).some((p) => p.sp === s.id && p.rare);
+    const best = mine.filter((p) => p.sp === s.id).reduce((a, p) => Math.max(a, waterCount(p)), 0);
+    const rare = mine.some((p) => p.sp === s.id && p.rare);
     return { ...s, house, open, cond, price: u.seeds || 0, canTrade: !open && !!u.seeds && seeds >= u.seeds, best, rare, rareName: RARE[s.id] ? `${s.nom} ${RARE[s.id][0]}` : '' };
   });
 }
@@ -133,18 +133,19 @@ function bridgePlant(S, src, cat, day) {
 }
 
 // Une chose faite : un arrosoir plein (ou, venue d'un pont, versé tout de suite sur la plante du pont).
-// → { can } ou { plant, events }
+// L'identifiant vient de la chose : recochée après avoir versé son arrosoir, ou cochée sur deux appareils, elle n'en
+// donne qu'un. → { can } ou { plant, events } ou { dup }
 export function addCan(S, { cat, day, title = null, thing = null, listId = null, src = null, id = null }) {
-  const g = ensure(S), can = { id: id || uid(), cat: catId(cat || 'perso'), day, title: title ? String(title).slice(0, 120) : null };
+  const g = ensure(S), can = { id: id || (thing ? `c-t-${thing}` : listId ? `c-l-${listId}` : uid()), cat: catId(cat || 'perso'), day, title: title ? String(title).slice(0, 120) : null };
   if (thing) can.thing = thing; if (listId) can.listId = listId;
   if (g.cans.some((c) => c.id === can.id) || g.plants.some((p) => Array.isArray(p.waters) && p.waters.some((w) => w.id === can.id))) return { dup: true };
   if (src) { can.src = src; const p = bridgePlant(S, src, can.cat, day); return { plant: p, events: feed(S, p, can, day) }; }
   g.cans.push(can); return { can };
 }
-// Retirer l'arrosoir d'une chose décochée, s'il n'a pas encore été versé.
+// Retirer les arrosoirs d'une chose décochée, s'ils n'ont pas encore été versés.
 export function dropCan(S, { thing = null, listId = null }) {
-  const g = ensure(S), i = g.cans.findIndex((c) => (thing && c.thing === thing) || (listId && c.listId === listId));
-  if (i < 0) return false; g.cans.splice(i, 1); return true;
+  const g = ensure(S), n = g.cans.length; g.cans = g.cans.filter((c) => !((thing && c.thing === thing) || (listId && c.listId === listId)));
+  return g.cans.length < n;
 }
 
 // Verser n arrosoirs de la serre de la plante (les plus anciens d'abord). → { poured, events }
@@ -174,9 +175,11 @@ export function trade(S, spId, day) {
 
 // Dormance : trois semaines sans arrosage, Ernest propose de ranger la plante à la cabane (sauf si on l'a fixée).
 export const resting = (S, house) => plantsOf(S, house).filter((p) => p.dormant);
-export const toRest = (S, today) => (G(S).plants || []).filter((p) => isNew(p) && !p.fixed && !p.dormant && !p.src && diffDays(lastWater(p), today) >= DORMANT_DAYS);
+// Ressortie de la cabane : les trois semaines repartent de ce jour-là.
+const lastCare = (p) => { const w = lastWater(p); return p.woke && (!w || p.woke > w) ? p.woke : w; };
+export const toRest = (S, today) => (G(S).plants || []).filter((p) => isNew(p) && !p.fixed && !p.dormant && !p.src && diffDays(lastCare(p), today) >= DORMANT_DAYS);
 export function rest(S, id, day) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; p.dormant = day; return true; }
-export function wake(S, id) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p) || !p.dormant) return false; delete p.dormant; return true; }
+export function wake(S, id, day = null) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p) || !p.dormant) return false; delete p.dormant; if (day) p.woke = day; return true; }
 export function fix(S, id, on = true) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; if (on) p.fixed = true; else delete p.fixed; return true; }
 
 // Ce qui a nourri une plante : les titres des choses, avec leur nombre, du plus fréquent au plus rare.
@@ -189,7 +192,8 @@ export function fedBy(p) { const m = new Map(); for (const w of p.waters || []) 
 // appareils (l'un a versé, l'autre a migré de son côté) peut le faire revenir.
 export function tidyCans(S) {
   const g = ensure(S), poured = new Set(), seen = new Set();
-  for (const p of g.plants) if (p && Array.isArray(p.waters)) for (const w of p.waters) poured.add(w.id);
+  // un même arrosoir versé sur deux plantes (deux appareils, chacun de son côté) ne compte qu'une fois
+  for (const p of g.plants) if (p && Array.isArray(p.waters)) p.waters = p.waters.filter((w) => { if (!w || poured.has(w.id)) return false; poured.add(w.id); return true; });
   const before = g.cans.length; g.cans = g.cans.filter((c) => c && !poured.has(c.id) && !seen.has(c.id) && seen.add(c.id));
   return before - g.cans.length;
 }

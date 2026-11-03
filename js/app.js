@@ -403,7 +403,7 @@ function florePlantSheet(p) {
       if (inter && inter.api) { closeSheet(); save(); refreshInterior(); inter.api.play('arrose', p.id); announce(r.events); return; } announce(r.events); }
     if (f === 'fix') FL.fix(S, p.id, !p.fixed);
     if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); if (inter && inter.api) { closeSheet(); save(); inter.api.play('cabane', p.id, () => { refreshInterior(); gardenUpdate(); }); return; } }
-    if (f === 'wake') { FL.wake(S, p.id); ernestLine('flore.reveil', { espece: plantName(p) }, `${cap1(plantName(p))} revient dans la serre.`); }
+    if (f === 'wake') { FL.wake(S, p.id, today); ernestLine('flore.reveil', { espece: plantName(p) }, `${cap1(plantName(p))} revient dans la serre.`); }
     save(); gardenUpdate(); refreshCabane(); if (f === 'rest') closeSheet(); else florePlantSheet(p);
   }));
 }
@@ -829,7 +829,7 @@ function action(act, ds, el, v) {
     case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; FL.dropCan(S, { listId: l.id }); } else { l.done = true; l.doneAt = new Date().toISOString(); gainCan({ cat: l.cat || 'perso', day: today, title: l.text, listId: l.id }); /* un arrosoir, pour Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
     case 'listEdit': listSheet(S.list.find((x) => x.id === ds.id)); break;
     case 'ideaAct': { const i = S.ideas.find((x) => x.id === ds.id); if (!i) return; if (ds.v === 'todo') { S.list.push({ id: uid(), text: i.text, cat: null, due: null, done: false, at: new Date().toISOString() }); i.status = 'done'; } else if (ds.v === 'keep') i.status = 'kept'; else if (ds.v === 'drop') i.status = 'dropped'; else if (ds.v === 'goal') { S.goals.push({ id: uid(), title: i.text, cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} }); i.status = 'done'; } save(); render(); break; }
-    case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) { t.real = 0; FL.dropCan(S, { thing: t.id }); } save(); render(); break; }
+    case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (t.done) gainCan({ cat: t.cat, day: ds.day, title: t.title, thing: t.id, src: t.src }); else { t.real = 0; FL.dropCan(S, { thing: t.id }); } save(); render(); break; }
     case 'jToday': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); d.things.push({ ...t, startedAt: null, spent: 0 }); d.planned = true; save(); toast('Remise dans ta journée.'); render(); break; }
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;

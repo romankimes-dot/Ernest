@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { phaseAt } from './model.js';
+import { STAGES, stageOf } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -430,9 +431,8 @@ export function plan() {
 }
 
 // ---------- Stades (docs/PROGRESSION.md) : 1 graine, 2 pousse, 5 plante, 10 grande, 20 pleine terre ----------
-export const STAGES = [['Graine', 1], ['Pousse', 2], ['Plante', 5], ['Grande', 10], ['Pleine terre', 20]];
+export { STAGES, stageOf }; // les mêmes que l'app (js/flore.js)
 export function waterings(it, p) { if (p < it.sow) return 0; if (p < it.ground) return 1 + Math.floor(19 * (p - it.sow) / (it.ground - it.sow)); return 20 + Math.floor(30 * clamp01((p - it.ground) / (it.full - it.ground))); }
-export const stageOf = (w) => { let s = -1; STAGES.forEach(([, k], i) => { if (w >= k) s = i; }); return s; };
 
 // ---------- Montage ----------
 let SHARED_GEO = null; // formes partagées entre les scènes : jamais libérées
