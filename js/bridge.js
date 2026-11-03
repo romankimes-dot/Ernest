@@ -2,7 +2,7 @@
 // Format unique : { v: 1, src, things: [{ title, cat, est, link, day, note, slot, done }], goals: [{ title, cat, due, milestones: [text|{text,done}] }] }
 // transporté dans l'adresse (#import=<base64url(JSON UTF-8)>) ou collé dans Réglages.
 import { uid, ensureDay, catId } from './model.js';
-import { addCan } from './flore.js';
+import { addCan, isNew } from './flore.js';
 
 const b64 = {
   enc: (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
@@ -74,8 +74,11 @@ export const SRC_NAMES = { deonto: 'Dec-Deonto', revision: 'dec-revision', memoi
 export function plantHistory(state, payload) {
   if (!Array.isArray(payload.history)) return 0;
   let n = 0;
+  // Jours déjà nourris autrement (anciens pots migrés, choses cochées par le pont) : comme avant, rien de plus.
+  const bp = ((state.garden && state.garden.plants) || []).find((x) => isNew(x) && x.src === payload.src), pre = `h-${payload.src}-`;
   for (const hd of payload.history) {
     if (!hd || !/^\d{4}-\d{2}-\d{2}$/.test(hd.day || '')) continue;
+    if (bp && (bp.waters || []).some((w) => w.day === hd.day && !String(w.id).startsWith(pre))) continue;
     let got = 0; for (let i = 0; i < Math.min(3, Number(hd.n) || 0); i++) { const r = addCan(state, { id: `h-${payload.src}-${hd.day}-${i}`, cat: 'travail', day: hd.day, title: `Révision (${SRC_NAMES[payload.src] || payload.src})`, src: payload.src }); if (!r.dup) { n++; got++; } }
     if (!got) continue;
     if (!state.days[hd.day] && hd.n > 0) ensureDay(state, hd.day).things.push({ id: uid(), title: `Révision (${SRC_NAMES[payload.src] || payload.src})`, cat: 'travail', est: 0, done: true, real: 0, src: payload.src, doneAt: hd.day + 'T20:00:00' });

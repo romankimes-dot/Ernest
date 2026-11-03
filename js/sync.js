@@ -8,6 +8,7 @@
 import { importJSON, snapshotPrev } from './store.js';
 import { decode, merge as mergeBridge, plantHistory } from './bridge.js';
 import { merge3 } from './merge.js';
+import { tidyCans } from './flore.js';
 
 const CFG_KEY = 'ernest.sync';
 const DEC_CFG_KEY = 'dec1.sync'; // même origine que Dec-Deonto dans un navigateur : réglage repris s'il existe
@@ -69,7 +70,7 @@ export async function pull(cfg, local, m, today, { fetch: f = globalThis.fetch, 
     if (m.rev === null) { base = remote; adopted = true; conflict = !!m.dirty; }
     else if (rev !== m.rev && !m.dirty) { base = remote; adopted = true; }
     // Changé ici et ailleurs : fusion, rien n'est perdu
-    else if (rev !== m.rev) { base = merge3(baseFor(m.rev), local, remote); merged = true; }
+    else if (rev !== m.rev) { base = merge3(baseFor(m.rev), local, remote); tidyCans(base); merged = true; }
   } else if (res.status !== 204) throw fail(res);
 
   let ponts = {};

@@ -166,11 +166,17 @@ export function mount(canvas, { onPick } = {}) {
   // contenu variable : bonsaïs, plantes au repos, graines
   let dyn = new THREE.Group(); scene.add(dyn); let timeKey = 'day';
   const trayM = std({ color: 0x5a3a2a, roughness: 0.7 });
+  // Les bonsaïs et les plantes déjà dessinés sont gardés (même objectif, mêmes branches ; même plante) : rafraîchir la
+  // cabane ne refait que ce qui a changé, et ce qui part est libéré (sauf les formes partagées avec le village).
+  const keep = new Map();
+  const free = (g) => g.traverse((o) => { if (o.geometry && o.geometry.userData.own) o.geometry.dispose(); }); // seulement ce que la cabane a créé : les formes du village sont partagées
+  const reuse = (key, make) => { if (!keep.has(key)) keep.set(key, make()); return keep.get(key); };
   function set({ bonsais = [], plants = [], seeds = 0, time = 'day' } = {}) {
-    scene.remove(dyn); dyn = new THREE.Group(); scene.add(dyn);
-    bonsais.slice(0, BS.length).forEach((b, i) => { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.05, 0.24), trayM); t.position.y = 0.025; g.add(t); const m = makeBonsai(b.seed, b.branches); m.scale.multiplyScalar(0.42); m.position.y = 0.05; g.add(m);
-      g.position.copy(BS[i]); g.rotation.y = Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'bonsai', goal: b.goal }; }); dyn.add(g); });
-    plants.slice(0, PS.length).forEach((p, i) => { const g = makeSpecimen(p); g.scale.setScalar(0.55); g.position.copy(PS[i]); g.rotation.y = -Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'plant', id: p.id }; }); dyn.add(g); });
+    const used = new Set(); scene.remove(dyn); dyn = new THREE.Group(); scene.add(dyn);
+    bonsais.slice(0, BS.length).forEach((b, i) => { const key = `b:${b.goal}:${b.branches}`; used.add(key); const fresh = !keep.has(key), g = reuse(key, () => new THREE.Group()); if (fresh) { const tg = new THREE.BoxGeometry(0.36, 0.05, 0.24); tg.userData.own = true; const t = new THREE.Mesh(tg, trayM); t.position.y = 0.025; g.add(t); const m = makeBonsai(b.seed, b.branches); m.scale.multiplyScalar(0.42); m.position.y = 0.05; g.add(m);
+      } g.position.copy(BS[i]); g.rotation.y = Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'bonsai', goal: b.goal }; }); dyn.add(g); });
+    plants.slice(0, PS.length).forEach((p, i) => { const key = `p:${p.id}:${p.sp}:${p.seed}`; used.add(key); const g = reuse(key, () => makeSpecimen(p)); g.scale.setScalar(0.55); g.position.copy(PS[i]); g.rotation.y = -Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'plant', id: p.id }; }); dyn.add(g); });
+    for (const [k, g] of keep) if (!used.has(k)) { free(g); keep.delete(k); }
     const n = Math.min(120, Math.max(0, Math.round(seeds))), r2 = rngOf(5), m4 = new THREE.Matrix4(); seedIM.count = n;
     for (let i = 0; i < n; i++) { const a = r2() * 6.28, d = Math.sqrt(r2()) * 0.08; m4.makeTranslation(Math.cos(a) * d, 0.02 + Math.floor(i / 14) * 0.022 + r2() * 0.01, Math.sin(a) * d); seedIM.setMatrixAt(i, m4); }
     seedIM.instanceMatrix.needsUpdate = true;

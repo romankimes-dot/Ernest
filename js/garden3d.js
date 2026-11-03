@@ -1432,7 +1432,7 @@ export function houseFromState(S, today, id, counts, n) {
   const goals = Array.isArray(S.goals) ? new Map(S.goals.map((g) => [g.id, g])) : null;
   let hn = H.cats.reduce((a, c) => a + (counts[c] || 0), 0);
   if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
-  const plants = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
+  const plants = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, v: p.v, sp: p.sp, g: growth(p, S, today) })); // v, sp : l'espèce donne le dessin (floraOf)
   const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
   const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || bonsaiInSerre(p, goals.get(p.goal))))
     .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0, goal: p.goal || null }));

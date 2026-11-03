@@ -270,7 +270,7 @@ function cottageTap() {
   $('#ctRit').addEventListener('click', () => { closeSheet(); ritualSheet(); }); $('#ctIn').addEventListener('click', () => { closeSheet(); openCabane(); });
 }
 // ---------- La cabane d'Ernest : étagère à bonsaïs, réserve, le livre, le bocal à graines ----------
-let cab = null, cabKeep = null; // cab : la cabane ouverte ; cabKeep : gardée en pause, pour rentrer sans attendre
+let cab = null, cabKeep = null, cabLoading = false; // cab : la cabane ouverte ; cabKeep : gardée en pause, pour rentrer sans attendre
 const timeNow = () => { const d = new Date(); return phaseName(d.getHours() + d.getMinutes() / 60, d.getMonth()); }; // le même soleil que le village
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
@@ -285,7 +285,7 @@ function interCap() {
 function refreshInterior() { if (inter && inter.api) { inter.api.setData(interData(interHouse)); interCap(); } }
 async function openInterior(house) {
   if (inter) return; if (!g3d) { houseSheet(house); return; }
-  inter = {}; interHouse = house; closeSheet();
+  const me = inter = {}; interHouse = house; closeSheet();
   const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
   if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior);
     const joy = $('#inJoy'), knob = joy.querySelector('i'); let id = null; // joystick : se promener dans la serre
@@ -294,11 +294,11 @@ async function openInterior(house) {
     joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.setPointerCapture(id); mv(e); }); joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) mv(e); }); joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try {
     if (interKeep && interKeep.api.serre === house) { inter.mod = interKeep.mod; inter.api = interKeep.api; inter.api.resume(); inter.api.setData(interData(house)); }
-    else { const mod = await import('./botaniste3d.js'); if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }
+    else { const mod = await import('./botaniste3d.js'); if (inter !== me) return; /* refermée pendant le chargement */ if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }
     interKeep = { mod: inter.mod, api: inter.api }; interCap(); setTimeout(() => inter && ernestLine(`dedans.${house}`), 900); }
   catch (e) { closeInterior(); houseSheet(house); }
 }
-function closeInterior() { moving = null; if (inter && inter.api) { inter.api.hideSlots(); inter.api.pause(); } inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
+function closeInterior() { moving = null; const knob = $('#inJoy i'); if (knob) knob.style.transform = ''; if (inter && inter.api) { inter.api.move(0, 0); inter.api.hideSlots(); inter.api.pause(); } inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
 let moving = null; // plante qu'on change de place
 function startMove(p) {
   if (!inter || !inter.api) return; closeSheet(); moving = p.id; inter.api.showSlots(p.id, p.sp);
@@ -315,13 +315,13 @@ function onPickInterior(o) {
   else if (o.kind === 'ernest') { const t = say(S, `lieu.${interHouse}`, ernestEnv(S, today, plantsOf(interHouse))) || say(S, 'ernest.touche', ernestEnv(S, today, plantNames())); if (t) { toast(t, 4500); save(); } }
 }
 async function openCabane() {
-  if (cab || !g3d) { if (!g3d) livreSheet(); return; }
+  if (cab || cabLoading || !g3d) { if (!g3d) livreSheet(); return; }
   const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
   const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
   $('#cabCap').innerHTML = `<b>Chez Ernest</b><br><span>Le livre sur la table, ${n} graine${n > 1 ? 's' : ''} dans le bocal. ${b ? `${b} bonsaï${b > 1 ? 's' : ''} sur l'étagère` : "L'étagère attend un objectif atteint"}, ${r ? `${r} plante${r > 1 ? 's' : ''} à la réserve` : 'la réserve est vide'}.</span>`;
   if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
-  try { if (cabKeep) { cab = cabKeep; cab.resume(); } else { const mod = await import('./cabane3d.js'); cab = cabKeep = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); } cab.set(cabData()); setTimeout(() => cab && ernestLine('lieu.cabane'), 900); }
-  catch (e) { closeCabane(); livreSheet(); }
+  try { if (cabKeep) { cab = cabKeep; cab.resume(); } else { cabLoading = true; const mod = await import('./cabane3d.js'); cabKeep = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cabLoading = false; if ($('#cabane').hidden) { cabKeep.pause(); return; } /* refermée pendant le chargement */ cab = cabKeep; } cab.set(cabData()); setTimeout(() => cab && ernestLine('lieu.cabane'), 900); }
+  catch (e) { cabLoading = false; closeCabane(); livreSheet(); }
 }
 function closeCabane() { if (cab) { cab.pause(); cab = null; } $('#cabane').hidden = true; if (!inter) document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
 function onPickCabane(o) {
@@ -399,7 +399,7 @@ function florePlantSheet(p) {
   $('#flPlant').querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
     const f = b.dataset.f; if (f === 'close') { closeSheet(); return; } if (f === 'move') { startMove(p); return; }
     if (f === 'pour' && g3d && g3d.walking && !inter) { closeSheet(); waterNow(p.id); return; }
-    if (f === 'pour' || f === 'all') { label('l\'arrosage'); const r = FL.pour(S, p.id, today, f === 'all' ? 999 : 1); toast(`${r.poured} arrosoir${r.poured > 1 ? 's' : ''} versé${r.poured > 1 ? 's' : ''} sur ${plantName(p)}.`); gardenWater();
+    if (f === 'pour' || f === 'all') { label('l\'arrosage'); const r = FL.pour(S, p.id, today, f === 'all' ? 999 : 1); toast(`${r.poured} arrosoir${r.poured > 1 ? 's' : ''} versé${r.poured > 1 ? 's' : ''} sur ${plantName(p)}.`); gardenWater(); if (r.poured) markWatered(catId(p.cat));
       if (inter && inter.api) { closeSheet(); save(); refreshInterior(); inter.api.play('arrose', p.id); announce(r.events); return; } announce(r.events); }
     if (f === 'fix') FL.fix(S, p.id, !p.fixed);
     if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); if (inter && inter.api) { closeSheet(); save(); inter.api.play('cabane', p.id, () => { refreshInterior(); gardenUpdate(); }); return; } }
@@ -436,12 +436,16 @@ function waterNow(id) {
 }
 function recordWater(p) {
   const house = catId(p.cat);
-  if (FL.isNew(p)) { const r = FL.pour(S, p.id, today, 1); if (r.poured) { announce(r.events); gardenUpdate(); if (r.events.length && g3d) { g3d.setErnest('salue'); setTimeout(() => g3d && g3d.setErnest('attend'), 2600); } } }
+  if (FL.isNew(p)) { const r = FL.pour(S, p.id, today, 1); if (!r.poured) { toast(`Pas d'arrosoir plein pour la serre ${H_NAME[house]}. Termine une chose de la catégorie.`); say3d('arrosage', [plantName(p)]); save(); return; }
+    announce(r.events); gardenUpdate(); if (r.events.length && g3d) { g3d.setErnest('salue'); setTimeout(() => g3d && g3d.setErnest('attend'), 2600); } }
+  markWatered(house); say3d('arrosage', [plantName(p)]); save();
+}
+// Une serre arrosée aujourd'hui (un arrosoir versé, en promenade ou depuis la fiche) : les trois le même jour ouvrent une carte.
+function markWatered(house) {
   if (!S.garden.watered || S.garden.watered.day !== today) S.garden.watered = { day: today, houses: [] };
   const w = S.garden.watered, first = !w.houses.includes(house); if (first) w.houses.push(house);
   if (w.houses.length === 3 && first && S.garden.waterCard !== today) { S.garden.waterCard = today; const c = drawWater(S); toast(c ? `Les trois serres arrosées. Carnet : « ${c.titre || 'une carte'} »` : 'Les trois serres arrosées.', 4200); }
   else if (first) toast(`Arrosé. ${w.houses.length} serre${w.houses.length > 1 ? 's' : ''} sur 3 aujourd'hui.`);
-  say3d('arrosage', [plantName(p)]); save();
 }
 function bonsaiSheet(goalId) {
   const g = S.goals.find((x) => x.id === goalId); if (!g) { toast('Ce bonsaï garde son objectif pour lui.'); return; }
@@ -820,12 +824,12 @@ function action(act, ds, el, v) {
     case 'start': if (thing) startThing(thing); break;
     case 'pause': if (thing && thing.startedAt) { thing.spent = spentMs(thing); thing.startedAt = null; save(); toast('En pause. Reprends quand tu veux.'); render(); } break;
     case 'done': if (thing) doneSheet(thing); break;
-    case 'toggle': if (thing) { if (thing.done) { thing.done = false; thing.doneAt = null; save(); render(); } else doneSheet(thing); } break;
+    case 'toggle': if (thing) { if (thing.done) { thing.done = false; thing.doneAt = null; FL.dropCan(S, { thing: thing.id }); save(); render(); } else doneSheet(thing); } break;
     case 'thingMenu': if (thing) thingSheet(thing); break;
     case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; FL.dropCan(S, { listId: l.id }); } else { l.done = true; l.doneAt = new Date().toISOString(); gainCan({ cat: l.cat || 'perso', day: today, title: l.text, listId: l.id }); /* un arrosoir, pour Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
     case 'listEdit': listSheet(S.list.find((x) => x.id === ds.id)); break;
     case 'ideaAct': { const i = S.ideas.find((x) => x.id === ds.id); if (!i) return; if (ds.v === 'todo') { S.list.push({ id: uid(), text: i.text, cat: null, due: null, done: false, at: new Date().toISOString() }); i.status = 'done'; } else if (ds.v === 'keep') i.status = 'kept'; else if (ds.v === 'drop') i.status = 'dropped'; else if (ds.v === 'goal') { S.goals.push({ id: uid(), title: i.text, cat: 'perso', due: null, horizon: 'month', milestones: [], status: 'active', reviews: {} }); i.status = 'done'; } save(); render(); break; }
-    case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) t.real = 0; save(); render(); break; }
+    case 'jToggle': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (!t) return; if (!t.done && ds.day === today) { doneSheet(t); return; } t.done = !t.done; t.doneAt = t.done ? `${ds.day}T20:00:00` : null; if (!t.done) { t.real = 0; FL.dropCan(S, { thing: t.id }); } save(); render(); break; }
     case 'jToday': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); d.things.push({ ...t, startedAt: null, spent: 0 }); d.planned = true; save(); toast('Remise dans ta journée.'); render(); break; }
     case 'jDel': { const dd = dayOf(S, ds.day), i = dd.things.findIndex((x) => x.id === ds.id); if (i < 0) return; const [t] = dd.things.splice(i, 1); save(); render(); toast('Supprimée.', 5000, () => dd.things.splice(i, 0, t)); break; }
     case 'filter': listeFilter = ds.v; render(); break;
@@ -834,7 +838,7 @@ function action(act, ds, el, v) {
     case 'jEdit': { const dd = dayOf(S, ds.day), t = dd.things.find((x) => x.id === ds.id); if (t) thingSheet(t, ds.day); break; }
     case 'mood': { setMood(d, Number(ds.v)); save(); S._light = moodAvg(S, today); render(); if (Number(ds.v) <= 1) { const t = lowDays() >= 3 ? say(S, 'semaine-grise', ernestEnv(S, today, plantNames())) : ['Noté. Je garde la serre au calme aujourd\'hui.', 'Noté. On fera simple.', 'Bien reçu. Une chose à la fois, et c\'est déjà bien.'][Math.floor(Math.random() * 3)]; if (t) bubble(t); } break; }
     case 'seriesEdit': seriesSheet(S.series.find((x) => x.id === ds.id)); break;
-    case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; save(); toast('Décochée, de retour dans la liste.'); render(); break; }
+    case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; FL.dropCan(S, { listId: l.id }); save(); toast('Décochée, de retour dans la liste.'); render(); break; }
     case 'jListDel': removeList(ds.id); break;
     case 'fam': carnetFam = ds.v; render(); break;
     case 'livre': livreSheet(); break;

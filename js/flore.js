@@ -6,9 +6,8 @@
 // Graine 1, pousse 2, plante 5, grande 10, pleine terre 20. Chaque passage de stade : Ernest taille, une graine ;
 // la pleine terre : trois graines. Les choses venues d'un pont nourrissent seules la plante de ce pont.
 // Tout est rangé dans des tableaux à identifiants : la synchronisation réunit sans rien perdre.
-import { catId, isActive } from './model.js';
+import { catId, isActive, uid, diffDays } from './model.js';
 
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 const seedNum = () => Math.floor(Math.random() * 1e9);
 
 export const STAGES = [['Graine', 1], ['Pousse', 2], ['Plante', 5], ['Grande', 10], ['Pleine terre', 20]];
@@ -174,9 +173,8 @@ export function trade(S, spId, day) {
 }
 
 // Dormance : trois semaines sans arrosage, Ernest propose de ranger la plante à la cabane (sauf si on l'a fixée).
-const diff = (a, b) => Math.round((Date.UTC(...b.split('-').map((x, i) => Number(x) - (i === 1 ? 1 : 0))) - Date.UTC(...a.split('-').map((x, i) => Number(x) - (i === 1 ? 1 : 0)))) / 86400000);
 export const resting = (S, house) => plantsOf(S, house).filter((p) => p.dormant);
-export const toRest = (S, today) => (G(S).plants || []).filter((p) => isNew(p) && !p.fixed && !p.dormant && !p.src && diff(lastWater(p), today) >= DORMANT_DAYS);
+export const toRest = (S, today) => (G(S).plants || []).filter((p) => isNew(p) && !p.fixed && !p.dormant && !p.src && diffDays(lastWater(p), today) >= DORMANT_DAYS);
 export function rest(S, id, day) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; p.dormant = day; return true; }
 export function wake(S, id) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p) || !p.dormant) return false; delete p.dormant; return true; }
 export function fix(S, id, on = true) { const p = (G(S).plants || []).find((x) => x.id === id); if (!isNew(p)) return false; if (on) p.fixed = true; else delete p.fixed; return true; }
@@ -187,8 +185,16 @@ export function fedBy(p) { const m = new Map(); for (const w of p.waters || []) 
 // ---------- Migration : les anciens pots (une plante par chose faite) deviennent des arrosoirs à verser ----------
 // Les pots venus d'un pont nourrissent la plante de ce pont. Les identifiants sont tirés des pots : deux appareils
 // qui migrent chacun de leur côté produisent les mêmes arrosoirs, la synchronisation les réunit sans doublon.
+// Un arrosoir déjà versé (son identifiant est dans une plante) ou en double ne reste pas à verser : la fusion de deux
+// appareils (l'un a versé, l'autre a migré de son côté) peut le faire revenir.
+export function tidyCans(S) {
+  const g = ensure(S), poured = new Set(), seen = new Set();
+  for (const p of g.plants) if (p && Array.isArray(p.waters)) for (const w of p.waters) poured.add(w.id);
+  const before = g.cans.length; g.cans = g.cans.filter((c) => c && !poured.has(c.id) && !seen.has(c.id) && seen.add(c.id));
+  return before - g.cans.length;
+}
 export function migrateGarden(S) {
-  const g = ensure(S); g.v = 2; if (!g.plants.some((p) => p && p.kind === 'plant' && p.v !== 2)) return 0;
+  const g = ensure(S); g.v = 2; tidyCans(S); if (!g.plants.some((p) => p && p.kind === 'plant' && p.v !== 2)) return 0;
   const things = new Map(); for (const d of Object.values(S.days || {})) for (const t of (d && d.things) || []) things.set(t.id, t);
   const list = new Map((S.list || []).map((l) => [l.id, l]));
   let n = 0; const keep = [];
@@ -202,7 +208,7 @@ export function migrateGarden(S) {
     else g.cans.push(can);
     n++;
   }
-  g.plants = keep; g.migrated = { n: ((g.migrated && g.migrated.n) || 0) + n, at: new Date().toISOString().slice(0, 10), seen: false };
+  g.plants = keep; tidyCans(S); g.migrated = { n: ((g.migrated && g.migrated.n) || 0) + n, at: new Date().toISOString().slice(0, 10), seen: false };
   return n;
 }
 
