@@ -100,6 +100,7 @@ const ICONS = {
   blagues: '<svg class="ic" viewBox="0 0 48 48" fill="none" stroke="#e98a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 24a16 12 0 0 1 32 0z"/><path d="M19 24v12a5 5 0 0 0 10 0V24"/><circle cx="17" cy="18" r="2" fill="#e98a8a"/><circle cx="28" cy="15" r="2" fill="#e98a8a"/><circle cx="33" cy="20" r="1.5" fill="#e98a8a"/></svg>',
   tips: '<svg class="ic" viewBox="0 0 48 48" fill="none" stroke="#8fc0cf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 34h12M20 40h8M24 6a11 11 0 0 0-6 20c1 1 2 3 2 5h8c0-2 1-4 2-5a11 11 0 0 0-6-20z"/></svg>',
 };
+const srcTxt = (s) => String(s || '').replace(/https?:\/\/(?:www\.)?([^/\s]+)\S*/g, '$1'); // une URL longue déborde : le domaine suffit
 const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 function split(card, deck) {
   const tx = card.texte || '';
@@ -112,7 +113,7 @@ function cardHTML(deck, card, rare) {
   const { title, teaser } = split(card, deck);
   const k = deck === 'feuilleton' && card.ep ? `Feuilleton · ép. ${card.ep}` : DECKS[deck];
   return `<div class="in"><div class="f">${rare ? '<span class="rare">Rare</span>' : ''}<span class="k">${esc(k)}</span><h3>${esc(title)}</h3><p>${esc(teaser)}</p>${ICONS[deck]}</div>`
-    + `<div class="b"><span class="k">${esc(k)}</span><h3>${esc(title)}</h3><p>${esc(card.texte)}</p>${card.source && card.fiabilite === 'sourcee' ? `<p class="src">${esc(card.source)}</p>` : ''}</div></div>`;
+    + `<div class="b"><span class="k">${esc(k)}</span><h3>${esc(title)}</h3><p>${esc(card.texte)}</p>${card.source && card.fiabilite === 'sourcee' ? `<p class="src">${esc(srcTxt(card.source))}</p>` : ''}</div></div>`;
 }
 const DATA = {};
 async function loadDeck(d) { if (!DATA[d]) { try { DATA[d] = await (await fetch(`./data/cartes/${d}.json`)).json(); } catch { DATA[d] = []; } } return DATA[d]; }
@@ -170,7 +171,8 @@ async function openRare() {
   }
   const [d, c] = rare;
   $('#rareK').textContent = d === 'feuilleton' ? `Feuilleton · ép. ${c.ep}` : DECKS[d];
-  $('#rareT').textContent = c.titre || DECKS[d]; $('#rareX').textContent = c.texte; $('#rareS').textContent = c.fiabilite === 'sourcee' ? c.source : '';
+  $('#rareT').textContent = c.titre || DECKS[d]; $('#rareX').textContent = c.texte; $('#rareS').textContent = c.fiabilite === 'sourcee' ? srcTxt(c.source) : '';
+  $('#rareScroll').scrollTop = 0;
   const dlg = $('#rareDlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
 }
 function huntText() {
