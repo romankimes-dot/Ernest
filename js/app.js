@@ -199,7 +199,7 @@ function openSerre() {
   g3d.setMode('full');
   const pick = $('#sfPick'); if (pick && !pick._b) { pick._b = 1; pick.querySelectorAll('[data-house]').forEach((b) => b.addEventListener('click', (ev) => { ev.stopPropagation(); pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (g3d.walking) g3d.walkTo(b.dataset.house); else if (g3d.focus) g3d.focus(b.dataset.house); })); }
   if (pick) pick.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.house === 'all'));
-  bindWalkUi(); setWalkUi(false); document.body.classList.add('serre-open'); g3d.setFinds(todayFinds());
+  bindWalkUi(); setWalkUi(false); bindGo(); document.body.classList.add('serre-open'); g3d.setFinds(todayFinds());
   { const r = FL.toRest(S, today); if (r.length && S.garden.restAsked !== today) { S.garden.restAsked = today; save(); setTimeout(() => ernestLine('flore.dormance', { espece: plantName(r[0]) }, `${cap1(plantName(r[0]))} attend depuis trois semaines. Ernest propose la cabane.`), 600); } const c = FL.cansOf(S).length; if (c && !r.length) toast(`${c} arrosoir${c > 1 ? 's' : ''} plein${c > 1 ? 's' : ''} à verser. Promenade, ou le panneau d'une serre.`, 3500); }
   if (!$('#sfFps')) { const d = document.createElement('div'); d.id = 'sfFps'; d.className = 'sf-fps'; f.appendChild(d); }
   g3d.onFps((v) => { const el = $('#sfFps'); if (el) el.textContent = `${v} i/s`; });
@@ -273,6 +273,17 @@ function cottageTap() {
 let cab = null, cabKeep = null, cabLoading = false; // cab : la cabane ouverte ; cabKeep : gardée en pause, pour rentrer sans attendre
 const timeNow = () => { const d = new Date(); return phaseName(d.getHours() + d.getMinutes() / 60, d.getMonth()); }; // le même soleil que le village
 const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
+// Se téléporter : la cabane ou une serre, directement (depuis le village ou depuis un autre intérieur).
+function goTo(place) {
+  closeSheet();
+  if (place === (inter ? interHouse : cab ? 'cabane' : null)) return;
+  if (inter) closeInterior(); if (cab) closeCabane();
+  if (place === 'cabane') openCabane(); else openInterior(place);
+}
+function bindGo() {
+  for (const id of ['sfGo', 'inGo', 'cabGo']) { const el = $('#' + id); if (!el || el._b) continue; el._b = 1; el.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); goTo(b.dataset.go); })); }
+  const here = inter ? interHouse : cab ? 'cabane' : null; document.querySelectorAll('.go-bar [data-go]').forEach((b) => b.classList.toggle('here', b.dataset.go === here));
+}
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
 // ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
 let inter = null, interHouse = null, interKeep = null; // interKeep : la dernière serre visitée, en pause
@@ -286,7 +297,7 @@ function refreshInterior() { if (inter && inter.api) { inter.api.setData(interDa
 async function openInterior(house) {
   if (inter) return; if (!g3d) { houseSheet(house); return; }
   const me = inter = {}; interHouse = house; closeSheet();
-  const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
+  const el = $('#serreIn'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop(); bindGo();
   if (!$('#serreInClose')._b) { $('#serreInClose')._b = 1; $('#serreInClose').addEventListener('click', closeInterior);
     const joy = $('#inJoy'), knob = joy.querySelector('i'); let id = null; // joystick : se promener dans la serre
     const mv = (e) => { const r = joy.getBoundingClientRect(), R = r.width / 2; let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } knob.style.transform = `translate(${dx * R * 0.6}px,${dy * R * 0.6}px)`; if (inter && inter.api) inter.api.move(Math.abs(dx) < 0.12 ? 0 : dx, Math.abs(dy) < 0.12 ? 0 : -dy); };
@@ -316,7 +327,7 @@ function onPickInterior(o) {
 }
 async function openCabane() {
   if (cab || cabLoading || !g3d) { if (!g3d) livreSheet(); return; }
-  const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
+  const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop(); bindGo();
   const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
   $('#cabCap').innerHTML = `<b>Chez Ernest</b><br><span>Le livre sur la table, ${n} graine${n > 1 ? 's' : ''} dans le bocal. ${b ? `${b} bonsaï${b > 1 ? 's' : ''} sur l'étagère` : "L'étagère attend un objectif atteint"}, ${r ? `${r} plante${r > 1 ? 's' : ''} à la réserve` : 'la réserve est vide'}.</span>`;
   if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }

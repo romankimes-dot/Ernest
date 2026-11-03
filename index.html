@@ -39,6 +39,7 @@
   <div class="serre-full" id="serreFull" hidden>
     <button class="sf-close" id="serreClose" aria-label="Revenir"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>Ernest</button>
     <div class="sf-pick" id="sfPick"><button data-house="all" class="on">Tout</button><button data-house="perso">Vie perso</button><button data-house="travail">Travail</button><button data-house="bienetre">Bien-être</button></div>
+    <div class="go-bar" id="sfGo"><span>Aller</span><button data-go="cabane">Cabane</button><button data-go="travail">Travail</button><button data-go="bienetre">Bien-être</button><button data-go="perso">Vie perso</button></div>
     <div class="sf-cap" id="sfCap"></div>
     <div class="sf-bubble" id="sfBubble" hidden></div>
     <div class="sf-walk"><button id="sfAct" class="act" hidden></button><button id="sfView" hidden>1ʳᵉ personne</button><button id="sfWalk">Promenade</button></div>
@@ -47,12 +48,14 @@
   <div class="cabane" id="serreIn" hidden>
     <canvas id="serreInCv"></canvas>
     <button class="sf-close" id="serreInClose" aria-label="Sortir"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>Sortir</button>
+    <div class="go-bar" id="inGo"><span>Aller</span><button data-go="cabane">Cabane</button><button data-go="travail">Travail</button><button data-go="bienetre">Bien-être</button><button data-go="perso">Vie perso</button></div>
     <div class="sf-joy in-joy" id="inJoy" aria-label="Joystick"><i></i></div>
     <div class="sf-cap" id="serreInCap"></div>
   </div>
   <div class="cabane" id="cabane" hidden>
     <canvas id="cabaneCv"></canvas>
     <button class="sf-close" id="cabaneClose" aria-label="Sortir"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>Sortir</button>
+    <div class="go-bar" id="cabGo"><span>Aller</span><button data-go="cabane">Cabane</button><button data-go="travail">Travail</button><button data-go="bienetre">Bien-être</button><button data-go="perso">Vie perso</button></div>
     <div class="sf-cap" id="cabCap"></div>
   </div>
   <script type="module" src="./js/app.js"></script>

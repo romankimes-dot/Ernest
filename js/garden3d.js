@@ -242,7 +242,8 @@ function ibFlush(parent) {
 }
 {
   const box1 = new THREE.BoxGeometry(1, 1, 1), floorGeo = new THREE.PlaneGeometry(HW * 2, HD * 2); floorGeo.rotateX(-Math.PI / 2);
-  M.frame.color.set(0xffffff); ibDef('frame', box1, M.frame); // ossature : la couleur de l'instance (STYLE.frame), sans teinte du matériau ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
+  M.frame.color.set(0xffffff); ibDef('frame', box1, M.frame); // ossature : la couleur de l'instance (STYLE.frame), sans teinte du matériau
+  ibDef('brick', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })); // soubassement : la couleur de l'instance (briques, pierre, planches)
   ibDef('wood', box1, M.wood); ibDef('dark', box1, M.woodDark); ibDef('door', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.65, metalness: 0 })); // portes peintes : couleur de la serre (par instance)
   ibDef('cloth', box1, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), false, true); // chemins de table
   ibDef('tile', box1, Object.assign(M.stone.clone(), { color: col('#ffffff') }), false, true); ibDef('floor', floorGeo, M.gravel, false, true); // dalles : matériau blanc, la couleur est celle de l'instance
@@ -1119,7 +1120,7 @@ function route(from, to) {
 }
 
 // Promenade : état, entrées (joystick, clavier, glisser pour regarder), caméras.
-const walk = { on: false, view: 'third', yaw: Math.PI, pitch: 0.32, dist: 2.7, distCur: 2.7, ix: 0, iz: 0, keys: new Set(), auto: null, speed: 0, pose: null, poseUntil: 0, onArrive: null, onPlace: null, place: undefined };
+const walk = { on: false, view: 'third', yaw: Math.PI, pitch: 0.36, dist: 4.2, distCur: 4.2, ix: 0, iz: 0, keys: new Set(), auto: null, speed: 0, pose: null, poseUntil: 0, onArrive: null, onPlace: null, place: undefined };
 const KEYS = { KeyW: [0, 1], KeyZ: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], KeyQ: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', (e) => { if (!walk.on || !KEYS[e.code] || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return; walk.keys.add(e.code); walk.auto = null; e.preventDefault(); });
@@ -1206,13 +1207,13 @@ function bindLook(canvas) {
   canvas.addEventListener('pointerdown', (e) => { if (!walk.on) return; pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener('pointermove', (e) => {
     if (!walk.on || !pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) walk.dist = Math.max(1.3, Math.min(6, walk.dist * (pinch / d))); pinch = d; return; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) walk.dist = Math.max(1.6, Math.min(8, walk.dist * (pinch / d))); pinch = d; return; }
     const dx = e.clientX - last[0], dy = e.clientY - last[1]; last = [e.clientX, e.clientY];
     walk.yaw -= dx * 0.0065; walk.pitch = Math.max(walk.view === 'first' ? -0.7 : -0.1, Math.min(walk.view === 'first' ? 0.95 : 1.05, walk.pitch + dy * 0.005 * (walk.view === 'first' ? 1 : 1)));
   });
   const up = (e) => { pts.delete(e.pointerId); pinch = null; if (pts.size === 1) last = [...pts.values()][0]; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
-  canvas.addEventListener('wheel', (e) => { if (!walk.on) return; e.preventDefault(); walk.dist = Math.max(1.3, Math.min(6, walk.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
+  canvas.addEventListener('wheel', (e) => { if (!walk.on) return; e.preventDefault(); walk.dist = Math.max(1.6, Math.min(8, walk.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
 }
 function updateErnest(dt, t, still) {
   if (!walk.on) { ernest.setPose(ERNEST_POSE[ernestState] || 'attend'); }

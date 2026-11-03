@@ -493,10 +493,20 @@ export function setProgress(p) {
 }
 // Pour de vrai (l'app) : les plantes de la serre, leurs arrosages, les décors troqués.
 // data : { plants: [{ id, sp, n, seed }], decors: [id], time }
-let LIVE = null, nightNow = false, lastSky = 0;
+let LIVE = null, nightNow = false, lastSky = 0, walking = false;
 // Se déplacer : un joystick (move) ou toucher le sol (la vue et Ernest y vont).
-const nav = { mx: 0, mz: 0, goal: null };
-export function move(x, z) { nav.mx = x; nav.mz = z; if (x || z) nav.goal = null; }
+const nav = { mx: 0, mz: 0 };
+export function move(x, z) { nav.mx = x; nav.mz = z; if ((x || z) && scene3 && scene3.kind === 'walk') scene3 = null; }
+// Où Ernest peut marcher : l'allée et le devant de la serre (pas dans les plates-bandes, ni sur les établis ni dans le bassin).
+function blocked(x, z) {
+  if (Math.abs(x) > HALL.w - 0.35 || z < -D + 0.45 || z > D - 0.3) return true;
+  if (Math.abs(x) > 0.78 && z < -0.5) return true;
+  if (Math.abs(x) < 0.9 && z < -4.25) return true;
+  if (Math.hypot(x, z + 2.6) < 0.82) return true;
+  if (Math.abs(x) > 2.3 && z > 0.55 && z < 5.65) return true;
+  return false;
+}
+const freeSpot = (x, z) => { let k = 0; while (blocked(x, z) && k++ < 30) { x *= 0.85; z = Math.min(z, D - 0.35); if (Math.abs(x) < 0.05 && z < -4.25) z += 0.2; } return V(x, 0, z); };
 const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 export function setData(data) {
   const sig = JSON.stringify([data.plants, data.decors]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
@@ -537,7 +547,7 @@ function standFor(t) {
   if (Math.hypot(x, z + 2.6) < 0.85) x = Math.sign(x || 1) * 0.85;
   return V(x, 0, z);
 }
-function walkErnest(p) { const to = V(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), 0, Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(); scene3 = { kind: 'walk', t: to, from, to, t0: performance.now() / 1000, walk: Math.min(2.5, from.distanceTo(to) / 1.4), phase: 0 }; }
+function walkErnest(p) { const to = freeSpot(Math.max(-HALL.w + 0.5, Math.min(HALL.w - 0.5, p.x)), Math.max(-D + 0.6, Math.min(D - 0.4, p.z))), from = ernest.root.position.clone(); scene3 = { kind: 'walk', t: to, from, to, t0: performance.now() / 1000, walk: Math.min(2.5, from.distanceTo(to) / 1.4), phase: 0 }; }
 export function playScene(kind, pid, done) {
   const t = plantPos(pid); if (!t || !ernest) { if (done) done(); return; }
   const from = ernest.root.position.clone(), to = standFor(t);
@@ -553,7 +563,7 @@ function stepScene(now, dt) {
     if (a < 0.8) { e.setWalk(0); e.setPose('assis'); }
     else { const k = Math.min(1, (a - 0.8) / 2.2); e.root.position.lerpVectors(S3.to, S3.door, smooth(0, 1, k)); face(S3.to, S3.door); e.setWalk(1); e.setPose('attend'); }
     carried.position.copy(e.root.position).add(V(0, 0.42, 0)).addScaledVector(V(Math.sin(e.root.rotation.y), 0, Math.cos(e.root.rotation.y)), 0.22);
-    if (a > 3.0) { scene.remove(carried); carried = null; e.setWalk(0); e.root.position.set(0.55, 0, 1.3); e.root.rotation.y = -2.1; const d = S3.done; scene3 = null; applyTime(); if (d) d(); }
+    if (a > 3.0) { scene.remove(carried); carried = null; e.setWalk(0); const d = S3.done; scene3 = null; applyTime(); if (d) d(); }
     return;
   }
   e.setWalk(0);
@@ -757,10 +767,10 @@ export function mount(canvas, opts = {}) {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     fireflies = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffe08a, size: 0.05, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(fireflies);
   }
-  ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0.55, 0, 1.3); ernest.root.rotation.y = -2.1; scene.add(ernest.root); ernest.attach(scene);
+  ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0, 0, 3.4); ernest.root.rotation.y = Math.PI; scene.add(ernest.root); ernest.attach(scene); // dos à la caméra, face à l'allée
   scene3 = null; carried = null; buildParticles();
-  controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 1.3, -2); controls.minDistance = 0.8; controls.maxDistance = 9; controls.maxPolarAngle = Math.PI * 0.62; controls.enablePan = true; controls.screenSpacePanning = false;
-  camera.position.set(0.3, 1.7, 5.3);
+  controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 1.1, 1.6); controls.minDistance = 1.2; controls.maxDistance = 7; controls.maxPolarAngle = Math.PI * 0.62; controls.enablePan = true; controls.screenSpacePanning = false;
+  camera.position.set(0.2, 2.1, 5.7); let lastE = ernest.root.position.clone(); // la vue suit Ernest (troisième personne, comme dehors)
   const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix(); };
   window.addEventListener('resize', resize); resize();
   if (opts.data) setData(opts.data); else setProgress(opts.progress ?? 0.5);
@@ -772,14 +782,14 @@ export function mount(canvas, opts = {}) {
     const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
     for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } }
     // le sol : la vue s'y rend, Ernest aussi
-    const hit = ray.ray.intersectPlane(new THREE.Plane(UP, 0), V()); if (hit && Math.abs(hit.x) < HALL.w - 0.3 && Math.abs(hit.z) < D - 0.3) { nav.goal = V(hit.x, 0, hit.z); if (!scene3) walkErnest(hit); } };
+    const hit = ray.ray.intersectPlane(new THREE.Plane(UP, 0), V()); if (hit && Math.abs(hit.x) < HALL.w - 0.3 && Math.abs(hit.z) < D - 0.3 && (!scene3 || scene3.kind === 'walk')) walkErnest(hit); };
   canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointerup', onUp);
   let last = performance.now(), frames = 0, acc = 0;
   const loop = () => {
     const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; frames++; acc += dt; if (acc > 1 && onFps) { onFps(Math.round(frames / acc)); frames = 0; acc = 0; }
     controls.update();
     // rester dans la serre
-    const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D + 1.5, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
+    const c = camera.position; c.x = Math.max(-HALL.w + 0.35, Math.min(HALL.w - 0.35, c.x)); c.z = Math.max(-D + 0.35, Math.min(D - 0.25, c.z)); const maxY = roofY(c.x) - 0.3; c.y = Math.max(0.3, Math.min(maxY, c.y));
     controls.target.x = Math.max(-HALL.w + 0.3, Math.min(HALL.w - 0.3, controls.target.x)); controls.target.z = Math.max(-D + 0.3, Math.min(D, controls.target.z)); controls.target.y = Math.max(0.2, Math.min(4.5, controls.target.y));
     const t = now / 1000;
     if (slotMarks) slotMarks.children.forEach((m, i) => m.scale.setScalar(1 + Math.sin(t * 4 + i) * 0.08));
@@ -789,11 +799,15 @@ export function mount(canvas, opts = {}) {
     if (fireflies && fireflies.visible) { fireflies.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; fireflies.rotation.y = Math.sin(t * 0.05) * 0.2; }
     stepScene(t, dt); stepParticles(dt, t);
     if (timeKey === 'auto' && now - lastSky > 30000) { lastSky = now; applyTime(); }
-    { // déplacement : joystick dans le repère de la vue, ou glissé vers le point touché
-      const f = V(controls.target.x - camera.position.x, 0, controls.target.z - camera.position.z); if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); const rgt = V(-f.z, 0, f.x);
-      let d = null; if (nav.mx || nav.mz) d = rgt.multiplyScalar(nav.mx).addScaledVector(f, nav.mz).multiplyScalar(2.2 * dt);
-      else if (nav.goal) { const g = V(nav.goal.x - controls.target.x, 0, nav.goal.z - controls.target.z); if (g.length() < 0.03) nav.goal = null; else d = g.multiplyScalar(Math.min(1, dt * 2.5)); }
-      if (d) { camera.position.add(d); controls.target.add(d); }
+    { // Ernest marche au joystick, dans le repère de la vue ; il glisse le long de ce qui le bloque
+      const p = ernest.root.position, inp = Math.min(1, Math.hypot(nav.mx, nav.mz));
+      if (inp > 0 && (!scene3 || scene3.kind === 'walk')) { scene3 = null;
+        const f = V(controls.target.x - camera.position.x, 0, controls.target.z - camera.position.z); if (f.lengthSq() < 1e-6) f.set(0, 0, -1); f.normalize(); const rgt = V(-f.z, 0, f.x);
+        const dir = rgt.multiplyScalar(nav.mx).addScaledVector(f, nav.mz).normalize(), step = 1.7 * inp * dt, nx = p.x + dir.x * step, nz = p.z + dir.z * step;
+        if (!blocked(nx, nz)) p.set(nx, 0, nz); else if (!blocked(nx, p.z)) p.x = nx; else if (!blocked(p.x, nz)) p.z = nz;
+        ernest.root.rotation.y = Math.atan2(dir.x, dir.z); ernest.setWalk(inp * 1.2); ernest.setPose('attend'); walking = true;
+      } else if (walking) { walking = false; ernest.setWalk(0); applyTime(); }
+      const d = p.clone().sub(lastE); if (d.lengthSq() > 0) { camera.position.add(d); controls.target.add(d); lastE.copy(p); } // la vue suit
     }
     ernest.update(dt, { lantern: nightNow, lanternK: 2.0, groundY: 0, still: !scene3 });
     renderer.render(scene, camera);
