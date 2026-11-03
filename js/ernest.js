@@ -54,8 +54,8 @@ export function svg(state = 'attend') {
     : '<circle cx="84" cy="100" r="7" fill="#0b1511"/><circle cx="118" cy="100" r="7" fill="#0b1511"/><circle cx="86" cy="98" r="2.2" fill="#fff"/><circle cx="120" cy="98" r="2.2" fill="#fff"/>';
   const mouth = state === 'dort' ? '<circle cx="100" cy="124" r="3" fill="#0b1511"/>' : state === 'salue' ? '<path d="M84 120c8 12 24 12 32 0" stroke="#0b1511" stroke-width="3" fill="none" stroke-linecap="round"/>' : '<path d="M86 122c8 8 20 8 28 0" stroke="#0b1511" stroke-width="3" fill="none" stroke-linecap="round"/>';
   const body = state === 'assis'
-    ? '<path d="M66 150h68l6 46H60z" fill="#2f6b48"/><path d="M66 150h68v18H66z" fill="#3f8a5c"/><path d="M40 196h120v10H40z" fill="#8a5a2b"/><path d="M60 190l-24 6v10l24-4z" fill="#5fae6d"/><path d="M140 190l24 6v10l-24-4z" fill="#5fae6d"/>'
-    : '<path d="M70 140h60l10 70H60z" fill="#2f6b48"/><path d="M70 140h60v18H70z" fill="#3f8a5c"/><path d="M62 150l-26 40 10 6 26-36z" fill="#5fae6d"/><path d="M138 150l26 40-10 6-26-36z" fill="#5fae6d"/><path d="M36 190l-8 10 9 4z" fill="#8fc98f"/><path d="M164 190l8 10-9 4z" fill="#8fc98f"/>';
+    ? '<path d="M66 150h68l6 46H60z" fill="#8a5a34"/><path d="M66 150h68v18H66z" fill="#b07c44"/><path d="M40 196h120v10H40z" fill="#8a5a2b"/><path d="M60 190l-24 6v10l24-4z" fill="#5fae6d"/><path d="M140 190l24 6v10l-24-4z" fill="#5fae6d"/>'
+    : '<path d="M72 184h24v24H74zM104 184h24l-2 24h-22z" fill="#4b3424"/><path d="M70 140h60l8 48H62z" fill="#8a5a34"/><path d="M70 140h60v18H70z" fill="#b07c44"/><path d="M62 150l-26 40 10 6 26-36z" fill="#5fae6d"/><path d="M138 150l26 40-10 6-26-36z" fill="#5fae6d"/><path d="M36 190l-8 10 9 4z" fill="#8fc98f"/><path d="M164 190l8 10-9 4z" fill="#8fc98f"/>';
   return `<svg viewBox="0 0 230 240" class="ernest e-${state}" aria-label="Ernest">
   <ellipse cx="100" cy="226" rx="60" ry="8" fill="#000" opacity=".35"/>
   ${body}

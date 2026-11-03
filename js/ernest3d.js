@@ -108,11 +108,12 @@ function makeMaterials(TX) {
     patch: new THREE.MeshPhysicalMaterial({ color: 0x7d4a22, roughness: 0.95, bumpMap: TX.felt, bumpScale: 1.5, sheen: 0.8, sheenColor: col('#e0a070') }),
     band: new THREE.MeshPhysicalMaterial({ color: 0x5a3216, roughness: 0.7, sheen: 0.5, sheenColor: col('#c08050') }),
     thread: new THREE.MeshStandardMaterial({ color: 0xe9d9a8, roughness: 0.8 }),
-    tunic: new THREE.MeshPhysicalMaterial({ color: 0x357a52, roughness: 0.9, bumpMap: TX.knit, bumpScale: 0.9, sheen: 0.9, sheenColor: col('#8fd0a0'), sheenRoughness: 0.6, side: THREE.DoubleSide }),
-    collar: new THREE.MeshPhysicalMaterial({ color: 0x4a9a62, roughness: 0.7, sheen: 0.6, sheenColor: col('#c0ffb0'), side: THREE.DoubleSide }),
+    tunic: new THREE.MeshPhysicalMaterial({ color: 0x8a5a34, roughness: 0.9, bumpMap: TX.knit, bumpScale: 0.9, sheen: 0.9, sheenColor: col('#e8c090'), sheenRoughness: 0.6, side: THREE.DoubleSide }),
+    collar: new THREE.MeshPhysicalMaterial({ color: 0xb07c44, roughness: 0.75, sheen: 0.6, sheenColor: col('#ffe0b0'), side: THREE.DoubleSide }),
     leather: new THREE.MeshPhysicalMaterial({ color: 0x5e3a1c, roughness: 0.62, bumpMap: TX.leather, bumpScale: 0.9, clearcoat: 0.35, clearcoatRoughness: 0.5 }),
     leatherLight: new THREE.MeshPhysicalMaterial({ color: 0x8a5a2b, roughness: 0.7, bumpMap: TX.leather, bumpScale: 0.9, clearcoat: 0.2 }),
     brass: new THREE.MeshStandardMaterial({ color: 0xd4a548, roughness: 0.28, metalness: 1 }),
+    pants: new THREE.MeshPhysicalMaterial({ color: 0x4b3424, roughness: 0.95, bumpMap: TX.knit, bumpScale: 0.6, sheen: 0.5, sheenColor: col('#c09a70') }),
     stock: new THREE.MeshPhysicalMaterial({ map: TX.stripes, roughness: 0.95, bumpMap: TX.knit, bumpScale: 1.4, sheen: 0.7, sheenColor: col('#ffe0a0') }),
     sprig: new THREE.MeshStandardMaterial({ color: 0x5f8f4a, roughness: 0.7, side: THREE.DoubleSide }),
     flower: new THREE.MeshStandardMaterial({ color: 0xb79ad8, roughness: 0.6 }),
@@ -145,7 +146,7 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
   const legs = [];
   for (const s of [-1, 1]) {
     const leg = pivot(body, s * 0.13, HIP, 0);
-    add(leg, new THREE.CylinderGeometry(0.068, 0.058, 0.3, 20, 1, true), M.stock, 0, -0.17, 0);
+    add(leg, lathe([[0.0, 0.02], [0.088, 0.0], [0.092, -0.08], [0.084, -0.17], [0.078, -0.23], [0.0, -0.235]], 22), M.pants); // pantalon, rentré dans les bottines
     const boot = pivot(leg, 0, -HIP, 0.0);
     add(boot, bootGeo, M.leather);
     const cuff = add(boot, lathe([[0.075, 0.13], [0.1, 0.15], [0.112, 0.2], [0.104, 0.235], [0.07, 0.24]], 28), M.leatherLight); cuff.rotation.y = s * 0.3;
@@ -155,8 +156,11 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
 
   // --- Buste : tunique tricotée évasée, ourlet festonné en pointes de feuilles ---
   const torso = pivot(body, 0, HIP, 0);
-  const tunicGeo = lathe([[0.2, 0.5], [0.27, 0.46], [0.3, 0.38], [0.31, 0.25], [0.325, 0.12], [0.35, 0.0], [0.385, -0.1], [0.4, -0.15], [0.39, -0.16]], 64);
-  { const p = tunicGeo.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (y < -0.08) { const a = Math.atan2(z, x), k = Math.pow(Math.abs(Math.cos(a * 4.5)), 3); p.setY(i, y - k * 0.07); } } tunicGeo.computeVertexNormals(); }
+  // le bassin : le haut du pantalon, sous la veste
+  add(pivot(body, 0, HIP, 0), lathe([[0.0, 0.1], [0.25, 0.1], [0.275, 0.02], [0.27, -0.05], [0.2, -0.09], [0.0, -0.1]], 40), M.pants);
+  // veste courte de laine brune, qui s'arrête aux hanches, bas festonné
+  const tunicGeo = lathe([[0.2, 0.5], [0.27, 0.46], [0.3, 0.38], [0.31, 0.25], [0.325, 0.13], [0.345, 0.04], [0.36, -0.02], [0.352, -0.035]], 64);
+  { const p = tunicGeo.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (y < -0.0) { const a = Math.atan2(z, x), k = Math.pow(Math.abs(Math.cos(a * 4.5)), 3); p.setY(i, y - k * 0.05); } } tunicGeo.computeVertexNormals(); }
   add(torso, tunicGeo, M.tunic);
   add(torso, new THREE.CircleGeometry(0.2, 32), M.tunic, 0, 0.5, 0).rotation.x = -Math.PI / 2;
   // ceinture, boucle de laiton, bourse à graines
@@ -172,7 +176,7 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
   const leafCollar = leafGeo(0.17, 0.2, 0.25, 0.3);
   for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2 + 0.2, lf = add(torso, leafCollar, M.collar); lf.position.set(Math.sin(a) * 0.16, 0.5, Math.cos(a) * 0.16); lf.rotation.set(0, a, 0, 'YXZ'); lf.rotateX(1.9); }
   // pièce cousue sur la tunique
-  const tPatch = add(torso, new THREE.CylinderGeometry(0.06, 0.06, 0.01, 6), M.patch); tPatch.position.set(0.22, -0.02, 0.26); tPatch.rotation.set(Math.PI / 2 - 0.1, 0, 0.5); tPatch.lookAt(V(0.9, -0.02, 1).multiplyScalar(1).add(V(0, 0, 0)));
+  const tPatch = add(torso, new THREE.CylinderGeometry(0.06, 0.06, 0.01, 6), M.patch); tPatch.position.set(0.21, 0.24, 0.24); tPatch.rotation.set(Math.PI / 2 - 0.1, 0, 0.5); tPatch.lookAt(V(0.9, 0.24, 1));
   tPatch.rotateX(Math.PI / 2);
 
   // --- Tête ---
