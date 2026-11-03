@@ -316,11 +316,11 @@ async function openInterior(house) {
     joy.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); id = e.pointerId; joy.classList.add('drag'); joy.setPointerCapture(id); mv(e); }); joy.addEventListener('pointermove', (e) => { if (e.pointerId === id) mv(e); }); joy.addEventListener('pointerup', end); joy.addEventListener('pointercancel', end); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
   try {
     if (interKeep && interKeep.api.serre === house) { inter.mod = interKeep.mod; inter.api = interKeep.api; inter.api.resume(); inter.api.setData(interData(house)); }
-    else { const mod = await import('./botaniste3d.js'); if (inter !== me) return; /* refermée pendant le chargement */ if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior }); }
+    else { const mod = await import('./botaniste3d.js'); if (inter !== me) return; /* refermée pendant le chargement */ if (interKeep) interKeep.api.dispose(); inter.mod = mod; inter.api = mod.mount($('#serreInCv'), { serre: house, data: interData(house), onPick: onPickInterior, onExit: () => closeInterior() }); }
     interKeep = { mod: inter.mod, api: inter.api }; interCap(); setTimeout(() => inter && ernestLine(`dedans.${house}`), 900); }
   catch (e) { closeInterior(); houseSheet(house); }
 }
-function closeInterior() { moving = null; const knob = $('#inJoy i'); if (knob) knob.style.transform = ''; if (inter && inter.api) { inter.api.move(0, 0); inter.api.hideSlots(); inter.api.pause(); } inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
+function closeInterior() { if (interHouse && g3d && g3d.walking && g3d.placeAtDoor) g3d.placeAtDoor(interHouse); moving = null; const knob = $('#inJoy i'); if (knob) knob.style.transform = ''; if (inter && inter.api) { inter.api.move(0, 0); inter.api.hideSlots(); inter.api.pause(); } inter = null; interHouse = null; $('#serreIn').hidden = true; if (!cab) document.body.classList.remove('cabane-open'); if (g3d) { gardenUpdate(); g3d.start(); } }
 let moving = null; // plante qu'on change de place
 function startMove(p) {
   if (!inter || !inter.api) return; closeSheet(); moving = p.id; inter.api.showSlots(p.id, p.sp);
@@ -537,6 +537,7 @@ function bindWalkUi() {
   w.addEventListener('click', (e) => { e.stopPropagation(); const on = !g3d.walking; g3d.walk(on); setWalkUi(on); refreshAct(); });
   $('#sfView').addEventListener('click', (e) => { e.stopPropagation(); g3d.walk(true, g3d.walkView === 'first' ? 'third' : 'first'); setWalkUi(true); });
   g3d.onPlace((p) => { walkCap(p); placeTalk(p); });
+  if (g3d.onEnter) g3d.onEnter((id) => goTo(id)); // passer la porte d'une serre : on y entre
   // joystick : un disque, le pouce le tire jusqu'à son bord
   const joy = $('#sfJoy'), knob = joy.querySelector('i'); let id = null;
   const move = (e) => { const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2; let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }

@@ -791,13 +791,13 @@ export function mount(canvas, opts = {}) {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     fireflies = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffe08a, size: 0.05, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(fireflies);
   }
-  ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0, 0, 3.4); ernest.root.rotation.y = Math.PI; scene.add(ernest.root); ernest.attach(scene); // dos à la caméra, face à l'allée
+  ernest = createErnest({ scale: 0.36, lanternShadow: false }); ernest.root.position.set(0, 0, D - 1.2); ernest.root.rotation.y = Math.PI; scene.add(ernest.root); ernest.attach(scene); // dos à la caméra, face à l'allée
   scene3 = null; carried = null; buildParticles();
   controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 1.1, 1.6); controls.minDistance = 1.2; controls.maxDistance = 7; controls.maxPolarAngle = Math.PI * 0.62; controls.enablePan = true; controls.screenSpacePanning = false;
   camera.position.set(0.2, 2.1, 5.7); let lastE = ernest.root.position.clone();
   // Dans l'app, la vue suit Ernest comme dehors (js/garden3d.js) : un bras derrière lui, glisser pour tourner, pincer
   // pour reculer ; le bras raccourcit contre le vitrage au lieu de coincer la caméra. La maquette garde la vue libre.
-  const follow = !!opts.data, cam = { yaw: Math.PI, pitch: 0.36, dist: 3.7, cur: 3.7, tg: V(0, 0.6, 3.4), pts: new Map(), pinch: 0, touched: -9, speed: 0, dir: V(0, 0, -1) };
+  const follow = !!opts.data, cam = { yaw: Math.PI, pitch: 0.36, dist: 3.7, cur: 3.7, tg: V(0, 0.6, D - 1.2), pts: new Map(), pinch: 0, touched: -9, speed: 0, dir: V(0, 0, -1) };
   ernestFace = Math.PI; if (follow) controls.enabled = false; idleIn.last = performance.now() / 1000; idleIn.next = 0;
   const resize = () => { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix(); };
   window.addEventListener('resize', resize); resize();
@@ -844,6 +844,7 @@ export function mount(canvas, opts = {}) {
       if (!scene3) { cam.speed += ((inp > 0 ? 1.7 * inp : 0) - cam.speed) * Math.min(1, dt * (inp > 0 ? 7 : 12));
         if (cam.speed > 0.02) { const step = cam.speed * dt; let nx = p.x + cam.dir.x * step, nz = p.z + cam.dir.z * step;
           const rc = Math.hypot(nx, nz + 2.6); if (rc < 0.64) { nx *= 0.64 / rc; nz = -2.6 + (nz + 2.6) * 0.64 / rc; } // le rond : on glisse autour
+          if (nz > D - 0.42 && Math.abs(nx) < 0.75 && cam.dir.z > 0.3 && inp > 0 && opts.onExit && !cam.out) { cam.out = true; opts.onExit(); } // la porte : on ressort au village
           if (!blocked(nx, nz)) p.set(nx, 0, nz); else if (!blocked(nx, p.z)) p.x = nx; else if (!blocked(p.x, nz)) p.z = nz; }
         ernest.setWalk(cam.speed / 1.4);
         if (walking && inp === 0 && cam.speed < 0.05) { walking = false; cam.speed = 0; ernest.setWalk(0); applyTime(); } }
@@ -864,7 +865,7 @@ export function mount(canvas, opts = {}) {
   return { setProgress, setTime, setData, showSlots, hideSlots, assignOf, play: playScene, move, camera, controls, renderer, scene, serre: SERRE.id,
     // pause : on garde tout (rentrer à nouveau est immédiat) ; reprise : même scène, données fraîches
     pause() { if (paused) return; paused = true; renderer.setAnimationLoop(null); listen(false); cam.pts.clear(); controls.enabled = false; },
-    resume() { if (!paused) return; paused = false; idleIn.last = performance.now() / 1000; listen(true); controls.enabled = !follow; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },
+    resume() { if (!paused) return; paused = false; cam.out = false; scene3 = null; nav.mx = nav.mz = 0; cam.speed = 0; ernest.root.position.set(0, 0, D - 1.2); ernest.root.rotation.y = ernestFace = cam.yaw = Math.PI; cam.tg.set(0, 0.6, D - 1.2); lastE.copy(ernest.root.position); /* on entre par la porte */ idleIn.last = performance.now() / 1000; listen(true); controls.enabled = !follow; last = performance.now(); resize(); renderer.setAnimationLoop(loop); },
     dispose() { this.pause(); window.removeEventListener('resize', resize); controls.dispose(); } };
 }
 export const themeName = (id) => (THEMES[id] || THEMES.bienetre).nom;

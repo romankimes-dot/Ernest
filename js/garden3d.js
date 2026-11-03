@@ -1184,6 +1184,8 @@ function updateWalk(dt, t, cam = true) {
   ernest.setPose(walk.pose && t < walk.poseUntil ? walk.pose : 'attend');
   // lieu : pour la légende (« dans la serre Travail »)
   if (!cam) return;
+  // passer la porte d'une serre, c'est y entrer : la vue de l'intérieur s'ouvre (js/botaniste3d.js) ; en sortant, Ernest est devant sa porte
+  { const hin = houseAt(p.x, p.z); if (hin && walk.onEnter && !(walk.auto && walk.auto.noEnter)) { placeAtDoor(hin); walk.onEnter(hin); return; } }
   const pl = houseAt(p.x, p.z) || (p.distanceTo(COT_DOOR) < 2.2 ? 'chaumiere' : null); if (pl !== walk.place) { walk.place = pl; if (walk.onPlace) walk.onPlace(pl); }
   // caméra
   if (walk.view === 'first') {
@@ -1213,6 +1215,12 @@ function setWalk(on, view) {
   if (renderer) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, walk.on && !DESK ? 1.5 : 2)); // promenade sur téléphone : un peu moins de pixels, une marche plus fluide
   camera.updateProjectionMatrix(); resize(); poke();
 }
+const doorFront = (h, d = 0.9) => toWorld(h, 0, 0, HD + d);
+function placeAtDoor(id) {
+  const h = HB[id]; if (!h) return; const q = doorFront(h, 1.0);
+  ernest.root.position.set(q.x, groundAt(q.x, q.z), q.z); ernest.root.rotation.y = h.ry; // dos à la porte, il sort
+  walk.auto = null; walk.speed = 0; walk.ix = walk.iz = 0; walk.keys.clear(); walk.pose = null; walk.faceTo = null; walk.yaw = h.ry; walk.distCur = Math.min(walk.distCur, 2.5); walk.place = null; ernest.setWalk(0); poke();
+}
 function walkTo(id) {
   if (!walk.on) return;
   const p = ernest.root.position, from = V(p.x, 0, p.z);
@@ -1229,14 +1237,14 @@ function idleTick(t) {
   if (mode !== 'full' || fly || walk.auto || walk.speed > 0.05 || walk.ix || walk.iz || walk.keys.size || (walk.on && walk.view === 'first')) return;
   if (t - idle.last < 5 || t < idle.next || (walk.pose && t < walk.poseUntil)) return;
   const p = ernest.root.position, from = V(p.x, 0, p.z), r = Math.random(), opts = [];
-  for (const h of HOUSES) opts.push([toWorld(h, (Math.random() - 0.5) * 0.6, 0, -0.4 - Math.random() * 1.6), null, 'arrose', 3]);
+  for (const h of HOUSES) opts.push([doorFront(h, 0.8 + Math.random() * 0.8), h.ry + Math.PI, 'arrose', 3]); // devant la porte, il regarde dedans
   opts.push([COT_DOOR.clone(), 0.5 + Math.PI, 'salue', 1]);
   { const px = 7.2, pz = -9.0, a = Math.random() * 6.28; opts.push([V(px + Math.cos(a) * 2.5, 0, pz + Math.sin(a) * 2.0), null, 'attend', 1.5, V(px, 0, pz)]); }
-  for (let k = 0; k < 2; k++) { const a = Math.random() * 6.28, d = 3 + Math.random() * 5; opts.push([V(Math.cos(a) * d, 0, 4 + Math.sin(a) * d * 0.6), null, 'attend', 1]); }
+  for (let k = 0; k < 4; k++) { const a = Math.random() * 6.28, d = 3 + Math.random() * 5, q = V(Math.cos(a) * d, 0, 4 + Math.sin(a) * d * 0.6); if (!inHouse(q.x, q.z, 0.6)) opts.push([q, null, 'attend', 0.5]); }
   let w = opts.reduce((a, o) => a + o[3], 0) * r, pick = opts[0]; for (const o of opts) { w -= o[3]; if (w <= 0) { pick = o; break; } }
   const [to, face0, pose, , look] = pick, pts = route(from, to); if (!pts || !pts.length) { idle.next = t + 4; return; }
-  const face = face0 ?? (look ? Math.atan2(look.x - to.x, look.z - to.z) : HOUSES.some((h) => houseAt(to.x, to.z) === h.id) ? Math.atan2(-HB[houseAt(to.x, to.z)].sin, -HB[houseAt(to.x, to.z)].cos) : null);
-  idle.moved = true; walk.auto = { pts, i: 0, face, pose, idle: true, then: () => { idle.next = clock.elapsedTime + 4 + Math.random() * 5; } };
+  const face = face0 ?? (look ? Math.atan2(look.x - to.x, look.z - to.z) : null);
+  idle.moved = true; walk.auto = { pts, i: 0, face, pose, idle: true, noEnter: true, then: () => { idle.next = clock.elapsedTime + 4 + Math.random() * 5; } };
 }
 // Le regard : glisser sur la scène (hors joystick)
 function bindLook(canvas) {
@@ -1302,10 +1310,9 @@ function waterPlant(id, done) {
   const fire = () => { pop = { obj: L.obj, t: clock.elapsedTime }; poke(); if (done) done(); };
   if (!walk.on) { fire(); return; }
   const h = L.house, lp = L.obj.position, side = Math.sign(lp.x) || 1;
-  const [ax, az] = L.sl.ground || L.sl.liane ? [Math.max(-0.35, Math.min(0.35, lp.x)), Math.max(-2.95, Math.min(BED_Z + 0.35, lp.z + 0.35))] : [side * 1.0, lp.z]; // massifs : depuis l'allée centrale
-  const to = toWorld(h, ax, 0, az); L.obj.getWorldPosition(_w);
-  const face = Math.atan2(_w.x - to.x, _w.z - to.z), p = ernest.root.position;
-  walk.auto = { pts: Math.hypot(p.x - to.x, p.z - to.z) < 0.4 ? [to] : route(V(p.x, 0, p.z), to), i: 0, face, pose: 'arrose', then: () => setTimeout(fire, 700) };
+  // dehors, il arrose depuis la porte (entrer, c'est passer dans la vue de l'intérieur)
+  const to = doorFront(h, 0.75), face = h.ry + Math.PI, p = ernest.root.position; void side; void lp;
+  walk.auto = { pts: Math.hypot(p.x - to.x, p.z - to.z) < 0.4 ? [to] : route(V(p.x, 0, p.z), to), i: 0, face, pose: 'arrose', noEnter: true, then: () => setTimeout(fire, 700) };
 }
 // Graines dorées : des emplacements cachés dans le jardin (sous les tables, derrière les serres, au bord de la mare,
 // près de la chaumière, au pied du muret) ; l'app en choisit trois par jour. On les ramasse en passant à côté.
@@ -1737,6 +1744,7 @@ export const api = {
   onPick(fn) { pickFn = fn; }, onNear(fn) { nearFn = fn; near = undefined; }, onFind(fn) { findFn = fn; },
   waterPlant, setFinds, findSpots: () => FIND_SPOTS.length, ernestScreen, get place() { return walk.place; },
   onPlace(fn) { walk.onPlace = fn; walk.place = undefined; },
+  onEnter(fn) { walk.onEnter = fn; }, placeAtDoor,
   ernest,
   onFps(fn) { onFps = fn; frames = 0; fpsT = 0; },
   water() { const last = [...live.values()].pop(); if (last) pop = { obj: last.obj, t: clock.elapsedTime }; poke(); },
