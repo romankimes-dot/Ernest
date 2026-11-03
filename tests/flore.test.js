@@ -69,3 +69,24 @@ test('migration : les anciens pots deviennent des arrosoirs, ceux des ponts nour
 test('douze espèces par serre, chacune avec un dessin', () => {
   for (const l of Object.values(SPECIES)) { assert.equal(l.length, 12); for (const s of l) assert.ok(s.look && s.art && s.latin); }
 });
+import { decorsOf, tradeDecor, shelfCandidates, shelve, keepInSerre, bonsaiInSerre, shelf, achievements, addSeeds } from '../js/flore.js';
+test('décors : troqués une fois contre des graines', () => {
+  const S = defaultState(); addSeeds(S, 4, 'test', D);
+  assert.equal(tradeDecor(S, 'bienetre', 'bassin', D).error, 'graines');
+  assert.equal(tradeDecor(S, 'bienetre', 'arrosoir', D).ok, true); assert.equal(seedsOf(S), 1);
+  assert.equal(tradeDecor(S, 'bienetre', 'arrosoir', D).error, 'obtenu');
+  assert.ok(decorsOf(S, 'bienetre')[0].got); assert.ok(!decorsOf(S, 'travail')[0].got);
+});
+test('étagère : un objectif atteint, le bonsaï proposé ; posé, il quitte la serre', () => {
+  const S = defaultState(); S.goals.push({ id: 'g', title: 'Épreuve 1', status: 'active', milestones: [] }); S.garden.plants.push({ id: 'b', kind: 'bonsai', goal: 'g', cat: 'travail', seed: 1, branches: 3 });
+  assert.equal(shelfCandidates(S).length, 0);
+  S.goals[0].status = 'done'; assert.equal(shelfCandidates(S).length, 1); assert.equal(bonsaiInSerre(S.garden.plants[0], S.goals[0]), true);
+  shelve(S, 'g', D); assert.equal(shelf(S).length, 1); assert.equal(bonsaiInSerre(S.garden.plants[0], S.goals[0]), false); assert.equal(shelfCandidates(S).length, 0);
+  keepInSerre(S, 'g'); assert.equal(shelf(S).length, 0); assert.equal(shelfCandidates(S).length, 0);
+});
+test('achèvements : calculés depuis l’état', () => {
+  const S = defaultState(); many(S, 20); const { plant } = sow(S, 'bienetre', 'thym', D); pour(S, plant.id, D, 19);
+  S.goals.push({ id: 'g', title: 'Épreuve 1', status: 'done', doneAt: D, milestones: [] });
+  const a = Object.fromEntries(achievements(S).map((x) => [x.id, x.done]));
+  assert.equal(a.terre1, true); assert.equal(a.terre10, false); assert.equal(a.obj1, true); assert.equal(a['obj-g'], true); assert.equal(a['serre-bienetre'], false);
+});

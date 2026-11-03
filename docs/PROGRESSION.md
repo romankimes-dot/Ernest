@@ -51,4 +51,13 @@
 ## Mécanique dans l'app (`js/flore.js`)
 - Fait : arrosoirs, semis, versement (un ou tous), stades et événements, graines (taille, pleine terre, journée pleine, graines dorées), espèces ouvertes par la pleine terre ou troquées, plantes des ponts, dormance proposée, plante fixée, ranger et ressortir, migration des anciens pots.
 - Rendu : les plantes vont dans les petites serres actuelles, avec le dessin de leur espèce le plus proche et une taille selon le stade. Le rendu de botaniste dans l'app reste à faire.
-- À venir : la cabane (étagère à bonsaïs, réserve, livre), le livre (catalogue, herbier, achèvements), le troc des décors.
+
+## La cabane et le livre (`js/cabane3d.js`)
+- On entre chez Ernest en touchant la chaumière, ou par le bouton « Entrer chez Ernest » en promenade. Le soir, la chaumière propose aussi de préparer demain.
+- Dedans, il y a une pièce ronde sous le chaume avec un feu et deux fenêtres qui suivent l'heure. On y trouve l'étagère à bonsaïs à gauche, la réserve à droite, et la table au milieu avec le livre et le bocal à graines.
+- Un objectif atteint garde son bonsaï dans la serre jusqu'à décision. Ernest propose alors l'étagère, et on peut aussi le garder en serre ou l'y remettre.
+- Le livre s'ouvre depuis la table de la cabane ou depuis le Carnet. Il a quatre onglets : le catalogue des espèces de chaque serre avec le troc, l'herbier avec une page par plante, les achèvements calculés depuis les données, et les décors à troquer.
+- Les décors troqués sont enregistrés, mais ils ne s'affichent pas encore. Ils arriveront avec les serres de botaniste dans l'app.
+
+## À garder en tête
+- Des serres différentes : chaque serre aura sa propre architecture, et pas seulement ses plantes et ses décors. La maquette les fait encore toutes sur le même modèle.

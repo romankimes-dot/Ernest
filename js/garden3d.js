@@ -12,6 +12,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { buildCottage } from './cottage3d.js';
 import { growth, totalDone, moodAvg, catCounts, catId, floraOf } from './model.js';
+import { bonsaiInSerre } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -937,6 +938,9 @@ function buildPlant(p, h, slotIdx) {
   g.position.set(sl.x + (rng() - 0.5) * 0.08, sl.y, sl.z + (rng() - 0.5) * 0.08); g.rotation.y = rng() * Math.PI * 2;
   h.g.add(g); return { obj: g, plant: pl };
 }
+// Pour la cabane (js/cabane3d.js) : une plante de la réserve dans son pot, un bonsaï de l'étagère.
+export function makeSpecimen(p) { const rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(); g.add(makePot(1.1, M.terra)); const pl = compact(SPECIES[sp](rng, 0.85)); pl.position.y = 0.21; g.add(pl); return g; }
+export function makeBonsai(seed, branches) { return compact(bonsai(rngOf(seed >>> 0), Math.min(1.45, 0.6 + 0.12 * (branches || 0)))); }
 // Bonsaïs du fond : un par objectif actif de la catégorie (trois au plus), une branche par étape franchie ;
 // le plus fourni au centre, sur une petite sellette de bois.
 const BONSAI_SPOTS = [[0, -HD + 0.85, 1], [-1.15, -HD + 0.7, 0.78], [1.15, -HD + 0.7, 0.78]];
@@ -1399,7 +1403,7 @@ export function houseFromState(S, today, id, counts, n) {
   if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
   const plants = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)).slice(-SLOTS_PER_HOUSE).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, g: growth(p, S, today) }));
   const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
-  const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || (goals.get(p.goal) || {}).status === 'active'))
+  const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || bonsaiInSerre(p, goals.get(p.goal))))
     .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0, goal: p.goal || null }));
   return { n: hn, plants, moss: Math.min(MOSS_MAX, mossN * 8 + Math.max(0, hn - 10) * 3), vine: Math.min(1, hn / 80), hanging: [8, 25, 50].filter((k) => hn >= k).length, bonsai };
 }

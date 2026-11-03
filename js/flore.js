@@ -6,7 +6,7 @@
 // Graine 1, pousse 2, plante 5, grande 10, pleine terre 20. Chaque passage de stade : Ernest taille, une graine ;
 // la pleine terre : trois graines. Les choses venues d'un pont nourrissent seules la plante de ce pont.
 // Tout est rangé dans des tableaux à identifiants : la synchronisation réunit sans rien perdre.
-import { catId } from './model.js';
+import { catId, isActive } from './model.js';
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 const seedNum = () => Math.floor(Math.random() * 1e9);
@@ -190,4 +190,52 @@ export function migrateGarden(S) {
   }
   g.plants = keep; g.migrated = { n: ((g.migrated && g.migrated.n) || 0) + n, at: new Date().toISOString().slice(0, 10), seen: false };
   return n;
+}
+
+// ---------- Décors à troquer (six par serre) ----------
+export const DECORS = {
+  bienetre: [['arrosoir', 'Arrosoir de cuivre', 3], ['etiquettes', 'Étiquettes de botaniste', 4], ['banc', 'Banc de jardin', 6], ['lanternes', 'Lanternes', 8], ['bassin', 'Bassin et fontaine', 12], ['carillon', 'Carillon', 5]],
+  travail: [['arrosoir', 'Arrosoir de cuivre', 3], ['etiquettes', 'Étiquettes de botaniste', 4], ['banc', 'Banc de lecture', 6], ['lanternes', 'Lampes de bibliothèque', 8], ['cadran', 'Cadran solaire', 12], ['horloge', 'Horloge de gare', 5]],
+  perso: [['arrosoir', 'Arrosoir de cuivre', 3], ['etiquettes', 'Étiquettes peintes', 4], ['banc', 'Banc de jardin', 6], ['guirlande', 'Guirlande lumineuse', 8], ['vasque', 'Vasque aux oiseaux', 12], ['carillon', 'Carillon', 5]],
+};
+export function decorsOf(S, house) { const got = G(S).decors || {}, seeds = seedsOf(S); return DECORS[house].map(([id, nom, prix]) => ({ id, key: `${house}:${id}`, house, nom, prix, got: got[`${house}:${id}`] || null, canTrade: !got[`${house}:${id}`] && seeds >= prix })); }
+export function tradeDecor(S, house, id, day) {
+  const d = decorsOf(S, house).find((x) => x.id === id); if (!d) return { error: 'décor' }; if (d.got) return { error: 'obtenu' }; if (!d.canTrade) return { error: 'graines' };
+  addSeeds(S, -d.prix, `décor:${d.key}`, day); const g = ensure(S); if (!g.decors || typeof g.decors !== 'object') g.decors = {}; g.decors[d.key] = day; return { ok: true, decor: d };
+}
+
+// ---------- Étagère à bonsaïs : un objectif atteint, Ernest propose de poser son bonsaï dans la cabane ----------
+export const bonsaiOf = (S, goalId) => (G(S).plants || []).find((p) => p && p.kind === 'bonsai' && p.goal === goalId) || null;
+// Visible dans la serre : objectif en cours, ou atteint et pas encore posé sur l'étagère.
+export const bonsaiInSerre = (p, goal) => !!goal && (goal.status === 'active' || (goal.status === 'done' && !p.shelf));
+export const shelfCandidates = (S) => (G(S).plants || []).filter((p) => p && p.kind === 'bonsai' && !p.shelf && !p.keep && ((S.goals || []).find((g) => g.id === p.goal) || {}).status === 'done');
+export const shelf = (S) => (G(S).plants || []).filter((p) => p && p.kind === 'bonsai' && p.shelf);
+export function shelve(S, goalId, day) { const p = bonsaiOf(S, goalId); if (!p) return false; p.shelf = day; delete p.keep; return true; }
+export function keepInSerre(S, goalId) { const p = bonsaiOf(S, goalId); if (!p) return false; delete p.shelf; p.keep = true; return true; }
+
+// ---------- Achèvements (le livre) : calculés depuis l'état, rien à enregistrer ----------
+// → [{ id, groupe, nom, desc, done }]
+export function achievements(S) {
+  const ps = (G(S).plants || []).filter(isNew), waters = ps.reduce((a, p) => a + waterCount(p), 0);
+  const sown = new Set(ps.map((p) => p.sp)), ground = ps.filter((p) => waterCount(p) >= GROUND);
+  const active = Object.keys(S.days || {}).filter((k) => isActive(S, k)).length, finds = G(S).findsTotal || 0;
+  const goals = (S.goals || []).filter((g) => g.status === 'done');
+  const A = (id, groupe, nom, desc, done) => ({ id, groupe, nom, desc, done: !!done });
+  const out = [
+    A('terre1', 'Botanique', 'Première pleine terre', 'Une plante arrosée vingt fois.', ground.length >= 1),
+    A('terre10', 'Botanique', 'Dix en pleine terre', 'Dix plantes arrosées vingt fois.', ground.length >= 10),
+    A('esp6', 'Botanique', 'Six espèces', 'Six espèces différentes semées.', sown.size >= 6),
+    A('esp36', 'Botanique', 'Toutes les espèces', 'Les trente-six espèces semées.', sown.size >= 36),
+    A('eau100', 'Botanique', 'Cent arrosoirs', 'Cent arrosoirs versés.', waters >= 100),
+    ...Object.keys(SPECIES).map((h) => A(`serre-${h}`, 'Botanique', `Serre ${{ travail: 'Travail', bienetre: 'Bien-être', perso: 'Vie perso' }[h]} accomplie`, 'Ses douze espèces en pleine terre.', SPECIES[h].every((sp) => ground.some((p) => p.sp === sp.id)))),
+    A('jours10', 'Régularité douce', 'Dix jours', 'Dix jours où tu as avancé, pas forcément d’affilée.', active >= 10),
+    A('jours30', 'Régularité douce', 'Trente jours', 'Trente jours où tu as avancé.', active >= 30),
+    A('jours100', 'Régularité douce', 'Cent jours', 'Cent jours où tu as avancé.', active >= 100),
+    A('obj1', 'Objectifs', 'Premier objectif atteint', 'Un bonsaï achevé.', goals.length >= 1),
+    ...goals.map((g) => A(`obj-${g.id}`, 'Objectifs', g.title, `Atteint${g.doneAt ? ` le ${g.doneAt}` : ''}.`, true)),
+    A('serres3', 'Promenade', 'Les trois serres', 'Les trois serres arrosées le même jour.', !!G(S).waterCard),
+    A('dorees10', 'Promenade', 'Dix graines dorées', 'Ramassées en promenade.', finds >= 10),
+    A('dorees50', 'Promenade', 'Cinquante graines dorées', 'Ramassées en promenade.', finds >= 50),
+  ];
+  return out;
 }

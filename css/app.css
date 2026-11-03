@@ -379,3 +379,19 @@ body.serre-open .toast{z-index:41!important}
 .fl-dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--fg2);display:block}
 .fl-dot.on{background:#5fae6d;border-color:#5fae6d}
 .linkish{background:none;border:0;padding:0;color:var(--amber);font:inherit;text-decoration:underline;cursor:pointer}
+/* La cabane d'Ernest (js/cabane3d.js) */
+.cabane{position:fixed;inset:0;z-index:34;background:#1a120c;touch-action:none;-webkit-user-select:none;user-select:none}
+.cabane canvas{display:block;width:100%;height:100%}
+body.cabane-open .sheet-bg{z-index:38}
+body.cabane-open .sheet{z-index:39}
+body.cabane-open .toast{z-index:41!important}
+/* Le livre d'Ernest */
+.lv-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.lv-tabs button,.lv-h button{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:13px}
+.lv-tabs button.on,.lv-h button.on{border-color:var(--amber);color:var(--amber)}
+.lv-h{display:flex;gap:6px;flex-wrap:wrap}
+.lv-ach{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.lv-ach i{flex:none;width:18px;height:18px;border-radius:50%;border:1px solid var(--fg2);margin-top:2px}
+.lv-ach.done i{background:#5fae6d;border-color:#5fae6d}
+.lv-ach:not(.done){opacity:.6}
+.lv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}

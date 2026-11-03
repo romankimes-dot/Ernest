@@ -89,7 +89,7 @@ async function init() {
   window.addEventListener('hashchange', handleImport);
   setInterval(() => { if (reslot(S, today, nowHour()) && $('#sheet').hidden) { save(); render(); } else if (tab === 'today') renderTimerOnly(); }, 30000);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-  window.__ernest = { houseSheet, plantSheet }; // essais de bout en bout (tests dans le navigateur)
+  window.__ernest = { houseSheet, plantSheet, livreSheet, openCabane, bonsaiSheet }; // essais de bout en bout (tests dans le navigateur)
   pullToRefresh();
   if (SY.config()) runSync();
   window.addEventListener('online', () => { if (SY.config()) runSync(); });
@@ -247,7 +247,8 @@ function refreshAct() {
   if (g3d && g3d.walking) {
     if (near3d && near3d.kind === 'plant') { const p = S.garden.plants.find((x) => x.id === near3d.id); if (p) { const n = FL.isNew(p) ? FL.cansOf(S, catId(p.cat)).length : 0; lbl = n ? `Arroser ${plantName(p)} · ${n}` : `Arroser ${plantName(p)}`; fn = () => waterNow(p.id); } }
     else if (near3d && near3d.kind === 'sign') { lbl = `Panneau ${H_NAME[near3d.house]}`; fn = () => houseSheet(near3d.house); }
-    else if (g3d.place === 'chaumiere' && ritualOpen()) { lbl = 'Préparer demain'; fn = () => ritualSheet(); }
+    else if (g3d.place === 'chaumiere' && ritualOpen()) { lbl = 'Préparer demain'; fn = () => cottageTap(); }
+    else if (g3d.place === 'chaumiere') { lbl = 'Entrer chez Ernest'; fn = () => openCabane(); }
   }
   b.hidden = !lbl; b.textContent = lbl || ''; b.onclick = fn ? (e) => { e.stopPropagation(); fn(); } : null;
 }
@@ -260,9 +261,61 @@ function onPick3d(o) {
   else if (o.kind === 'seed') toast(g3d.walking ? 'Une graine dorée. Approche-toi, Ernest la ramassera.' : 'Une graine dorée. Pars en promenade pour aller la ramasser.');
 }
 function cottageTap() {
-  if (ritualOpen()) { ritualSheet(); return; }
-  say3d('lieu.chaumiere');
-  toast(nowHour() >= RITUAL_HOUR ? 'Demain est déjà prêt.' : "La chaumière ouvre le rituel du soir dès 18 h.");
+  if (!ritualOpen()) { openCabane(); return; }
+  openSheet(`<h2>La chaumière</h2><div class="btns"><button class="btn" id="ctRit">Préparer demain</button><button class="btn quiet" id="ctIn">Entrer chez Ernest</button></div>`);
+  $('#ctRit').addEventListener('click', () => { closeSheet(); ritualSheet(); }); $('#ctIn').addEventListener('click', () => { closeSheet(); openCabane(); });
+}
+// ---------- La cabane d'Ernest : étagère à bonsaïs, réserve, le livre, le bocal à graines ----------
+let cab = null;
+const timeNow = () => { const h = nowHour(); return h >= 8 && h < 18 ? 'day' : h >= 18 && h < 21 ? 'dusk' : 'night'; };
+const cabData = () => ({ bonsais: FL.shelf(S).map((p) => ({ goal: p.goal, seed: p.seed, branches: p.branches || 0 })), plants: (S.garden.plants || []).filter((p) => FL.isNew(p) && p.dormant), seeds: FL.seedsOf(S), time: timeNow() });
+function refreshCabane() { if (cab) cab.set(cabData()); }
+async function openCabane() {
+  if (cab || !g3d) { if (!g3d) livreSheet(); return; }
+  const el = $('#cabane'); el.hidden = false; document.body.classList.add('cabane-open'); g3d.stop();
+  const b = FL.shelf(S).length, r = cabData().plants.length, n = FL.seedsOf(S);
+  $('#cabCap').innerHTML = `<b>Chez Ernest</b><br><span>Le livre sur la table, ${n} graine${n > 1 ? 's' : ''} dans le bocal. ${b ? `${b} bonsaï${b > 1 ? 's' : ''} sur l'étagère` : "L'étagère attend un objectif atteint"}, ${r ? `${r} plante${r > 1 ? 's' : ''} à la réserve` : 'la réserve est vide'}.</span>`;
+  if (!$('#cabaneClose')._b) { $('#cabaneClose')._b = 1; $('#cabaneClose').addEventListener('click', closeCabane); for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) el.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); }
+  try { const mod = await import('./cabane3d.js'); cab = mod.mount($('#cabaneCv'), { onPick: onPickCabane }); cab.set(cabData()); }
+  catch (e) { closeCabane(); livreSheet(); }
+}
+function closeCabane() { if (cab) { cab.dispose(); cab = null; } $('#cabane').hidden = true; document.body.classList.remove('cabane-open'); if (g3d) g3d.start(); }
+function onPickCabane(o) {
+  if (o.kind === 'book') livreSheet();
+  else if (o.kind === 'seeds') livreSheet('decors');
+  else if (o.kind === 'bonsai') bonsaiSheet(o.goal);
+  else if (o.kind === 'plant') plantSheet(o.id);
+  else if (o.kind === 'ernest') { const t = say(S, 'ernest.touche', ernestEnv(S, today, plantNames())); if (t) { toast(t, 4500); save(); } }
+}
+// ---------- Le livre d'Ernest : catalogue, herbier, achèvements, décors ----------
+let livreTab = 'catalogue', livreHouse = 'bienetre';
+function livreSheet(t) {
+  if (t) livreTab = t;
+  const tabs = [['catalogue', 'Catalogue'], ['herbier', 'Herbier'], ['achevements', 'Achèvements'], ['decors', 'Décors']], seeds = FL.seedsOf(S);
+  const houses = `<div class="lv-h">${['travail', 'bienetre', 'perso'].map((h) => `<button data-lh="${h}" class="${h === livreHouse ? 'on' : ''}">${H_NAME[h]}</button>`).join('')}</div>`;
+  let body = '';
+  if (livreTab === 'catalogue') {
+    const cat = FL.catalogue(S, livreHouse);
+    body = `${houses}<div class="muted small">${cat.filter((s) => s.open).length} espèces sur 12 · ${seeds} graine${seeds > 1 ? 's' : ''}</div><div class="fl-grid">${cat.map((s) => `<div class="fl-sp${s.open ? '' : ' locked'}"><b>${esc(s.nom)}</b><span class="muted small"><i>${esc(s.latin)}</i></span><span class="small">${s.type}</span>
+      ${s.open ? `<span class="fl-dots">${FL.STAGES.map((_, i) => `<i class="fl-dot${i <= FL.stageOf(s.best) ? ' on' : ''}"></i>`).join('')}</span><span class="small muted">${s.best ? FL.stageName(s.best) : 'Pas encore semée'}</span>` : s.canTrade ? `<button class="btn quiet" data-tsp="${s.id}">Troquer ${s.price} graines</button>` : `<span class="small muted">Se débloque : ${esc(s.cond)}</span>`}</div>`).join('')}</div>`;
+  } else if (livreTab === 'herbier') {
+    const ps = (S.garden.plants || []).filter(FL.isNew).sort((a, b) => FL.waterCount(b) - FL.waterCount(a));
+    body = ps.length ? `<div class="stack">${ps.map((p) => { const sp = FL.speciesById(p.sp) || {}, f = FL.fedBy(p)[0]; return `<button class="fl-plant" data-fp="${p.id}" style="width:100%"><b>${esc(sp.nom || '')} <span class="muted small"><i>${esc(sp.latin || '')}</i></span></b><span class="small">Serre ${H_NAME[catId(p.cat)]} · ${FL.stageName(FL.waterCount(p))} · ${FL.waterCount(p)} arrosage${FL.waterCount(p) > 1 ? 's' : ''}${p.dormant ? ' · à la réserve' : ''}${p.fixed ? ' · fixée' : ''}</span><span class="small muted">Semée ${esc(fmtDay(p.day))}${f ? ` · surtout « ${esc(f[0])} »` : ''}</span></button>`; }).join('')}</div>` : '<p class="muted">L\'herbier se remplit avec tes plantes. Sème une graine depuis le panneau d\'une serre.</p>';
+  } else if (livreTab === 'achevements') {
+    const all = FL.achievements(S), groups = [...new Set(all.map((a) => a.groupe))];
+    body = `<div class="muted small">${all.filter((a) => a.done).length} sur ${all.length}</div>${groups.map((g) => `<h3 style="margin:12px 0 2px">${esc(g)}</h3>${all.filter((a) => a.groupe === g).map((a) => `<div class="lv-ach${a.done ? ' done' : ''}"><i></i><div><b>${esc(a.nom)}</b><div class="small muted">${esc(a.desc)}</div></div></div>`).join('')}`).join('')}`;
+  } else {
+    const ds = FL.decorsOf(S, livreHouse);
+    body = `${houses}<div class="muted small">${seeds} graine${seeds > 1 ? 's' : ''} dans le bocal. Les décors s'installeront dans les serres de botaniste.</div><div>${ds.map((d) => `<div class="lv-row"><div><b>${esc(d.nom)}</b><div class="small muted">${d.got ? `Obtenu ${esc(fmtDay(d.got))}` : `${d.prix} graines`}</div></div>${d.got ? icon('check') : `<button class="btn quiet" data-tdec="${d.id}" ${d.canTrade ? '' : 'disabled'}>Troquer</button>`}</div>`).join('')}</div>`;
+  }
+  openSheet(`<div id="livre"><h2>Le livre d'Ernest</h2><div class="lv-tabs">${tabs.map(([k, n]) => `<button data-lt="${k}" class="${k === livreTab ? 'on' : ''}">${n}</button>`).join('')}</div><div style="margin-top:12px">${body}</div><button class="btn quiet" id="lvClose" style="margin-top:14px">Fermer</button></div>`);
+  const L = $('#livre');
+  L.querySelectorAll('[data-lt]').forEach((b) => b.addEventListener('click', () => livreSheet(b.dataset.lt)));
+  L.querySelectorAll('[data-lh]').forEach((b) => b.addEventListener('click', () => { livreHouse = b.dataset.lh; livreSheet(); }));
+  L.querySelectorAll('[data-fp]').forEach((b) => b.addEventListener('click', () => plantSheet(b.dataset.fp)));
+  L.querySelectorAll('[data-tsp]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.trade(S, b.dataset.tsp, today); if (r.ok) { toast(`Troc avec Ernest : ${r.species.nom.toLowerCase()} contre ${r.species.price} graines.`); save(); refreshCabane(); } livreSheet(); }));
+  L.querySelectorAll('[data-tdec]').forEach((b) => b.addEventListener('click', () => { label('le troc'); const r = FL.tradeDecor(S, livreHouse, b.dataset.tdec, today); if (r.ok) { toast(`Troc avec Ernest : ${r.decor.nom.toLowerCase()} contre ${r.decor.prix} graines.`); save(); refreshCabane(); } livreSheet(); }));
+  $('#lvClose').addEventListener('click', closeSheet);
 }
 // La chose faite qui a fait pousser une plante. Les plantes récentes la portent ; pour les anciennes, on apparie
 // dans l'ordre : la n-ième plante du jour dans cette serre ↔ la n-ième chose faite ce jour-là dans cette catégorie.
@@ -305,7 +358,7 @@ function florePlantSheet(p) {
     if (f === 'fix') FL.fix(S, p.id, !p.fixed);
     if (f === 'rest') { FL.rest(S, p.id, today); toast(`Ernest range ${plantName(p)} à la cabane.`); }
     if (f === 'wake') { FL.wake(S, p.id); toast(`${cap1(plantName(p))} revient dans la serre.`); }
-    save(); gardenUpdate(); if (f === 'rest') closeSheet(); else florePlantSheet(p);
+    save(); gardenUpdate(); refreshCabane(); if (f === 'rest') closeSheet(); else florePlantSheet(p);
   }));
 }
 // Les plantes de la serre, ses arrosoirs, semer une graine (et le troc des espèces).
@@ -349,9 +402,15 @@ function bonsaiSheet(goalId) {
   const done = g.milestones.filter((m) => m.done).length;
   openSheet(`<h2>${esc(g.title)}</h2><div class="muted small" style="margin:-6px 0 12px">Bonsaï de la serre ${H_NAME[catId(g.cat)]} · ${done} branche${done > 1 ? 's' : ''}${g.due ? ` · pour ${esc(fmtDay(g.due))}` : ''}</div>
     <div class="stack" id="bsMs">${g.milestones.map((m, i) => `<button class="ms-row ${m.done ? 'done' : ''}" data-i="${i}"><span class="check">${m.done ? icon('check') : ''}</span><span>${esc(m.text)}${m.due ? `<small class="muted"> · ${esc(new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}</small>` : ''}</span></button>`).join('') || '<p class="muted">Pas encore d\'étape.</p>'}</div>
-    <div class="row" style="gap:8px;margin-top:14px"><button class="btn quiet" id="bsEdit">Modifier l'objectif</button><button class="btn quiet" id="bsClose">Fermer</button></div>`);
+    ${shelfBlock(g)}<div class="row" style="gap:8px;margin-top:14px"><button class="btn quiet" id="bsEdit">Modifier l'objectif</button><button class="btn quiet" id="bsClose">Fermer</button></div>`);
+  document.querySelectorAll('[data-shelf]').forEach((b) => b.addEventListener('click', () => { label("l'étagère"); if (b.dataset.shelf === 'on') { FL.shelve(S, g.id, today); toast('Ernest pose le bonsaï sur l\'étagère de la cabane.'); } else { FL.keepInSerre(S, g.id); toast('Le bonsaï reste dans la serre.'); } save(); gardenUpdate(); refreshCabane(); bonsaiSheet(goalId); }));
   $('#bsMs').querySelectorAll('[data-i]').forEach((el) => el.addEventListener('click', () => { action('goalMs', { id: g.id, i: el.dataset.i }); bonsaiSheet(goalId); }));
   $('#bsEdit').addEventListener('click', () => goalSheet(g)); $('#bsClose').addEventListener('click', closeSheet);
+}
+function shelfBlock(g) {
+  const p = FL.bonsaiOf(S, g.id); if (!p || g.status !== 'done') return '';
+  if (p.shelf) return `<div class="card"><div class="small">Sur l'étagère de la cabane depuis ${esc(fmtDay(p.shelf))}.</div><button class="btn quiet" data-shelf="off" style="margin-top:8px">Le remettre en serre</button></div>`;
+  return `<div class="card"><div class="small">${p.keep ? 'Objectif atteint. Le bonsaï reste dans la serre.' : "Objectif atteint. Ernest propose de poser le bonsaï sur l'étagère de la cabane."}</div><div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-shelf="on">Sur l'étagère</button>${p.keep ? '' : '<button class="btn quiet" data-shelf="off">Le garder en serre</button>'}</div></div>`;
 }
 function houseSheet(house) {
   const d = dayOf(S, today), list = d.things.filter((t) => catId(t.cat) === house && !t.prep);
@@ -731,6 +790,7 @@ function action(act, ds, el, v) {
     case 'jListToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; l.done = false; l.doneAt = null; save(); toast('Décochée, de retour dans la liste.'); render(); break; }
     case 'jListDel': removeList(ds.id); break;
     case 'fam': carnetFam = ds.v; render(); break;
+    case 'livre': livreSheet(); break;
     case 'goalMs': { const g = S.goals.find((x) => x.id === ds.id); const m = g && g.milestones[Number(ds.i)]; if (!m) return; m.done = !m.done; if (m.done) { m.doneAt = today; let p = S.garden.plants.find((x) => x.kind === 'bonsai' && x.goal === g.id); if (!p) { p = { id: uid(), cat: g.cat, day: today, seed: Math.floor(Math.random() * 1e9), kind: 'bonsai', goal: g.id, branches: 0 }; S.garden.plants.push(p); } p.branches = g.milestones.filter((x) => x.done).length; gardenWater(); const left = g.milestones.filter((x) => !x.done).length; toast(left ? `Étape faite. Le bonsaï prend une branche (${left} restante${left > 1 ? 's' : ''}).` : 'Dernière étape. Le bonsaï est complet.'); setErnest('arrose'); setTimeout(() => setErnest(), 2500); } save(); render(); break; }
     case 'goalEdit': goalSheet(S.goals.find((x) => x.id === ds.id)); break;
     case 'addGoal': goalSheet(); break;
@@ -1026,7 +1086,7 @@ function goalSheet(g) {
   openSheet(`<h2>${isNew ? 'Un objectif' : 'Cet objectif'}</h2><input id="gTitle" value="${esc(g.title)}" placeholder="Quoi ?" autocomplete="off">${chips(g.cat)}<div class="grid2"><div class="kv"><label>Échéance</label><input type="date" id="gDue" value="${g.due || ''}"></div><div class="kv"><label>Horizon</label><select id="gHor"><option value="week" ${g.horizon === 'week' ? 'selected' : ''}>Semaine</option><option value="month" ${g.horizon === 'month' ? 'selected' : ''}>Mois ou plus</option></select></div></div><div class="kv"><label>Jalons, un par ligne</label><textarea id="gMs">${esc(g.milestones.map((m) => m.text).join('\n'))}</textarea></div><button class="btn" id="gSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="gDone">${icon('check', 'sm')} Atteint</button><button class="btn danger" id="gDel">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh);
   $('#gSave').addEventListener('click', () => { g.title = $('#gTitle').value.trim(); if (!g.title) { toast('Donne-lui un nom d\'abord.'); $('#gTitle').focus(); return; } g.cat = chipValue(sh, 'cat') || 'perso'; g.due = $('#gDue').value || null; g.horizon = $('#gHor').value; const lines = $('#gMs').value.split('\n').map((x) => x.trim()).filter(Boolean); const old = g.milestones; g.milestones = lines.map((text, i) => old.find((m) => m.text === text) || (old[i] ? { ...old[i], text } : { text, done: false })); if (isNew) S.goals.push(g); save(); closeSheet(); render(); toast(isNew ? 'Objectif posé. Un bonsaï attend sa première étape.' : 'Objectif mis à jour.'); });
-  if (!isNew) { $('#gDone').addEventListener('click', () => { g.status = 'done'; g.doneAt = today; const c = drawRare(S, 'goal'); if (c) toast(`Carnet : « ${c.titre || ''} »`); save(); closeSheet(); render(); }); $('#gDel').addEventListener('click', () => { closeSheet(); removeGoal(g.id); }); }
+  if (!isNew) { $('#gDone').addEventListener('click', () => { g.status = 'done'; g.doneAt = today; const c = drawRare(S, 'goal'); if (c) toast(`Carnet : « ${c.titre || ''} »`); if (FL.bonsaiOf(S, g.id)) toast("Objectif atteint. Ernest propose de poser son bonsaï sur l'étagère de la cabane : touche-le dans la serre pour décider.", 5000); save(); closeSheet(); render(); }); $('#gDel').addEventListener('click', () => { closeSheet(); removeGoal(g.id); }); }
 }
 function reviewSheet() {
   const wk = isoWeek(today), days = weekDays(today), goals = S.goals.filter((g) => g.status === 'active'), counts = catCounts(S, days), e = ernestEnv(S, today, plantNames());
@@ -1053,7 +1113,7 @@ function reviewSheet() {
 function viewCarnet() {
   const all = allCards(), log = S.cards.log || [], seen = Object.keys(S.cards.seen).length;
   const said = (S.ernest.log || []).filter((l) => l.at.slice(0, 10) === today).slice(0, 6);
-  let h = `<h1>Le carnet.</h1><div class="muted small">${seen ? `${seen} carte${seen > 1 ? 's' : ''} trouvée${seen > 1 ? 's' : ''}. ` : ''}Elles arrivent avec ce que tu fais.</div>`;
+  let h = `<h1>Le carnet.</h1><div class="muted small">${seen ? `${seen} carte${seen > 1 ? 's' : ''} trouvée${seen > 1 ? 's' : ''}. ` : ''}Elles arrivent avec ce que tu fais.</div><button class="btn quiet" data-act="livre">Le livre d'Ernest : catalogue, herbier, achèvements</button>`;
   if (said.length) h += `<div class="card stack"><div class="eyebrow">Ernest, aujourd'hui</div>${said.map((l) => `<div class="small">${esc(l.t)}</div>`).join('')}</div>`;
   h += `<div class="chips"><button class="chip ${carnetFam === 'all' ? 'on' : ''}" data-act="fam" data-v="all">Tout</button>${FAMILLES.map((f) => `<button class="chip ${carnetFam === f.id ? 'on' : ''}" data-act="fam" data-v="${f.id}">${f.nom}</button>`).join('')}</div>`;
   const items = log.map((l) => ({ ...l, card: cardById(l.id) })).filter((x) => x.card && (carnetFam === 'all' || x.card.famille === carnetFam)).slice(0, 60);
