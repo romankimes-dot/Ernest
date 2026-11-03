@@ -1,10 +1,14 @@
 // Page de la maquette : curseur de progression, heure, catalogue (js/botaniste3d.js).
-import { mount, setProgress, setTime, stats, events, SPECIES, DECORS, STAGES, stageOf } from './botaniste3d.js';
+import { mount, setProgress, setTime, stats, events, SPECIES, DECORS, STAGES, stageOf, SERRE } from './botaniste3d.js';
+
+const serreId = new URLSearchParams(location.search).get('serre') || 'bienetre';
 
 const $ = (id) => document.getElementById(id);
 const canvas = document.createElement('canvas'); document.body.prepend(canvas);
-const G = mount(canvas, { progress: 0.5, onFps: (v) => { $('fps').textContent = `${v} i/s`; } });
+const G = mount(canvas, { serre: serreId, progress: 0.5, onFps: (v) => { $('fps').textContent = `${v} i/s`; } });
 $('loading').remove();
+$('name').textContent = `Serre ${SERRE.nom}`; document.title = `Serre ${SERRE.nom}`;
+document.querySelectorAll('#serres a').forEach((a) => a.classList.toggle('on', a.dataset.s === serreId));
 
 const WHEN = [[0, 'Vide'], [0.04, 'Premiers jours'], [0.15, 'Un mois'], [0.3, 'Trois mois'], [0.5, 'Six mois'], [0.72, 'Neuf mois'], [0.92, 'Un an'], [1, 'Accomplie']];
 const whenOf = (p) => WHEN.filter(([k]) => p >= k).pop()[1];
@@ -27,6 +31,7 @@ document.querySelectorAll('#time button').forEach((b) => b.addEventListener('cli
 // Silhouettes du catalogue, une par type d'emplacement.
 const SIL = {
   'Massif': '<path d="M20 62c4-18 12-26 20-30M40 62c0-16 2-28 0-40M60 62c-2-16-10-24-18-28M30 62c2-10 6-16 10-18M50 62c-1-10-4-15-9-18"/><circle cx="40" cy="22" r="3"/><circle cx="22" cy="34" r="2.5"/><circle cx="58" cy="32" r="2.5"/>',
+  'Prairie': '<path d="M14 62c4-14 4-30 0-46M26 62c2-14 6-26 12-36M40 62c0-18-2-32-6-44M52 62c-2-14-6-28-12-38M64 62c-4-12-4-26 0-40"/><ellipse cx="14" cy="14" rx="2.5" ry="6"/><ellipse cx="34" cy="16" rx="2.5" ry="6"/><ellipse cx="64" cy="20" rx="2.5" ry="6"/>',
   'Rocaille': '<path d="M40 60C38 44 30 30 22 22M40 60c2-16 10-30 18-38M40 60c0-18 0-30 0-44M40 60C34 50 24 44 14 42M40 60c6-10 16-16 26-18"/><path d="M14 62h52"/>',
   'Géante': '<path d="M40 64V30"/><path d="M40 34c-14-12-26-8-30 4 10 2 20 0 30-4zM40 30c10-14 24-14 30-4-10 4-20 6-30 4zM40 42c-12 0-20 6-22 14 10 0 18-4 22-14zM40 40c12-2 22 4 24 12-10 2-18-2-24-12z"/>',
   'Liane': '<path d="M22 64C22 40 30 20 58 12"/><path d="M26 50c-8-2-12 2-12 8 6 0 10-2 12-8zM30 38c8-4 14-2 16 4-6 2-12 2-16-4zM38 26c-6-6-12-6-14 0 6 2 10 2 14 0zM48 18c6-6 12-6 14-2-4 4-10 4-14 2z"/>',
@@ -42,7 +47,7 @@ function book() {
       ${sp.rare ? `<div class="rare">${sp.rare}</div>` : ''}</div>`;
   }).join('');
   const decos = DECORS.map((d) => `<div class="deco">${d.nom}<span>${P >= d.u ? 'Dans la serre' : `${d.prix} graines`}</span></div>`).join('');
-  $('book').innerHTML = `<button class="close" id="close">Fermer</button><h2>Le livre d'Ernest</h2><p class="sub">Collection Bien-être · ${s.species} espèces sur ${SPECIES.length}</p>
+  $('book').innerHTML = `<button class="close" id="close">Fermer</button><h2>Le livre d'Ernest</h2><p class="sub">Collection ${SERRE.nom} · ${s.species} espèces sur ${SPECIES.length}</p>
     <h3>Catalogue</h3><div class="grid">${cards}</div><h3>Décors à troquer</h3>${decos}`;
   $('close').onclick = () => $('sheet').classList.remove('on');
 }

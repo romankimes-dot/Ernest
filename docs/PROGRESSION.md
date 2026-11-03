@@ -38,9 +38,12 @@
 2. Validation, puis Travail et Vie perso.
 3. Mécanique (arrosoirs, stades, migration), puis cabane, livre, troc.
 
-## Maquette Bien-être (`botaniste.html`)
+## Maquette des trois serres (`botaniste.html?serre=bienetre|travail|perso`)
 - Page à part, sans effet sur l'app : `js/botaniste3d.js` (serre, plan, espèces, décors), `js/botaniste.js` (curseur, heure, livre).
 - Le curseur rejoue une année : l'espèce se débloque, elle est semée en pot sur l'établi, puis passe en pleine terre dans son emplacement du plan.
 - Pleine terre se fait dans les emplacements du plan de la serre (massif, rocaille, géantes, lianes, suspensions). Le jardin extérieur prendrait le surplus. À confirmer.
-- Douze espèces : thym, basilic, romarin, camomille (massif), aloès (rocaille), fougère arborescente, citronnier, monstera (géantes), lierre, jasmin étoilé (lianes), misère, capucine (suspensions).
-- Six décors à troquer : arrosoir de cuivre, étiquettes, banc, lanternes, bassin et fontaine, carillon.
+- Même plan pour les trois serres : 4 espèces de massif, 1 de rocaille (ou prairie), 3 géantes, 2 lianes, 2 suspensions.
+- Bien-être : thym, basilic, romarin, camomille, aloès, fougère arborescente, citronnier, monstera, lierre, jasmin étoilé, misère, capucine. Décors : arrosoir, étiquettes, banc, lanternes, bassin, carillon.
+- Travail : pensée, lavande, iris, calathéa, sansevière, palmier kentia, figuier lyre, oiseau de paradis, philodendron, glycine, pothos, orchidée. Décors : arrosoir, étiquettes, banc de lecture, lampes de bibliothèque, cadran solaire, horloge de gare.
+- Vie perso : marguerite, coquelicot, bleuet, cosmos, graminées, hortensia, figuier, olivier, chèvrefeuille, rosier grimpant, géranium-lierre, fuchsia. Décors : arrosoir, étiquettes peintes, banc, guirlande lumineuse, vasque aux oiseaux, carillon.
+- Photophores au sol le soir et la nuit, dans l'allée et sous les massifs.
