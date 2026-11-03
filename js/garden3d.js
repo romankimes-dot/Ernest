@@ -1142,7 +1142,7 @@ function route(from, to) {
 const walk = { on: false, view: 'third', yaw: Math.PI, pitch: 0.36, dist: 4.2, distCur: 4.2, ix: 0, iz: 0, keys: new Set(), auto: null, speed: 0, pose: null, poseUntil: 0, onArrive: null, onPlace: null, place: undefined };
 const KEYS = { KeyW: [0, 1], KeyZ: [0, 1], ArrowUp: [0, 1], KeyS: [0, -1], ArrowDown: [0, -1], KeyA: [-1, 0], KeyQ: [-1, 0], ArrowLeft: [-1, 0], KeyD: [1, 0], ArrowRight: [1, 0] };
 if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', (e) => { if (!walk.on || !KEYS[e.code] || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return; walk.keys.add(e.code); walk.auto = null; e.preventDefault(); });
+  window.addEventListener('keydown', (e) => { if (!walk.on || !KEYS[e.code] || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return; walk.keys.add(e.code); walk.auto = null; idleInput(); e.preventDefault(); });
   window.addEventListener('keyup', (e) => walk.keys.delete(e.code));
   window.addEventListener('blur', () => walk.keys.clear());
 }
@@ -1156,7 +1156,7 @@ function setFirstPerson(on) {
   // la lanterne garde ses propres réglages de visibilité (allumée ou rangée)
   L.userData.swing.children.forEach((c) => { if (!c.isLight) c.visible = !!(L.userData.on); });
 }
-function updateWalk(dt, t) {
+function updateWalk(dt, t, cam = true) {
   const p = ernest.root.position;
   // entrée : clavier + joystick, dans le repère de la caméra
   let ix = walk.ix, iz = walk.iz; for (const k of walk.keys) { ix += KEYS[k][0]; iz += KEYS[k][1]; }
@@ -1183,6 +1183,7 @@ function updateWalk(dt, t) {
   ernest.setWalk(walk.speed / 0.75);
   ernest.setPose(walk.pose && t < walk.poseUntil ? walk.pose : 'attend');
   // lieu : pour la légende (« dans la serre Travail »)
+  if (!cam) return;
   const pl = houseAt(p.x, p.z) || (p.distanceTo(COT_DOOR) < 2.2 ? 'chaumiere' : null); if (pl !== walk.place) { walk.place = pl; if (walk.onPlace) walk.onPlace(pl); }
   // caméra
   if (walk.view === 'first') {
@@ -1220,6 +1221,23 @@ function walkTo(id) {
   else { to = COT_DOOR.clone(); face = 0.5 + Math.PI; pose = 'salue'; }
   walk.auto = { pts: route(from, to), i: 0, face, pose };
 }
+// Ernest s'occupe seul : après quelques secondes sans geste, il va voir une serre, la chaumière, la mare ou fait
+// un tour au jardin (le même pilote que walkTo) ; un geste l'arrête aussitôt.
+const idle = { last: 0, next: 6, moved: false };
+const idleInput = () => { idle.last = clock.elapsedTime; if (walk.auto && walk.auto.idle) { walk.auto = null; walk.pose = null; } };
+function idleTick(t) {
+  if (mode !== 'full' || fly || walk.auto || walk.speed > 0.05 || walk.ix || walk.iz || walk.keys.size || (walk.on && walk.view === 'first')) return;
+  if (t - idle.last < 5 || t < idle.next || (walk.pose && t < walk.poseUntil)) return;
+  const p = ernest.root.position, from = V(p.x, 0, p.z), r = Math.random(), opts = [];
+  for (const h of HOUSES) opts.push([toWorld(h, (Math.random() - 0.5) * 0.6, 0, -0.4 - Math.random() * 1.6), null, 'arrose', 3]);
+  opts.push([COT_DOOR.clone(), 0.5 + Math.PI, 'salue', 1]);
+  { const px = 7.2, pz = -9.0, a = Math.random() * 6.28; opts.push([V(px + Math.cos(a) * 2.5, 0, pz + Math.sin(a) * 2.0), null, 'attend', 1.5, V(px, 0, pz)]); }
+  for (let k = 0; k < 2; k++) { const a = Math.random() * 6.28, d = 3 + Math.random() * 5; opts.push([V(Math.cos(a) * d, 0, 4 + Math.sin(a) * d * 0.6), null, 'attend', 1]); }
+  let w = opts.reduce((a, o) => a + o[3], 0) * r, pick = opts[0]; for (const o of opts) { w -= o[3]; if (w <= 0) { pick = o; break; } }
+  const [to, face0, pose, , look] = pick, pts = route(from, to); if (!pts || !pts.length) { idle.next = t + 4; return; }
+  const face = face0 ?? (look ? Math.atan2(look.x - to.x, look.z - to.z) : HOUSES.some((h) => houseAt(to.x, to.z) === h.id) ? Math.atan2(-HB[houseAt(to.x, to.z)].sin, -HB[houseAt(to.x, to.z)].cos) : null);
+  idle.moved = true; walk.auto = { pts, i: 0, face, pose, idle: true, then: () => { idle.next = clock.elapsedTime + 4 + Math.random() * 5; } };
+}
 // Le regard : glisser sur la scène (hors joystick)
 function bindLook(canvas) {
   let last = null, pinch = null; const pts = new Map();
@@ -1235,7 +1253,7 @@ function bindLook(canvas) {
   canvas.addEventListener('wheel', (e) => { if (!walk.on) return; e.preventDefault(); walk.dist = Math.max(1.6, Math.min(8, walk.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
 }
 function updateErnest(dt, t, still) {
-  if (!walk.on) { ernest.setPose(ERNEST_POSE[ernestState] || 'attend'); }
+  if (!walk.on && !(mode === 'full' && (walk.auto || walk.speed > 0.02))) { ernest.setPose(ERNEST_POSE[ernestState] || 'attend'); }
   const L = ernest.parts.lantern; L.userData.on = walk.on ? lanternWanted() : ernestState === 'lanterne' || (lanternWanted() && ernestState === 'attend');
   ernest.update(dt, { lantern: L.userData.on, lanternK: 2.4, groundY: ernest.root.position.y, still });
 }
@@ -1264,7 +1282,7 @@ function pickAt(cx, cy) {
 }
 function bindPick(canvas) {
   let d = null;
-  canvas.addEventListener('pointerdown', (e) => { d = e.isPrimary ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
+  canvas.addEventListener('pointerdown', (e) => { idleInput(); d = e.isPrimary ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
   canvas.addEventListener('pointerup', (e) => { if (!d || !e.isPrimary) return; const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y), dt = performance.now() - d.t; d = null; if (moved < 10 && dt < 450) pickAt(e.clientX, e.clientY); });
 }
 // En promenade : la plante ou le panneau le plus proche d'Ernest (pour un bouton « Arroser » ou « Le panneau »)
@@ -1609,8 +1627,10 @@ function frame(now) {
   }
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
   updateErnest(dt, t, false); updateFinds(t); if (walk.on) updateNear(t);
+  idleTick(t);
   if (walk.on) updateWalk(dt, t);
   else {
+    if (walk.auto || walk.speed > 0.02 || (walk.pose && t < walk.poseUntil)) updateWalk(dt, t, false); // vue d'ensemble : il vaque, la vue reste libre
     if (fly) { const e = Math.min(1, (performance.now() - fly.s) / 1100), k = e < 0.5 ? 2 * e * e : 1 - (-2 * e + 2) ** 2 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k); if (e >= 1) fly = null; }
     { const T = controls.target; T.x = Math.max(-10, Math.min(10, T.x)); T.z = Math.max(-9, Math.min(9, T.z)); T.y = Math.max(0.4, Math.min(2.2, T.y)); }
     controls.update(); { const hy = heightAt(camera.position.x, camera.position.z) + 0.9; if (camera.position.y < hy) camera.position.y = hy; }
@@ -1691,6 +1711,8 @@ export function mount(canvas, opts = {}) {
 }
 export function setMode(m) {
   if (m !== 'full' && walk.on) setWalk(false);
+  if (m !== 'full' && idle.moved) { walk.auto = null; walk.speed = 0; walk.pose = null; ernest.setWalk(0); ernest.root.position.set(ERNEST.x, ERNEST.y, ERNEST.z); ernest.root.rotation.y = 0.35; idle.moved = false; } // le bandeau le retrouve à sa place
+  if (m === 'full') { idle.last = clock.elapsedTime; idle.next = clock.elapsedTime + 6; }
   mode = m;
   if (!renderer) return;
   controls.enabled = m === 'full';
@@ -1710,7 +1732,7 @@ export const api = {
   // Ernest : état du moment (attend, arrose, assis, dort, salue, lanterne) et promenade
   setErnest(st) { if (st && st !== ernestState) { ernestState = st; poke(); } },
   walk(on, view) { setWalk(on, view); }, walkTo, get walking() { return walk.on; }, get walkView() { return walk.view; },
-  walkInput(x, z) { walk.ix = x; walk.iz = z; },
+  walkInput(x, z) { walk.ix = x; walk.iz = z; if (x || z) idleInput(); },
   // monde interactif : toucher (plantes, bonsaïs, panneaux, chaumière, Ernest, graines), arroser, graines dorées
   onPick(fn) { pickFn = fn; }, onNear(fn) { nearFn = fn; near = undefined; }, onFind(fn) { findFn = fn; },
   waterPlant, setFinds, findSpots: () => FIND_SPOTS.length, ernestScreen, get place() { return walk.place; },
