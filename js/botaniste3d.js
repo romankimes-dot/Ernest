@@ -635,7 +635,7 @@ function renderAll() {
     if (pl.mode === 'bench') { // en pot sur l'établi
       usedBench.add(it.bench); const b = BENCH[it.bench], big = SP[it.id].type === 'Géante';
       _P.compose(b, _q.setFromEuler(_e.set(0, it.i * 1.7, 0)), _s.setScalar(1)); push('pot', _P, POTC[it.i % 3], own);
-      const sc = big ? 0.45 : 0.75; // jeunes plantes de l'établi : assez grandes pour qu'on les voie _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(0.45 + g * 1.3) : Math.max(0.35, g), _P, own); // même une graine se voit dans son pot
+      const sc = big ? 0.45 : 0.75; /* jeunes plantes de l'établi : assez grandes pour qu'on les voie */ _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(0.45 + g * 1.3) : Math.max(0.35, g), _P, own); /* même une graine se voit dans son pot */
     } else { // pleine terre, dans son emplacement du plan
       const gr = pl.ground;
       if (gr.basket) { _P.compose(gr.pos.clone().add(V(0, -0.1, 0)), _q.identity(), _s.set(1.3, 0.7, 1.3)); push('pot', _P, BASKET_C, own); const top = roofY(gr.pos.x) - 0.05; _P.compose(gr.pos.clone().add(V(0, 0.05, 0)), _q.identity(), _s.set(0.006, Math.max(0.2, top - gr.pos.y - 0.05), 0.006)); push('stem', _P, CHAIN_C); }

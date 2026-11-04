@@ -10,3 +10,10 @@ test('village 3D : chaque pièce utilisée est définie', () => {
   const used = new Set([...src.matchAll(/(?:boxAt|ibPut)\('(\w+)'/g)].map((m) => m[1]));
   for (const k of used) assert.ok(defined.has(k), `pièce « ${k} » utilisée mais jamais définie`);
 });
+
+test('établi : les pots dessinent bien leur plante (pas avalée par un commentaire)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../js/botaniste3d.js', import.meta.url), 'utf8').split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+  assert.ok(src.includes('emit(pl.seedParts || pl.parts'), 'le dessin des plantes de l\'établi a disparu');
+  assert.ok(src.includes("push('pot', _P"), 'les pots de l\'établi ont disparu');
+});
