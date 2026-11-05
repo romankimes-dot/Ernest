@@ -1,0 +1,6 @@
+{
+  "name": "rythme-hebdo",
+  "version": "0.1.0",
+  "description": "Suivi du crédit hebdomadaire : utilisation de la semaine, rythme attendu, projection et budget par jour",
+  "types": "./types/index.d.ts"
+}
