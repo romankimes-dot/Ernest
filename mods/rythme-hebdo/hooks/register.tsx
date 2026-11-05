@@ -172,7 +172,6 @@ async function record($: Api, limits: SessionRateLimit[]) {
 
 async function refreshStatus($: Api, w: Week, now: number, key: string) {
   const a = analyze(w, now)
-  $.ui.status(statusText(a))
   if (a.pace === 'rapide') {
     const warnedKey = `warned:${key}`
     if (!(await $.store.get(warnedKey))) {
@@ -228,22 +227,18 @@ export const register: Register = on => {
     const now = (await read($, clockNow)) || (await $.clock.now())
     const a = analyze(w, now)
     const { Box, Text, Button } = $.ui.resolve(e)
+    // Une seule ligne discrète ; un clic ouvre le panneau de détail.
     return (
-      <Box flexDirection="row" gap={1}>
-        <Text>
-          <Text dimColor>Semaine </Text>
-          <Text color={PACE_COLOR[a.pace]}>{bar(a.used, a.expected, 20)}</Text>
-          <Text> {round1(a.used)}%</Text>
-          <Text dimColor> / rythme {Math.round(a.expected)}% · </Text>
-          <Text color={PACE_COLOR[a.pace]}>
-            {PACE_TEXT[a.pace]} ({sign(a.delta)} pts)
-          </Text>
-        </Text>
+      <Box flexDirection="row">
         <Button
-          key="details"
-          label="Détails"
+          key="hebdo"
+          plain
+          dimColor
           onPress={() => void $.ui.open({ id: PANE, title: TITLE })}
-        />
+        >
+          <Text color={PACE_COLOR[a.pace]}>●</Text> Semaine {Math.round(a.used)}%
+          <Text dimColor> · rythme {Math.round(a.expected)}% ({sign(Math.round(a.delta))})</Text>
+        </Button>
       </Box>
     )
   })

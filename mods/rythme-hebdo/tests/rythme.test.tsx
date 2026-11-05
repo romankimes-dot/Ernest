@@ -23,7 +23,7 @@ test('le bandeau et le panneau montrent le rythme hebdo', async ($, on) => {
 
   for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
     const band = await $.ui.mount({ plugin: 'rythme-hebdo', surface, component: 'AbovePrompt', props: { hasSurvey: false } } as never)
-    expect((await band.find({ type: 'Text', text: /Trop rapide/ }))).toBeDefined()
+    expect((await band.find({ key: 'hebdo' }))?.text).toMatch(/Semaine 70%.*rythme 50% \(\+20\)/)
     await band.unmount()
 
     const pane = await $.ui.mount({
