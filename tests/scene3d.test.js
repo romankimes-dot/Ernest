@@ -17,3 +17,8 @@ test('établi : les pots dessinent bien leur plante (pas avalée par un commenta
   assert.ok(src.includes('emit(pl.seedParts || pl.parts'), 'le dessin des plantes de l\'établi a disparu');
   assert.ok(src.includes("push('pot', _P"), 'les pots de l\'établi ont disparu');
 });
+
+test('graines dorées : aucune cachée dans une serre', async () => {
+  const src = readFileSync(new URL('../js/garden3d.js', import.meta.url), 'utf8');
+  assert.ok(/inHouse\(c\.x, c\.z, 0\.25\)\) return; out\.push\(c\)/.test(src), 'les emplacements des graines dorées doivent exclure les serres');
+});

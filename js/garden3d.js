@@ -1317,9 +1317,9 @@ function waterPlant(id, done) {
 // Graines dorées : des emplacements cachés dans le jardin (sous les tables, derrière les serres, au bord de la mare,
 // près de la chaumière, au pied du muret) ; l'app en choisit trois par jour. On les ramasse en passant à côté.
 const FIND_SPOTS = (() => {
-  const out = [], add = (v) => { const q = V(v.x, 0, v.z), c = collide(q.clone(), 0.12); if (q.distanceTo(c) > 0.3) return; out.push(c); };
+  const out = [], add = (v) => { const q = V(v.x, 0, v.z), c = collide(q.clone(), 0.12); if (q.distanceTo(c) > 0.3 || inHouse(c.x, c.z, 0.25)) return; out.push(c); }; // jamais dans une serre : Ernest n'y entre plus
   for (const h of HOUSES) {
-    for (const sd of [-1, 1]) add(toWorld(h, sd * (TBX - 0.42), 0, TZ0 + 0.5)); // sous le bord des tables, au fond
+    for (const sd of [-1, 1]) add(toWorld(h, sd * 1.5, 0, HD + 1.3)); // au pied de la façade, de part et d'autre de la porte (dedans, c'est une autre vue)
     add(toWorld(h, 0.9, 0, -HD - 0.7)); add(toWorld(h, HW + 0.55, 0, -1.2)); add(toWorld(h, -HW - 0.55, 0, 1.4));
   }
   for (const [x, z] of [[9.4, -8.2], [5.0, -8.6], [7.3, -11.3], [-3.2, -10.6], [-8.7, -7.4], [0, 9.6], [-6.2, 11.0], [6.1, 10.8], [10.4, 2.0], [-10.4, 2.6], [2.6, -9.8], [-1.6, 5.6]]) add(V(x, 0, z));
