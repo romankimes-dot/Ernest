@@ -10,6 +10,18 @@ Rythme attendu = temps écoulé dans la fenêtre de 7 jours (calculé depuis `re
 
 ## Installation
 
-```bash
-claude --plugin-dir ./mods/rythme-hebdo
+À l'invite d'une session Claude Code dans un terminal :
+
 ```
+/plugin install rythme-hebdo --marketplace romankimes-dot/Ernest
+```
+
+Depuis un shell :
+
+```bash
+claude plugin install rythme-hebdo --marketplace romankimes-dot/Ernest
+```
+
+Dans l'app desktop (où `/plugin` ne fonctionne pas) : cliquer sur **+** à côté du champ de saisie → **Plugins** → **Add marketplace** avec `romankimes-dot/Ernest` → **Add plugin**.
+
+Pour développer : `claude --plugin-dir ./mods/rythme-hebdo`.

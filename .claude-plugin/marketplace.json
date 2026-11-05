@@ -1,0 +1,11 @@
+{
+  "name": "ernest-mods",
+  "owner": { "name": "romankimes-dot" },
+  "plugins": [
+    {
+      "name": "rythme-hebdo",
+      "source": "./mods/rythme-hebdo",
+      "description": "Suivi du crédit hebdomadaire Claude : rythme, projection et budget par jour"
+    }
+  ]
+}
