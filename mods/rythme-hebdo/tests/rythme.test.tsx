@@ -24,7 +24,7 @@ test('le bandeau et le panneau montrent le rythme hebdo', async ($, on) => {
   })
 
   const out = await $.command.run({ command: 'hebdo', args: '' } as never)
-  expect((out as { text: string }).text).toMatch(/Projection au reset : 140%/)
+  expect((out as { text: string }).text).toMatch(/plus de crédit vers sam 00:00/)
 
   for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
     const band = await $.ui.mount({ plugin: 'rythme-hebdo', surface, component: 'AbovePrompt', props: { hasSurvey: false } } as never)

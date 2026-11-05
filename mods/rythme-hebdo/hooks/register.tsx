@@ -133,24 +133,43 @@ function statusText(a: Analysis) {
 }
 
 // Rapport texte : seul affichage disponible sur les interfaces web/mobile.
-function report(w: Week, a: Analysis, lastWeek: number | undefined) {
-  const daily = 100 / 7
-  const lines = [
-    `● ${PACE_TEXT[a.pace]} : ${sign(a.delta)} pts`,
-    `${bar(a.used, a.expected, 20)}  ${round1(a.used)}% utilisé · attendu ${Math.round(a.expected)}% (┃)`,
-  ]
-  if (a.projection !== null) lines.push(`Projection au reset : ${Math.round(a.projection)}%`)
-  if (a.emptyAt !== null) lines.push(`⚠ Crédit épuisé vers ${fmtWhen(a.emptyAt)}`)
-  if (a.perDayLeft !== null) {
-    lines.push(`Budget restant : ${round1(a.perDayLeft)}%/jour (régulier : ${round1(daily)}%/jour)`)
+function report(w: Week, a: Analysis, lastWeek: number | undefined, now: number) {
+  const pct = (x: number) => `${Math.round(x)} %`
+  const gap = Math.abs(Math.round(a.delta))
+  const verdict: Record<Pace, string> = {
+    rapide: `🔴 Tu consommes trop vite : ${gap} points d'avance sur un rythme régulier.`,
+    avance: `🟠 Un peu rapide : ${gap} points d'avance sur un rythme régulier.`,
+    ok: `🟢 Tu es dans le rythme (écart de ${gap} point${gap > 1 ? 's' : ''}).`,
+    marge: `🔵 Tu as de la marge : ${gap} points de moins qu'un rythme régulier.`,
   }
-  lines.push(`Reset : ${fmtWhen(a.resetAt)}`)
+  const daysLeft = Math.max(0, (a.resetAt - now) / DAY)
+  const lines = [
+    `Crédit de la semaine : ${pct(a.used)} utilisé — ${pct(a.expected)} de la semaine écoulée.`,
+    `${bar(a.used, a.expected, 20)}   (┃ = où tu devrais en être)`,
+    verdict[a.pace],
+    '',
+  ]
+  if (a.emptyAt !== null) {
+    lines.push(`⚠ À ce rythme, plus de crédit vers ${fmtWhen(a.emptyAt)}, avant la remise à zéro.`)
+  } else if (a.projection !== null) {
+    lines.push(`À ce rythme, tu finiras la semaine à ${pct(a.projection)}.`)
+  }
+  if (a.perDayLeft !== null) {
+    const jours = daysLeft.toFixed(1).replace('.', ',')
+    lines.push(
+      `Il te reste ${pct(100 - a.used)} pour ${jours} jours : environ ${pct(a.perDayLeft)} par jour (rythme régulier : 14 % par jour).`,
+    )
+  }
+  lines.push(`Remise à zéro : ${fmtWhen(a.resetAt)}.`)
   const known = a.days.filter(d => d.pct !== null)
   if (known.length >= 2) {
-    lines.push('Par jour : ' + known.map(d => `${d.label} ${d.pct}%`).join(' · '))
+    lines.push('Consommé par jour : ' + known.map(d => `${d.label} ${pct(d.pct ?? 0)}`).join(' · '))
   }
-  if (typeof lastWeek === 'number') lines.push(`Semaine précédente : ${round1(lastWeek)}%`)
-  if (w.fiveHour !== null) lines.push(`Fenêtre 5 h : ${round1(w.fiveHour)}%`)
+  if (typeof lastWeek === 'number') lines.push(`Semaine précédente : ${pct(lastWeek)}.`)
+  if (w.fiveHour !== null) {
+    const reset = w.fiveHourResetsAt ? `, remise à zéro ${fmtWhen(Date.parse(w.fiveHourResetsAt))}` : ''
+    lines.push(`Limite courte (sur 5 h) : ${pct(w.fiveHour)} utilisé${reset}.`)
+  }
   return lines.join('\n')
 }
 
@@ -268,7 +287,8 @@ export const register: Register = on => {
       }
     }
     const lastWeek = (await $.store.get('lastWeek')) as number | undefined
-    return { text: report(w, analyze(w, await $.clock.now()), lastWeek) }
+    const now = await $.clock.now()
+    return { text: report(w, analyze(w, now), lastWeek, now) }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
