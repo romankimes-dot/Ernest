@@ -132,6 +132,28 @@ function statusText(a: Analysis) {
   return `Hebdo ${round1(a.used)}% · rythme ${Math.round(a.expected)}% (${sign(a.delta)} pts)${proj}`
 }
 
+// Rapport texte : seul affichage disponible sur les interfaces web/mobile.
+function report(w: Week, a: Analysis, lastWeek: number | undefined) {
+  const daily = 100 / 7
+  const lines = [
+    `● ${PACE_TEXT[a.pace]} : ${sign(a.delta)} pts`,
+    `${bar(a.used, a.expected, 20)}  ${round1(a.used)}% utilisé · attendu ${Math.round(a.expected)}% (┃)`,
+  ]
+  if (a.projection !== null) lines.push(`Projection au reset : ${Math.round(a.projection)}%`)
+  if (a.emptyAt !== null) lines.push(`⚠ Crédit épuisé vers ${fmtWhen(a.emptyAt)}`)
+  if (a.perDayLeft !== null) {
+    lines.push(`Budget restant : ${round1(a.perDayLeft)}%/jour (régulier : ${round1(daily)}%/jour)`)
+  }
+  lines.push(`Reset : ${fmtWhen(a.resetAt)}`)
+  const known = a.days.filter(d => d.pct !== null)
+  if (known.length >= 2) {
+    lines.push('Par jour : ' + known.map(d => `${d.label} ${d.pct}%`).join(' · '))
+  }
+  if (typeof lastWeek === 'number') lines.push(`Semaine précédente : ${round1(lastWeek)}%`)
+  if (w.fiveHour !== null) lines.push(`Fenêtre 5 h : ${round1(w.fiveHour)}%`)
+  return lines.join('\n')
+}
+
 function pick(limits: SessionRateLimit[], kind: string) {
   return limits.find(l => l.kind === kind)
 }
@@ -245,7 +267,8 @@ export const register: Register = on => {
         text: "Pas encore de relevé hebdomadaire (envoie un message ; disponible uniquement avec un abonnement Pro/Max).",
       }
     }
-    return { text: statusText(analyze(w, await $.clock.now())) }
+    const lastWeek = (await $.store.get('lastWeek')) as number | undefined
+    return { text: report(w, analyze(w, await $.clock.now()), lastWeek) }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

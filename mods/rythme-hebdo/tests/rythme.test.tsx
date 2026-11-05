@@ -10,6 +10,8 @@ test('le bandeau et le panneau montrent le rythme hebdo', async ($, on) => {
   on('ui.toast', () => ({ value: undefined }))
   on('ui.status', () => ({ value: undefined }))
   on('session.measure', (_, e) => ({ changed: e.changed }))
+  on('session.surfaces', () => ({ value: [] }))
+  on('ui.open', () => ({ value: { isPlaced: false, reason: 'no-surface' } }))
 
   // Moitié de la fenêtre écoulée, 70 % utilisé : 20 pts d'avance.
   await $.session.measure({
@@ -20,6 +22,9 @@ test('le bandeau et le panneau montrent le rythme hebdo', async ($, on) => {
     ],
     changed: ['rateLimits'],
   })
+
+  const out = await $.command.run({ command: 'hebdo', args: '' } as never)
+  expect((out as { text: string }).text).toMatch(/Projection au reset : 140%/)
 
   for (const surface of ['terminal', 'desktop', 'vscode', 'mobile'] as const) {
     const band = await $.ui.mount({ plugin: 'rythme-hebdo', surface, component: 'AbovePrompt', props: { hasSurvey: false } } as never)
