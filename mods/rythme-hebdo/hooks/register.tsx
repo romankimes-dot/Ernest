@@ -225,11 +225,7 @@ async function refreshStatus($: Api, w: Week, now: number, key: string) {
   $.ui.status(`● ${statusText(a)}`)
   if (!paneOpened && !(await hasBand($))) {
     paneOpened = true
-    const opened = await $.ui.open({ id: PANE, title: TITLE })
-    await $.store.set('diag', {
-      surfaces: await $.session.surfaces(),
-      open: opened,
-    })
+    await $.ui.open({ id: PANE, title: TITLE })
   }
   if (a.pace === 'rapide') {
     const warnedKey = `warned:${key}`
@@ -251,7 +247,6 @@ export const register: Register = on => {
       description: 'Afficher le suivi du crédit hebdomadaire (rythme, projection)',
     })
     const usage = await $.session.usage()
-    await $.store.set('diag', { surfaces: await $.session.surfaces(), at: 'start' })
     await record($, usage.rateLimits)
     // Le rythme attendu avance avec le temps, même sans requête.
     $.clock.every(5 * 60_000, () => {
