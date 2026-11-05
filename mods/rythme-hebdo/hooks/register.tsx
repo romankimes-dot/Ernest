@@ -170,8 +170,26 @@ async function record($: Api, limits: SessionRateLimit[]) {
   await refreshStatus($, w, now, key)
 }
 
+// Le bandeau au-dessus du prompt n'existe que sur le terminal et le desktop.
+async function hasBand($: Api) {
+  const surfaces = await $.session.surfaces()
+  return surfaces.some(s => s === 'terminal' || s === 'desktop')
+}
+
+let paneOpened = false
+
 async function refreshStatus($: Api, w: Week, now: number, key: string) {
   const a = analyze(w, now)
+  // Ligne de statut compacte : visible sur les surfaces sans bandeau.
+  $.ui.status(`● ${statusText(a)}`)
+  if (!paneOpened && !(await hasBand($))) {
+    paneOpened = true
+    const opened = await $.ui.open({ id: PANE, title: TITLE })
+    await $.store.set('diag', {
+      surfaces: await $.session.surfaces(),
+      open: opened,
+    })
+  }
   if (a.pace === 'rapide') {
     const warnedKey = `warned:${key}`
     if (!(await $.store.get(warnedKey))) {
@@ -192,6 +210,7 @@ export const register: Register = on => {
       description: 'Afficher le suivi du crédit hebdomadaire (rythme, projection)',
     })
     const usage = await $.session.usage()
+    await $.store.set('diag', { surfaces: await $.session.surfaces(), at: 'start' })
     await record($, usage.rateLimits)
     // Le rythme attendu avance avec le temps, même sans requête.
     $.clock.every(5 * 60_000, () => {
@@ -202,6 +221,14 @@ export const register: Register = on => {
         if (w) await refreshStatus($, w, now, resetKey(w.resetsAt))
       })()
     })
+    return ran
+  })
+
+  on('session.attach', async ($, e, next) => {
+    const ran = await next(e)
+    paneOpened = false
+    const w = await read($, week)
+    if (w) await refreshStatus($, w, await $.clock.now(), resetKey(w.resetsAt))
     return ran
   })
 
