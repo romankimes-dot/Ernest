@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "ernest-mods": {
+      "source": { "source": "github", "repo": "romankimes-dot/Ernest" }
+    }
+  },
+  "enabledPlugins": {
+    "rythme-hebdo@ernest-mods": true
+  }
+}
