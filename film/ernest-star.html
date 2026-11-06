@@ -10,7 +10,7 @@
 <body>
 <!--
   Court-métrage vertical (9:16) : Ernest arrive au ralenti dans la lumière d'un projecteur, une plante en pot dans
-  les mains, puis la caméra tourne autour de lui en gros plan pendant qu'une vapeur monte des feuilles.
+  les mains, puis la caméra tourne autour de lui en gros plan.
   Rendu image par image (film/render.mjs) : window.FILM.frame(i) avance la scène d'une image et renvoie un JPEG.
   Ouvert seul dans un navigateur, la page se joue en boucle (?w=540 pour une fenêtre plus petite).
 -->
@@ -127,36 +127,6 @@ const plant = new THREE.Group();
 }
 scene.add(plant);
 
-// ---------- Vapeur (façon fumée de café) ----------
-const steamU = { uT: { value: 0 } };
-const noise = `
-  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
-    return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
-  float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ s += a * vnoise(p); p *= 2.03; a *= 0.5; } return s; }`;
-const wisps = [];
-for (let i = 0; i < 3; i++) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.42), new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
-    uniforms: { uT: steamU.uT, uSeed: { value: i * 7.31 }, uK: { value: 0 } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform float uT; uniform float uSeed; uniform float uK; varying vec2 vUv; ${noise}
-      void main(){
-        float y = vUv.y, t = uT + uSeed;
-        float x = vUv.x - 0.5;
-        x += (fbm(vec2(y * 1.6 - t * 0.35, uSeed)) - 0.5) * 0.55 * y;     // ondulation qui s'amplifie en montant
-        x += sin(y * 7.0 - t * 1.1 + uSeed) * 0.04 * y;
-        float w = mix(0.06, 0.32, y);                                        // colonne qui s'évase
-        float col = smoothstep(w, 0.0, abs(x));
-        float n = fbm(vec2(x * 4.0 + uSeed, y * 3.0 - t * 0.9));
-        float wisp = smoothstep(0.38, 0.8, n) * col;
-        float a = wisp * smoothstep(0.05, 0.35, y) * (1.0 - smoothstep(0.55, 1.0, y)) * uK;
-        gl_FragColor = vec4(vec3(1.0, 0.93, 0.84) * a * 0.45, 1.0);
-      }` }));
-  m.userData.off = new THREE.Vector3((i - 1) * 0.022, 0.37 + i * 0.015, (i % 2) * 0.01);
-  scene.add(m); wisps.push(m);
-}
-
 // ---------- Poussière dans la lumière + bokeh ----------
 function motes(n, size, opacity, box, seed) {
   const g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), s = [];
@@ -253,9 +223,6 @@ function step() {
   for (let k = 0; k < 2; k++) E.update(dts / 2, { still: tv > 7.6 && tv < 8.3 });
   placePlant();
   for (const L of plant.children) if (L.userData.phase !== undefined) L.rotation.z = Math.sin(ts * 2.2 + L.userData.phase) * 0.04;
-  steamU.uT.value = ts;
-  const steamK = ease((tv - 3.4) / 1.6);
-  for (const m of wisps) { m.material.uniforms.uK.value = steamK; m.position.copy(plant.position).add(tmp.copy(m.userData.off).applyAxisAngle(new THREE.Vector3(0, 1, 0), plant.rotation.y * 0.3)); m.position.y = plant.position.y + 0.12 + m.userData.off.y * 0.55; m.quaternion.copy(camera.quaternion); }
   dust.userData.update(ts); bokeh.userData.update(ts);
   camAt(tv);
   grade.uniforms.uT.value = fi * 0.731;
