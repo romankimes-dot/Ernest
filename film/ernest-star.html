@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ernest, la star</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#gl{display:none}</style>
+  <script type="importmap">{ "imports": { "three": "../vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<!--
+  Court-métrage vertical (9:16) : Ernest arrive au ralenti dans la lumière d'un projecteur, une plante en pot dans
+  les mains, puis la caméra tourne autour de lui en gros plan pendant qu'une vapeur monte des feuilles.
+  Rendu image par image (film/render.mjs) : window.FILM.frame(i) avance la scène d'une image et renvoie un JPEG.
+  Ouvert seul dans un navigateur, la page se joue en boucle (?w=540 pour une fenêtre plus petite).
+-->
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js';
+
+// hasard reproductible : clignements et regard d'Ernest identiques d'un rendu à l'autre
+{ let a = 20261106; Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const { createErnest } = await import('../js/ernest3d.js');
+
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 1080), H = Math.round(W * 16 / 9), FPS = 30, DUR = 9.5, N = FPS * DUR;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+const ease5 = (x) => { x = clamp(x, 0, 1); return x * x * x * (x * (x * 6 - 15) + 10); };
+const mix = (a, b, t) => a + (b - a) * t;
+
+// ---------- Rendu ----------
+const gl = document.createElement('canvas'); gl.id = 'gl'; document.body.append(gl);
+const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const out = document.createElement('canvas'); out.width = W; out.height = H; document.body.append(out);
+const fit = () => { const k = Math.min(innerWidth / W, innerHeight / H); out.style.width = W * k + 'px'; out.style.height = H * k + 'px'; };
+fit(); addEventListener('resize', fit);
+const ctx = out.getContext('2d');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x040506);
+scene.fog = new THREE.Fog(0x040506, 1.6, 4.2);
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.02, 40);
+
+// fond uni + halo chaud séparé : le sol se fond dans le noir sans ligne d'horizon
+const halo = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: 'varying vec2 vUv; void main(){ float r = length((vUv - 0.5) * vec2(1.0, 1.25)); float a = exp(-r * r * 16.0) * smoothstep(0.5, 0.25, r); gl_FragColor = vec4(vec3(0.09, 0.05, 0.025) * a, 1.0); }' }));
+halo.position.set(0, 1.0, -3.2); halo.renderOrder = -1; scene.add(halo);
+// sol : béton sombre légèrement satiné
+// le sol s'efface en bord de disque : pas de ligne d'horizon devant le halo
+const floorA = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 0, 128, 128, 128); g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#fff'); g.addColorStop(1, '#000'); x.fillStyle = g; x.fillRect(0, 0, 256, 256); return new THREE.CanvasTexture(c); })();
+const floor = new THREE.Mesh(new THREE.CircleGeometry(3.2, 96), new THREE.MeshStandardMaterial({ color: 0x16181a, roughness: 0.55, metalness: 0.0, alphaMap: floorA, transparent: true, depthWrite: false }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+
+// environnement pour les reflets (boîte à lumière chaude au-dessus, bandes froides sur les côtés)
+{
+  const pm = new THREE.PMREMGenerator(renderer), env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(5, 16, 8), new THREE.MeshBasicMaterial({ color: 0x050607, side: THREE.BackSide })));
+  const box = (c, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0.5, 0); env.add(m); };
+  box(0xffd9a8, 0.5, 4, 1.5, 3, 2); box(0x6fa8ff, -3.5, 1.2, -2.5, 1, 3); box(0x6fa8ff, 3.5, 1.2, -2.5, 1, 3);
+  scene.environment = pm.fromScene(env, 0.04).texture; scene.environmentIntensity = 0.35;
+}
+
+// lumières : projecteur chaud (clé), deux contres froids, un contre chaud pour la vapeur
+const key = new THREE.SpotLight(0xffd7a0, 11, 9, 0.42, 0.55, 2);
+key.position.set(0.9, 3.4, 1.6); key.target.position.set(0, 0.35, 0);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.015; key.shadow.radius = 4; key.shadow.camera.near = 1; key.shadow.camera.far = 7;
+scene.add(key, key.target);
+const rimL = new THREE.SpotLight(0x8cc4ff, 9, 8, 0.5, 0.6, 2); rimL.position.set(-1.8, 1.6, -1.9); rimL.target.position.set(0, 0.45, 0); scene.add(rimL, rimL.target);
+const rimR = new THREE.SpotLight(0x9ccfff, 6, 8, 0.5, 0.6, 2); rimR.position.set(1.9, 1.2, -1.7); rimR.target.position.set(0, 0.4, 0); scene.add(rimR, rimR.target);
+const back = new THREE.Object3D();
+scene.add(new THREE.HemisphereLight(0x223040, 0x0a0806, 0.25));
+// débouchage doux sous le bord du chapeau, qui suit la caméra
+const fill = new THREE.PointLight(0xffe2c0, 0.9, 4, 1.5); scene.add(fill);
+
+// faisceau du projecteur : cône additif à peine visible
+{
+  const len = 3.6, geo = new THREE.ConeGeometry(Math.tan(0.42) * len, len, 64, 1, true); geo.translate(0, -len / 2, 0);
+  const beam = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = -position.y / 3.6; vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(abs(dot(vN, vV)), 1.5); float a = f * (1.0 - vY) * smoothstep(0.0, 0.15, vY) * 0.05; gl_FragColor = vec4(vec3(1.0, 0.82, 0.6) * a, 1.0); }' }));
+  beam.position.copy(key.position); beam.lookAt(key.target.position); beam.rotateX(-Math.PI / 2);
+  scene.add(beam);
+}
+
+// ---------- La plante : pilea en pot de terre cuite ----------
+const plant = new THREE.Group();
+{
+  const terra = new THREE.MeshStandardMaterial({ color: 0xb8653a, roughness: 0.85 });
+  // grain de la terre cuite
+  { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.fillStyle = '#808080'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 9000; i++) { const v = 100 + Math.random() * 60 | 0; x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 2); terra.bumpMap = t; terra.bumpScale = 0.6; }
+  const pts = [[0, 0], [0.042, 0], [0.046, 0.004], [0.058, 0.07], [0.064, 0.072], [0.066, 0.09], [0.06, 0.092], [0.057, 0.08]].map(([x, y]) => new THREE.Vector2(x, y));
+  const pot = new THREE.Mesh(new THREE.LatheGeometry(pts, 64), terra); pot.castShadow = pot.receiveShadow = true; plant.add(pot);
+  const soil = new THREE.Mesh(new THREE.CircleGeometry(0.057, 32), new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 1 })); soil.rotation.x = -Math.PI / 2; soil.position.y = 0.082; plant.add(soil);
+  // tige principale, puis pétioles en arc portant des feuilles rondes bombées
+  const stemM = new THREE.MeshStandardMaterial({ color: 0x6f9a48, roughness: 0.6 });
+  const leafM = new THREE.MeshPhysicalMaterial({ color: 0x4f9a3c, roughness: 0.38, clearcoat: 0.4, clearcoatRoughness: 0.4, side: THREE.DoubleSide, sheen: 0.4, sheenColor: new THREE.Color(0xb8ff9a) });
+  const main = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.082, 0), new THREE.Vector3(0.004, 0.12, 0.002), new THREE.Vector3(-0.003, 0.16, 0)]);
+  plant.add(Object.assign(new THREE.Mesh(new THREE.TubeGeometry(main, 12, 0.0045, 8), stemM), { castShadow: true }));
+  const leafGeo = (r) => { const g = new THREE.CircleGeometry(r, 28, 0, Math.PI * 2); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), d = Math.hypot(x, y) / r; p.setZ(i, d * d * r * 0.35 - Math.abs(x / r) * r * 0.08); } g.computeVertexNormals(); g.translate(0, 0, 0); return g; };
+  const NL = 15;
+  for (let i = 0; i < NL; i++) {
+    const t = i / (NL - 1), a = i * 2.39996, h = 0.095 + t * 0.062;
+    const base = main.getPoint(Math.min(1, (h - 0.082) / 0.078));
+    const reach = 0.075 - t * 0.035, up = 0.02 + t * 0.03;
+    const dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+    const tip = base.clone().addScaledVector(dir, reach).add(new THREE.Vector3(0, up, 0));
+    const ctrl = base.clone().addScaledVector(dir, reach * 0.35).add(new THREE.Vector3(0, up + 0.025, 0));
+    const pet = new THREE.QuadraticBezierCurve3(base, ctrl, tip);
+    const pm = new THREE.Mesh(new THREE.TubeGeometry(pet, 10, 0.0018, 6), stemM); pm.castShadow = true; plant.add(pm);
+    const r = 0.026 - t * 0.011 + (i % 3) * 0.002;
+    const leaf = new THREE.Mesh(leafGeo(r), leafM); leaf.castShadow = leaf.receiveShadow = true;
+    // feuille en parasol : le pétiole s'attache sous la feuille, un peu décentré, face tournée vers le haut et l'extérieur
+    leaf.position.copy(tip).add(new THREE.Vector3(0, 0.003, 0)).addScaledVector(dir, r * 0.35);
+    leaf.lookAt(leaf.position.clone().add(new THREE.Vector3(0, 1, 0)).addScaledVector(dir, 0.55 - t * 0.35));
+    leaf.userData.phase = i * 1.7; plant.add(leaf);
+  }
+}
+scene.add(plant);
+
+// ---------- Vapeur (façon fumée de café) ----------
+const steamU = { uT: { value: 0 } };
+const noise = `
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+    return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
+  float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ s += a * vnoise(p); p *= 2.03; a *= 0.5; } return s; }`;
+const wisps = [];
+for (let i = 0; i < 3; i++) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.42), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    uniforms: { uT: steamU.uT, uSeed: { value: i * 7.31 }, uK: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform float uT; uniform float uSeed; uniform float uK; varying vec2 vUv; ${noise}
+      void main(){
+        float y = vUv.y, t = uT + uSeed;
+        float x = vUv.x - 0.5;
+        x += (fbm(vec2(y * 1.6 - t * 0.35, uSeed)) - 0.5) * 0.55 * y;     // ondulation qui s'amplifie en montant
+        x += sin(y * 7.0 - t * 1.1 + uSeed) * 0.04 * y;
+        float w = mix(0.06, 0.32, y);                                        // colonne qui s'évase
+        float col = smoothstep(w, 0.0, abs(x));
+        float n = fbm(vec2(x * 4.0 + uSeed, y * 3.0 - t * 0.9));
+        float wisp = smoothstep(0.38, 0.8, n) * col;
+        float a = wisp * smoothstep(0.05, 0.35, y) * (1.0 - smoothstep(0.55, 1.0, y)) * uK;
+        gl_FragColor = vec4(vec3(1.0, 0.93, 0.84) * a * 0.45, 1.0);
+      }` }));
+  m.userData.off = new THREE.Vector3((i - 1) * 0.022, 0.37 + i * 0.015, (i % 2) * 0.01);
+  scene.add(m); wisps.push(m);
+}
+
+// ---------- Poussière dans la lumière + bokeh ----------
+function motes(n, size, opacity, box, seed) {
+  const g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), s = [];
+  let a = seed; const r = () => { a = (a * 16807) % 2147483647; return a / 2147483647; };
+  for (let i = 0; i < n; i++) s.push([box[0] + r() * (box[1] - box[0]), box[2] + r() * (box[3] - box[2]), box[4] + r() * (box[5] - box[4]), r() * 10, 0.4 + r()]);
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,236,205,1)'); gr.addColorStop(0.45, 'rgba(255,214,160,.55)'); gr.addColorStop(1, 'rgba(255,200,140,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ size, map: new THREE.CanvasTexture(c), transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  pts.userData.update = (t) => { for (let i = 0; i < n; i++) { const [x0, y0, z0, ph, sp] = s[i]; p[i * 3] = x0 + Math.sin(t * 0.25 * sp + ph) * 0.08; p[i * 3 + 1] = y0 + ((t * 0.03 * sp + ph) % 1) * 0.25 - 0.12; p[i * 3 + 2] = z0 + Math.cos(t * 0.2 * sp + ph * 1.3) * 0.08; } g.attributes.position.needsUpdate = true; };
+  scene.add(pts); return pts;
+}
+const dust = motes(420, 0.006, 0.8, [-0.9, 0.9, 0.05, 1.5, -1.2, 1.0], 7);
+const bokeh = motes(40, 0.09, 0.12, [-0.9, 0.9, 0.0, 1.4, -2.5, -1.2], 11);
+
+// ---------- Ernest ----------
+const E = createErnest({ scale: 0.33, lanternShadow: false }); scene.add(E.root); E.attach(scene);
+E.setPose('porte');
+const grips = E.parts.grips;
+// pré-roulage : il est déjà en marche, mains en place, quand le film commence
+E.setWalk(0.55); for (let i = 0; i < 60; i++) E.update(1 / 60);
+
+// ---------- Passe finale : étalonnage, vignette, grain, aberration légère ----------
+const rt = new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(1); composer.setSize(W, H);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.32, 0.5, 0.9); composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, uT: { value: 0 }, uFade: { value: 0 }, uAsp: { value: W / H } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uT; uniform float uFade; uniform float uAsp; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5; float r = length(d * vec2(uAsp, 1.0));
+      vec2 o = d * 0.0025;
+      vec3 c = vec3(texture2D(tDiffuse, vUv + o).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - o).b);
+      float l = dot(c, vec3(0.299, 0.587, 0.114));
+      c = mix(c, c * vec3(0.86, 1.0, 1.08) + vec3(0.0, 0.006, 0.012), 1.0 - smoothstep(0.0, 0.35, l));   // ombres bleutées
+      c = mix(c, c * vec3(1.06, 1.0, 0.9), smoothstep(0.45, 1.0, l));                                     // hautes lumières chaudes
+      c *= 1.0 - smoothstep(0.35, 0.95, r) * 0.65;
+      c += (h(vUv * 1000.0 + uT) - 0.5) * 0.035;
+      c *= uFade;
+      gl_FragColor = vec4(c, 1.0);
+    }` });
+composer.addPass(grade);
+
+// ---------- Mise en scène ----------
+// Le temps du film (tv) avance de 1/30 s par image ; la scène vit au ralenti (ts avance moins vite).
+const slow = (tv) => mix(0.38, 0.5, ease((tv - 5) / 3));
+const WALK_END = 3.3, STOP = 3.9;
+// vitesse de marche dans le temps de la scène, puis on précalcule le point de départ pour s'arrêter pile en z = 0
+const walkAt = (tv) => 0.55 * (1 - ease((tv - WALK_END + 0.5) / (STOP - WALK_END + 0.5)));
+const STRIDE = 0.4; // m/s de scène à walk = 0.55
+let Z0 = 0; for (let i = 0; i < N; i++) { const tv = i / FPS; Z0 -= STRIDE * (walkAt(tv) / 0.55) * slow(tv) / FPS; }
+
+let ts = 0, z = Z0, fi = 0;
+const look = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+
+function camAt(tv) {
+  // A : caméra basse qui recule devant lui ; B : grue jusqu'au visage ; C : tour en gros plan autour de la plante
+  const zB = 0;
+  const a = ease5((tv - 4.2) / 4.6);
+  const ang = mix(-0.35, 0.85, a) + mix(0.12, 0, ease(tv / 4));
+  const dist = tv < 3.6 ? mix(2.4, 2.0, ease(tv / 3.6)) : mix(2.0, 1.6, ease5((tv - 3.6) / 4.8));
+  const camY = mix(0.18, 0.5, ease5((tv - 2.2) / 3.4)) + Math.sin(tv * 1.3) * 0.004;
+  const tgtY = mix(0.42, 0.47, ease((tv - 2.5) / 3)) - 0.04 * ease((tv - 5.5) / 3);
+  const cz = Math.min(z, 0);
+  camera.position.set(Math.sin(ang) * dist, camY, cz + Math.cos(ang) * dist);
+  look.set(Math.sin(ang) * -0.02, tgtY, cz);
+  camera.lookAt(look);
+  fill.position.copy(camera.position).add(new THREE.Vector3(0, -0.15, 0)).lerp(look, 0.3);
+  camera.fov = mix(30, 26, ease((tv - 4) / 5)); camera.updateProjectionMatrix();
+}
+
+function placePlant() {
+  E.root.updateMatrixWorld(true);
+  grips[0].getWorldPosition(tmp); grips[1].getWorldPosition(tmp2);
+  plant.position.copy(tmp).add(tmp2).multiplyScalar(0.5);
+  plant.position.y -= 0.045; plant.position.z += 0.005;
+  plant.rotation.y = E.root.rotation.y + ts * 0.15;
+  back.position.copy(plant.position).add(new THREE.Vector3(0, 0.25, -0.18));
+}
+
+function step() {
+  const tv = fi / FPS, dts = slow(tv) / FPS;
+  ts += dts;
+  const w = walkAt(tv);
+  E.setWalk(w);
+  z += STRIDE * (w / 0.55) * dts;
+  E.root.position.set(0, 0, z);
+  // la petite foulée de gobelin a besoin de plusieurs pas internes pour rester souple
+  for (let k = 0; k < 2; k++) E.update(dts / 2, { still: tv > 7.6 && tv < 8.3 });
+  placePlant();
+  for (const L of plant.children) if (L.userData.phase !== undefined) L.rotation.z = Math.sin(ts * 2.2 + L.userData.phase) * 0.04;
+  steamU.uT.value = ts;
+  const steamK = ease((tv - 3.4) / 1.6);
+  for (const m of wisps) { m.material.uniforms.uK.value = steamK; m.position.copy(plant.position).add(tmp.copy(m.userData.off).applyAxisAngle(new THREE.Vector3(0, 1, 0), plant.rotation.y * 0.3)); m.position.y = plant.position.y + 0.12 + m.userData.off.y * 0.55; m.quaternion.copy(camera.quaternion); }
+  dust.userData.update(ts); bokeh.userData.update(ts);
+  camAt(tv);
+  grade.uniforms.uT.value = fi * 0.731;
+  // fin : la scène s'assombrit sous le titre, puis noir
+  grade.uniforms.uFade.value = ease(tv / 0.6) * (1 - 0.7 * ease((tv - (DUR - 2.4)) / 1.0)) * (1 - ease((tv - (DUR - 0.5)) / 0.5));
+  composer.render();
+  // titre en fin de film
+  ctx.drawImage(gl, 0, 0);
+  const ta = ease((tv - (DUR - 2.0)) / 0.9) * (1 - ease((tv - (DUR - 0.5)) / 0.5));
+  if (ta > 0) {
+    ctx.save(); ctx.globalAlpha = ta; ctx.textAlign = 'center'; ctx.fillStyle = '#f3e7cf';
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = W * 0.02;
+    ctx.font = `500 ${Math.round(W * 0.115)}px "Inter Display", Inter, sans-serif`; ctx.letterSpacing = `${W * 0.01}px`;
+    ctx.fillText('Ernest', W / 2, H * 0.52 + (1 - ta) * W * 0.02);
+    ctx.font = `400 ${Math.round(W * 0.028)}px Inter, sans-serif`; ctx.letterSpacing = `${W * 0.012}px`; ctx.fillStyle = '#f2b23d';
+    ctx.fillText('JARDINIER', W / 2, H * 0.555 + (1 - ta) * W * 0.02);
+    ctx.restore();
+  }
+  fi++;
+}
+
+window.FILM = {
+  W, H, FPS, N,
+  frame(i, quality = 0.93) { while (fi <= i) step(); return out.toDataURL('image/jpeg', quality); },
+};
+if (!q.has('render')) { const loop = () => { if (fi >= N) { fi = 0; ts = 0; z = Z0; } step(); requestAnimationFrame(loop); }; loop(); }
+</script>
+</body>
+</html>

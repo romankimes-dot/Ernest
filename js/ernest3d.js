@@ -335,6 +335,7 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
     lanterne: { sh: [[0.05, 0, -0.22], [-0.85, 0, 0.18]], el: [-0.25, -0.7], torso: [0, 0.05, 0], head: [0.05, 0.25, 0.05], lid: 0.15, brow: 0.2, smile: 0.5, sit: 0, curl: 1, prop: 'lantern' },
     guide: { sh: [[0.05, 0, -0.22], [-1.25, 0, 0.12]], el: [-0.25, -0.35], torso: [0, 0, 0], head: [0, 0, 0], lid: 0.1, brow: 0.2, smile: 0.5, sit: 0, curl: 1, prop: 'lantern' },
     assis: { sh: [[-0.3, 0, -0.15], [-0.3, 0, 0.15]], el: [-1.1, -1.1], torso: [-0.1, 0, 0], head: [-0.05, 0.15, 0.05], lid: 0.1, brow: 0.2, smile: 0.7, sit: 1, curl: 0.4, prop: null },
+    porte: { sh: [[-0.55, 0.15, 0.3], [-0.55, -0.15, -0.3]], el: [-1.0, -1.0], torso: [0.04, 0, 0], head: [-0.06, 0, 0], lid: 0.05, brow: 0.5, smile: 0.9, sit: 0, curl: 0.8, prop: null },
     dort: { sh: [[-0.25, 0, -0.12], [-0.25, 0, 0.12]], el: [-1.25, -1.25], torso: [-0.18, 0, 0], head: [0.42, 0, 0.18], lid: 1, brow: -0.3, smile: 0, sit: 1, curl: 0.6, prop: null },
   };
   const S = { sh: [[0, 0, 0], [0, 0, 0]], el: [0, 0], torso: [0, 0, 0], head: [0, 0, 0], lid: 0, brow: 0, smile: 0.4, sit: 0, curl: 0 };
@@ -398,14 +399,14 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
     neck.rotation.set(S.head[0] + hx - w * 0.1 + w * bob * 0.04 + (pose === 'dort' ? Math.sin(t * 0.9) * 0.05 : 0), S.head[1] + hy - w * sw * 0.1, S.head[2] + w * sw * 0.03 + Math.sin(t * 0.7) * 0.02);
     // bras
     for (let i = 0; i < 2; i++) {
-      const a = arms[i], s = a.s, holds = i === 1 && propOn;
+      const a = arms[i], s = a.s, holds = (i === 1 && propOn) || pose === 'porte';
       const swing = holds ? (pose === 'guide' ? 0.05 : 0.15) : 1;
       a.sh.rotation.set(S.sh[i][0] + w * -s * sw * 0.7 * swing, S.sh[i][1], S.sh[i][2] + w * s * 0.08);
       a.el.rotation.set(S.el[i] - w * 0.35 * swing, 0, 0);
       if (pose === 'salue' && i === 1) { a.el.rotation.z = Math.sin(t * 8) * 0.45 * smooth(1.2, 2.1, S.sh[1][2]); a.wr.rotation.z = Math.sin(t * 9 - 0.8) * 0.25; } else { a.wr.rotation.z = 0; }
       a.wr.rotation.x = holds ? 0.0 : -0.1;
       for (const f of a.fingers) f.rotation.z = -s * 0; for (const f of a.fingers) f.rotation.x = 0;
-      for (let j = 0; j < a.fingers.length; j++) { const f = a.fingers[j]; f.rotation.set((j - 1) * 0.12, 0, -s * S.curl * 1.2 * (i === 1 && holds ? 1 : 0.4)); }
+      for (let j = 0; j < a.fingers.length; j++) { const f = a.fingers[j]; f.rotation.set((j - 1) * 0.12, 0, -s * S.curl * 1.2 * (holds ? 1 : 0.4)); }
     }
     // la lanterne et l'arrosoir pendent droit (gravité), avec un petit balancement
     root.updateMatrixWorld(true);
@@ -460,5 +461,5 @@ export function createErnest({ scale = 0.33, castShadow = true, lanternShadow = 
   function firstPerson(on) { headMesh.visible = !on; eyes.forEach((e) => (e.visible = !on)); brows.forEach((b) => (b.visible = !on)); ears.forEach((e) => (e.e.visible = !on)); mouth.visible = !on; head.children.forEach((c) => { if (c.isMesh) c.visible = !on; }); tipP.visible = !on; }
   const eyeWorld = (out = new THREE.Vector3()) => head.localToWorld(out.set(0, HC.y + 0.02, 0.38));
 
-  return { root, update, setPose, setWalk, attach, firstPerson, eyeWorld, get pose() { return pose; }, parts: { head, hatP, lantern, can, model }, height: 2.45 * scale };
+  return { root, update, setPose, setWalk, attach, firstPerson, eyeWorld, get pose() { return pose; }, parts: { head, hatP, lantern, can, model, grips: arms.map((a) => a.grip) }, height: 2.45 * scale };
 }
