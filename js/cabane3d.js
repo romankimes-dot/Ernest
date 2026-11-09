@@ -165,7 +165,6 @@ export function mount(canvas, { onPick } = {}) {
 
   // contenu variable : bonsaïs, plantes au repos, graines
   let dyn = new THREE.Group(); scene.add(dyn); let timeKey = 'day';
-  const trayM = std({ color: 0x5a3a2a, roughness: 0.7 });
   // Les bonsaïs et les plantes déjà dessinés sont gardés (même objectif, mêmes branches ; même plante) : rafraîchir la
   // cabane ne refait que ce qui a changé, et ce qui part est libéré (sauf les formes partagées avec le village).
   const keep = new Map();
@@ -173,7 +172,7 @@ export function mount(canvas, { onPick } = {}) {
   const reuse = (key, make) => { if (!keep.has(key)) keep.set(key, make()); return keep.get(key); };
   function set({ bonsais = [], plants = [], seeds = 0, time = 'day' } = {}) {
     const used = new Set(); scene.remove(dyn); dyn = new THREE.Group(); scene.add(dyn);
-    bonsais.slice(0, BS.length).forEach((b, i) => { const key = `b:${b.goal}:${b.branches}`; used.add(key); const fresh = !keep.has(key), g = reuse(key, () => new THREE.Group()); if (fresh) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.05, 0.24), trayM); t.userData.own = true; t.position.y = 0.025; g.add(t); const m = makeBonsai(b.seed, b.branches); m.scale.multiplyScalar(0.42); m.position.y = 0.05; g.add(m);
+    bonsais.slice(0, BS.length).forEach((b, i) => { const key = `b:${b.goal}:${b.branches}`; used.add(key); const fresh = !keep.has(key), g = reuse(key, () => new THREE.Group()); if (fresh) { const m = makeBonsai(b.seed, b.branches); m.scale.multiplyScalar(0.62); g.add(m); /* dans son pot, assez grand pour se voir de la table */
       } g.position.copy(BS[i]); g.rotation.y = Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'bonsai', goal: b.goal }; }); dyn.add(g); });
     plants.slice(0, PS.length).forEach((p, i) => { const key = `p:${p.id}:${p.sp}:${p.seed}`; used.add(key); const g = reuse(key, () => makeSpecimen(p)); g.scale.setScalar(0.55); g.position.copy(PS[i]); g.rotation.y = -Math.PI / 2; g.traverse((o) => { o.castShadow = true; o.userData.pick = { kind: 'plant', id: p.id }; }); dyn.add(g); });
     for (const [k, g] of keep) if (!used.has(k)) { free(g); keep.delete(k); }
