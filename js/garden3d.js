@@ -12,7 +12,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { buildCottage } from './cottage3d.js';
 import { growth, totalDone, moodAvg, catCounts, catId, floraOf, DAYLEN, NOON, phaseAt } from './model.js';
-import { bonsaiInSerre, layout, SLOT_XZ, waterCount, GROUND } from './flore.js';
+import { bonsaiInSerre, layout, SLOT_XZ, waterCount, GROUND, stageLook } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -819,8 +819,8 @@ const FLOWERS = ['#e9c6e0', '#f4efe6', '#c7a6e8', '#f2b23d', '#f0907a', '#9ec8f0
 const VIOLETS = ['#9d7cc8', '#b28fe0', '#7f5fb8', '#c7a6e8', '#8a6ac8'];
 function flowering(rng, size, o = {}) {
   const pal = o.palette || FLOWERS, g = new THREE.Group(), stems = 3 + Math.floor(rng() * 5), fc = col(pal[Math.floor(rng() * pal.length)]);
-  const leaves = inst(GEO.leafMid, M.leaf, stems * 6), petals = inst(GEO.petal, M.leaf, stems * 7), cores = inst(GEO.ball, M.leafFlat, stems); let kl = 0, kp = 0;
-  const lavender = rng() < (o.lavender ?? 0.3); const spikes = lavender ? inst(GEO.ball, M.leafFlat, stems * 14) : null; let ks = 0;
+  const leaves = inst(GEO.leafMid, M.leaf, stems * 6), petals = inst(GEO.petal, M.leaf, stems * 7), cores = inst(GEO.ball, M.leafFlat, stems); let kl = 0, kp = 0; petals.userData.fl = cores.userData.fl = 1;
+  const lavender = rng() < (o.lavender ?? 0.3); const spikes = lavender ? inst(GEO.ball, M.leafFlat, stems * 14) : null; let ks = 0; if (spikes) spikes.userData.fl = 1;
   for (let s = 0; s < stems; s++) {
     const a = rng() * Math.PI * 2, r = rng() * 0.06, H = size * (0.35 + rng() * 0.3), lean = 0.05 + rng() * 0.12;
     const pts = [V(Math.cos(a) * r, 0, Math.sin(a) * r), V(Math.cos(a) * (r + lean * 0.4), H * 0.5, Math.sin(a) * (r + lean * 0.4)), V(Math.cos(a) * (r + lean), H, Math.sin(a) * (r + lean))];
@@ -857,7 +857,7 @@ function grass(rng, size, tall = false) {
 }
 // Vie perso : fleurs des champs (marguerites, coquelicots, bleuets) dans un pied d'herbes
 function wildflowers(rng, size) {
-  const g = grass(rng, size * 0.5), heads = 7 + Math.floor(rng() * 5), petals = inst(GEO.petal, M.leaf, heads * 8), cores = inst(GEO.ball, M.leafFlat, heads); let kp = 0;
+  const g = grass(rng, size * 0.5), heads = 7 + Math.floor(rng() * 5), petals = inst(GEO.petal, M.leaf, heads * 8), cores = inst(GEO.ball, M.leafFlat, heads); let kp = 0; petals.userData.fl = cores.userData.fl = 1;
   const kinds = [['#f6f1e4', '#e8b440'], ['#d8402e', '#2a1a14'], ['#4f7fd8', '#2f3f80'], ['#f2d24a', '#c98a28'], ['#e9a6c8', '#e8b440']];
   for (let s = 0; s < heads; s++) {
     const a = rng() * 6.28, r = rng() * 0.07, H = size * (0.45 + rng() * 0.35), [pc, cc] = kinds[Math.floor(rng() * kinds.length)];
@@ -870,7 +870,7 @@ function wildflowers(rng, size) {
 }
 // Vie perso : géranium, un dôme de feuilles rondes et des boules de fleurs rouges sur de longues tiges
 function geranium(rng, size) {
-  const g = new THREE.Group(), nl = 10 + Math.floor(rng() * 5), stems = 3 + Math.floor(rng() * 3), leaves = inst(GEO.roundLeaf, M.leaf, nl), florets = inst(GEO.blob, M.leafFlat, stems * 18);
+  const g = new THREE.Group(), nl = 10 + Math.floor(rng() * 5), stems = 3 + Math.floor(rng() * 3), leaves = inst(GEO.roundLeaf, M.leaf, nl), florets = inst(GEO.blob, M.leafFlat, stems * 18); florets.userData.fl = 1;
   const leafC = col(['#4f8a3a', '#5a9442', '#46803a'][Math.floor(rng() * 3)]), red = col(['#d8283a', '#e0323c', '#c81e34', '#e8504a', '#e0306a'][Math.floor(rng() * 5)]);
   for (let i = 0; i < nl; i++) {
     const a = i * 2.39996 + rng() * 0.3, out = 0.03 + (i / nl) * 0.1, y = size * (0.2 - (i / nl) * 0.13) + rng() * 0.02;
@@ -903,7 +903,7 @@ function cactus(rng, size) {
   put(0, 0, 0, R * 2, H);
   for (let a = 0; a < arms; a++) { const sd = a ? -1 : 1, y = H * (0.3 + rng() * 0.25), L = R * 1.6, ar = R * 1.3; put(sd * R * 0.5, y, 0, ar, L, -sd * Math.PI / 2); put(sd * (R * 0.5 + L), y - ar * 0.3, 0, ar, H * (0.3 + rng() * 0.2)); }
   g.add(im);
-  if (rng() < 0.45) { const f = inst(GEO.petal, M.leaf, 6); for (let i = 0; i < 6; i++) { dummy.position.set(0, H * 0.98, 0); dummy.rotation.set(-0.9, (i / 6) * 6.28, 0, 'YXZ'); dummy.scale.setScalar(size * 1.4); dummy.updateMatrix(); f.setMatrixAt(i, dummy.matrix); f.setColorAt(i, col(['#e86f8a', '#f2b23d', '#f4efe6'][Math.floor(rng() * 3)])); } g.add(f); }
+  if (rng() < 0.45) { const f = inst(GEO.petal, M.leaf, 6); f.userData.fl = 1; for (let i = 0; i < 6; i++) { dummy.position.set(0, H * 0.98, 0); dummy.rotation.set(-0.9, (i / 6) * 6.28, 0, 'YXZ'); dummy.scale.setScalar(size * 1.4); dummy.updateMatrix(); f.setMatrixAt(i, dummy.matrix); f.setColorAt(i, col(['#e86f8a', '#f2b23d', '#f4efe6'][Math.floor(rng() * 3)])); } g.add(f); }
   return g;
 }
 // Esprit : un coussin de mousse, des pointes de jeunes frondes
@@ -967,13 +967,34 @@ function spotOf(at) {
 }
 export const SLOTS_PER_HOUSE = 26; // démonstrations sans plan : autant de plantes par serre qu'avant
 const DEMO_AT = [...SLOT_XZ.Massif.map((_, k) => ({ mode: 'ground', type: 'Massif', k })), ...SLOT_XZ.Rocaille.map((_, k) => ({ mode: 'ground', type: 'Rocaille', k })), ...SLOT_XZ['Géante'].map((_, k) => ({ mode: 'ground', type: 'Géante', k }))];
+const SEEDM = { seed: new THREE.MeshStandardMaterial({ color: 0xd9b27a, roughness: 0.7 }), tag: new THREE.MeshStandardMaterial({ color: 0xefe6d2, roughness: 0.7 }), sprout: new THREE.MeshStandardMaterial({ color: 0x8fbf5a, roughness: 0.7, side: THREE.DoubleSide }), leaf: new THREE.MeshStandardMaterial({ color: 0x5d8c3a, roughness: 0.7, side: THREE.DoubleSide }) };
+const TAG_GEO = new THREE.BoxGeometry(0.05, 0.035, 0.004), STICK_GEO = new THREE.CylinderGeometry(0.004, 0.004, 1, 5);
+function seedling(rng, st, k) {
+  const g = new THREE.Group(), add = (geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.rotation.set(rx, ry, rz, 'YXZ'); m.castShadow = true; g.add(m); return m; };
+  if (st === 0) { // graine : une motte, la graine, une étiquette plantée de biais
+    add(GEO.blob, M.soil, 0, 0, 0, 0.07, 0.022, 0.07); add(GEO.ball, SEEDM.seed, 0.012, 0.03, 0, 0.03, 0.02, 0.04, 0, rng() * 6);
+    add(STICK_GEO, SEEDM.tag, -0.06, 0.05, 0.03, 1.4, 0.14, 1.4, 0, 0, 0.18); add(TAG_GEO, SEEDM.tag, -0.075, 0.13, 0.03, 1.8, 1.8, 1.5, 0, 0.3, 0.18);
+    return g;
+  }
+  if (st === 2) { // plante : une rosette touffue, qui s'étoffe arrosage après arrosage
+    const n = 8 + Math.round(8 * k); for (let i = 0; i < n; i++) { const u = i / 16; add(GEO.leafMid, i % 3 ? SEEDM.leaf : SEEDM.sprout, 0, 0.01 + u * 0.03, 0, 2.2 - u, 2.2 - u, 2.2 - u, -(0.3 + u * 0.8), i * 2.4); }
+    return g;
+  }
+  const y0 = rng() * 6.28, h = 0.07 + 0.05 * k; // pousse : deux cotylédons ronds, puis une ou deux paires de vraies feuilles
+  add(STICK_GEO, M.stem, 0, h / 2, 0, 0.9, h, 0.9);
+  for (const j of [0, 1]) add(GEO.leafMid, SEEDM.sprout, 0, 0.06, 0, 1.1, 1.1, 1.1, -0.25, y0 + j * Math.PI);
+  if (k > 0.2) for (const j of [0, 1]) add(GEO.leafMid, SEEDM.leaf, 0, 0.095, 0, 1.4, 1.4, 1.4, -0.5, y0 + Math.PI / 2 + j * Math.PI);
+  if (k > 0.5) for (const j of [0, 1]) add(GEO.leafMid, SEEDM.leaf, 0, h, 0, 1.6, 1.6, 1.6, -0.7, y0 + Math.PI / 4 + j * Math.PI);
+  return g;
+}
 const live = new Map(); // id de plante -> { obj, plant, cur, target, phase, sway, at, house }
 function buildPlant(p, h, sl) {
   const rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(), tall = sp === 'broadleaf' || sp === 'ficus';
   if (sl.ground) { const pl = compact(SPECIES[sp](rng, (sl.big ? 3.0 : tall ? 1.6 : 1.9) * (0.9 + rng() * 0.2))); g.add(pl); g.position.set(sl.x, sl.y, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
-  const ps = sl.pot * (tall ? 1.15 : 1) * (0.9 + rng() * 0.2);
+  const ps = sl.pot * (tall ? 1.15 : 1) * (0.9 + rng() * 0.2), st = p.st ? p.st.s : -1;
   g.add(makePot(ps, h.pots[rng() < 0.3 ? 1 : 0]));
-  const pl = compact(SPECIES[sp](rng, sl.hang ? 0.7 : 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; g.add(pl);
+  const young = st >= 0 && st <= 2, pl = young ? seedling(rng, st, p.st.k) : compact(SPECIES[sp](rng, sl.hang ? 0.7 : 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; if (young) pl.scale.setScalar(ps * 1.6); g.add(pl);
+  if (st === 3) pl.traverse((o) => { if (o.userData.fl) o.visible = false; }); // grande : l'espèce entière, pas encore en fleurs
   if (sl.hang) { const top = roofOf(h, sl.x) - 0.05 - sl.y, ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, top, 4), M.chain); ch.position.y = top / 2; ch.userData.own = true; g.add(ch); }
   g.position.set(sl.x, sl.y, sl.z); if (!sl.hang) g.rotation.y = rng() * Math.PI * 2;
   h.g.add(g); return { obj: g, plant: pl };
@@ -1486,7 +1507,7 @@ export function houseFromState(S, today, id, counts, n) {
   if (id === 'perso') hn += Math.max(0, n - Object.entries(counts).reduce((a, [c, v]) => a + (HOUSE_OF[c] ? v : 0), 0)); // sans catégorie
   const mineP = ps.filter((p) => p.kind === 'plant' && !p.dormant && mine(p)), L = layout(mineP.filter((p) => p.v === 2).map((p) => ({ id: p.id, sp: p.sp, n: waterCount(p), place: p.place })));
   // chaque plante à sa place de l'intérieur (js/flore.js, layout) : pleine terre dans le plan, sinon en pot sur l'établi
-  const plants = mineP.filter((p) => L.at.has(p.id)).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, v: p.v, sp: p.sp, at: L.at.get(p.id), g: waterCount(p) >= GROUND ? 1 : growth(p, S, today) })); // v, sp : l'espèce donne le dessin (floraOf)
+  const plants = mineP.filter((p) => L.at.has(p.id)).map((p) => ({ id: p.id, cat: p.cat, seed: p.seed, v: p.v, sp: p.sp, at: L.at.get(p.id), g: waterCount(p) >= GROUND ? 1 : growth(p, S, today), st: p.v === 2 ? stageLook(waterCount(p)) : null })); // v, sp : l'espèce donne le dessin (floraOf)
   const mossN = ps.filter((p) => (p.kind === 'moss' || p.list) && mine(p)).length;
   const bonsai = ps.filter((p) => p.kind === 'bonsai' && mine(p) && (!goals || !p.goal || bonsaiInSerre(p, goals.get(p.goal))))
     .sort((a, b) => (b.branches || 0) - (a.branches || 0)).slice(0, BONSAI_SPOTS.length).map((p) => ({ seed: p.seed, branches: p.branches || 0, goal: p.goal || null }));
@@ -1506,7 +1527,8 @@ function applyModel(m) {
   const hm = (h) => (m.houses && m.houses[h.id]) || EMPTY_HOUSE, keep = new Map();
   const atOf = (p, i) => p.at || DEMO_AT[i] || (i - DEMO_AT.length < BENCH_SHOWN ? { mode: 'bench', k: i - DEMO_AT.length } : null); // démonstrations : sans plan
   const keyOf = (a) => (a ? `${a.mode}:${a.type || ''}:${a.k}` : '');
-  for (const h of HOUSES) (hm(h).plants || []).forEach((p, i) => keep.set(p.id, [h, keyOf(atOf(p, i))]));
+  const stKey = (p) => (p.st ? `|${p.st.s}${p.st.s === 1 || p.st.s === 2 ? Math.round(p.st.k * 3) : ''}` : '');
+  for (const h of HOUSES) (hm(h).plants || []).forEach((p, i) => keep.set(p.id, [h, keyOf(atOf(p, i)) + stKey(p)]));
   for (const [id, L] of live) { const k = keep.get(id); if (!k || k[0] !== L.house || k[1] !== L.key) { L.house.g.remove(L.obj); disposeObj(L.obj); live.delete(id); } }
   for (const h of HOUSES) {
     const H = hm(h);
@@ -1514,9 +1536,9 @@ function applyModel(m) {
       let L = live.get(p.id);
       if (!L) {
         const at = atOf(p, i), sl = spotOf(at); if (!sl) return; // pas de place visible dehors
-        L = { ...buildPlant(p, h, sl), sl, key: keyOf(at), house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
+        L = { ...buildPlant(p, h, sl), sl, key: keyOf(at) + stKey(p), house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
       }
-      L.target = 0.35 + 0.65 * p.g;
+      L.target = !p.st || L.sl.ground ? 0.35 + 0.65 * p.g : p.st.s <= 2 ? 1 : 0.75 + 0.25 * p.st.k; // pot : graine et pousse à leur taille, puis plante, grande
     });
     vines.filter((v) => v.house === h).forEach((v) => { v.target = Math.max(0, Math.min(1, (H.vine || 0) * 1.25 - v.i * 0.12)); });
     mosses[h.id].target = Math.min(MOSS_MAX, H.moss || 0);

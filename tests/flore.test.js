@@ -113,3 +113,12 @@ test('plan partagé : pleine terre à sa place, le reste sur l\'établi', async 
   assert.equal(L.at.has('x'), false);
   assert.equal(SLOT_XZ.Massif.length, 24);
 });
+
+import { stageLook } from '../js/flore.js';
+test('stade et avancée dans le stade : un dessin par stade', () => {
+  assert.deepEqual(stageLook(0), { s: -1, k: 0 });
+  assert.equal(stageLook(1).s, 0);
+  assert.equal(stageLook(2).s, 1); assert.equal(stageLook(3).k, 1 / 3);
+  assert.equal(stageLook(5).s, 2); assert.equal(stageLook(10).s, 3); assert.equal(stageLook(19).k, 0.9);
+  assert.equal(stageLook(20).s, 4); assert.equal(stageLook(80).k, 1);
+});
