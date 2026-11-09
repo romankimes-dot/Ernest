@@ -154,3 +154,21 @@ test('le soleil : en novembre il fait nuit à 19 h et jour à 13 h, crépuscule 
   assert.equal(phaseName(20, 5), 'day', 'juin : encore jour à 20 h');
   assert.deepEqual(phaseAt(3, 0), ['night', 'night', 0]);
 });
+
+import { tickGrid, tickPrefs, planned, TICKS } from '../js/model.js';
+test('cases du jour : cochées en tête, habitudes ensuite, cases masquées absentes, hors des choses posées', () => {
+  const s = defaultState();
+  s.days['2026-11-07'] = { things: [{ id: 'm1', title: 'Natation', cat: 'bienetre', done: true }] };
+  s.days['2026-11-06'] = { things: [{ id: 'm2', title: 'Natation', cat: 'bienetre', done: true }, { id: 'w', title: 'Deonto', cat: 'travail', done: true }] };
+  s.days['2026-11-09'] = { things: [{ id: 'p', title: 'Session', cat: 'travail', done: false }, { id: 't', title: 'Étirements', cat: 'bienetre', done: true, tick: true }] };
+  tickPrefs(s).hidden.bienetre.push('Sport');
+  const g = tickGrid(s, 'bienetre', '2026-11-09');
+  assert.equal(g[0].title, 'Étirements'); assert.equal(g[0].on, 't');
+  assert.equal(g[1].title, 'Natation'); // faite deux fois ces 30 derniers jours
+  assert.ok(!g.some((x) => x.title === 'Sport'));
+  assert.equal(g.filter((x) => x.title === 'Étirements').length, 1);
+  assert.equal(g.length, 10); // dix d'Ernest, moins Sport, plus Natation
+  assert.equal(tickGrid(s, 'perso', '2026-11-09')[0].title, TICKS.perso[0]);
+  assert.deepEqual(planned(s.days['2026-11-09']).map((t) => t.id), ['p']);
+  assert.equal(doneOn(s, '2026-11-09').n, 1); // une case cochée compte comme une chose faite
+});
