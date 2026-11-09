@@ -930,20 +930,6 @@ function rosemary(rng, size) {
     for (let i = 0; i < 22; i++) { const t = 0.15 + (i / 22) * 0.85, p = curve.getPoint(t); dummy.position.copy(p); dummy.rotation.set(0.5 + rng() * 0.5, i * 2.4, 0, 'YXZ'); dummy.scale.setScalar(1.5 + rng() * 0.6); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.08)); } }
   im.count = k; g.add(im); return g;
 }
-function bonsai(rng, size) {
-  const g = new THREE.Group(), foliage = []; const base = col('#4f8a4a');
-  const branch = (p, dir, len, rad, depth) => {
-    const end = p.clone().addScaledVector(dir, len);
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.7, rad, len, 6), M.bark); m.position.copy(p).lerp(end, 0.5); m.quaternion.setFromUnitVectors(UP, dir); m.castShadow = true; g.add(m);
-    if (depth === 0) { foliage.push(end); return; }
-    const k = depth > 2 ? 2 : 2 + (rng() < 0.4 ? 1 : 0);
-    for (let i = 0; i < k; i++) { const nd = dir.clone().add(V((rng() - 0.5) * 1.3, 0.25 + rng() * 0.4, (rng() - 0.5) * 1.3)).normalize(); branch(end, nd, len * (0.62 + rng() * 0.15), rad * 0.62, depth - 1); }
-  };
-  branch(V(0, 0, 0), V(0.15, 1, 0).normalize(), size * 0.32, size * 0.05, 4);
-  const im = inst(GEO.blob, M.leafFlat, foliage.length * 3); let k = 0;
-  for (const f of foliage) for (let j = 0; j < 3; j++) { dummy.position.copy(f).add(V((rng() - 0.5) * 0.12, (rng() - 0.2) * 0.06, (rng() - 0.5) * 0.12).multiplyScalar(size * 1.5)); dummy.rotation.set(rng(), rng(), rng()); const s = size * (0.09 + rng() * 0.06); dummy.scale.set(s * 1.3, s * 0.7, s * 1.3); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(base, rng, 0.14)); }
-  g.add(im); return g;
-}
 const SPECIES = { fern, succulent, cactus, mossy, broadleaf, ficus, grass, wildflowers, aromatic, basil, rosemary, flowering, geranium,
   lavender: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 1 }), violet: (r, s) => flowering(r, s, { palette: VIOLETS, lavender: 0.25 }),
   thyme: aromatic, tallgrass: (r, s) => grass(r, s * 1.6, true) };
@@ -1001,7 +987,24 @@ function buildPlant(p, h, sl) {
 }
 // Pour la cabane (js/cabane3d.js) : une plante de la réserve dans son pot, un bonsaï de l'étagère.
 export function makeSpecimen(p) { const rng = rngOf(p.seed >>> 0), sp = speciesOf(p), g = new THREE.Group(); g.add(makePot(1.1, M.terra)); const pl = compact(SPECIES[sp](rng, 0.85)); pl.position.y = 0.21; g.add(pl); return g; }
-export function makeBonsai(seed, branches) { return compact(bonsai(rngOf(seed >>> 0), Math.min(1.45, 0.6 + 0.12 * (branches || 0)))); }
+// Le bonsaï d'un objectif, le même partout (village, cabane, et dedans : js/botaniste3d.js, bonsaiParts) : un tronc
+// sinueux, une branche et un coussin de feuillage par jalon franchi, dans un pot plat d'ardoise.
+const BONSAI_POT = new THREE.MeshStandardMaterial({ color: 0x3c4a5a, roughness: 0.6 });
+function bonsaiTree(rng, branches, pot = true) {
+  const g = new THREE.Group(), pads = [], y0 = pot ? 0.12 : 0;
+  const cyl = (a, b, r) => { const d = b.clone().sub(a), L = d.length(), m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.75, r, L, 7), M.bark); m.position.copy(a).lerp(b, 0.5); m.quaternion.setFromUnitVectors(UP, d.normalize()); m.castShadow = true; g.add(m); };
+  if (pot) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.12, 0.42), BONSAI_POT); p.position.y = 0.06; p.castShadow = p.receiveShadow = true; const t = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.012, 0.36), M.soil); t.position.y = 0.12; g.add(p, t); }
+  const pts = [V(0, y0, 0), V(0.08, y0 + 0.2, 0.02), V(-0.06, y0 + 0.4, -0.02), V(0.04, y0 + 0.6, 0.01)];
+  for (let i = 0; i < pts.length - 1; i++) cyl(pts[i], pts[i + 1], 0.05 - i * 0.012);
+  const n = Math.max(1, branches || 0);
+  for (let j = 0; j < n; j++) { const u = j / n, y = y0 + 0.12 + u * 0.45, a = j * 2.3 + rng() * 0.4, len = 0.28 - u * 0.1, base = V(Math.sin(y * 9) * 0.04, y, 0), tip = base.clone().add(V(Math.cos(a) * len, 0.08 + rng() * 0.06, Math.sin(a) * len));
+    cyl(base, tip, 0.022 - u * 0.008); pads.push([tip, 0.16 - u * 0.04]); }
+  pads.push([pts[3].clone().add(V(0, 0.06, 0)), 0.2]);
+  const im = inst(GEO.blob, M.leafFlat, pads.length * 7); let k = 0;
+  for (const [c, sz] of pads) for (let i = 0; i < 7; i++) { dummy.position.copy(c).add(V((rng() - 0.5) * sz, (rng() - 0.3) * sz * 0.4, (rng() - 0.5) * sz)); dummy.rotation.set(rng(), rng() * 6, 0); dummy.scale.set(sz * 0.55, sz * 0.28, sz * 0.5); dummy.updateMatrix(); im.setMatrixAt(k, dummy.matrix); im.setColorAt(k++, vary(col('#4f7d3a'), rng, 0.12)); }
+  g.add(im); return g;
+}
+export function makeBonsai(seed, branches) { return compact(bonsaiTree(rngOf(seed >>> 0), branches, true)); }
 // Bonsaïs du fond : un par objectif actif de la catégorie (trois au plus), une branche par étape franchie ;
 // le plus fourni au centre, sur une petite sellette de bois.
 const BONSAI_SPOTS = [[0, -2.6 * SZ, 0.9]]; // sur le rond de terre du croisement (le fond est aux géantes)
@@ -1023,7 +1026,7 @@ function setBonsai(h, list) {
     if (B.obj) { h.g.remove(B.obj); disposeObj(B.obj); B.obj = null; }
     if (j > 0) pedestals.set(h, j, !!b);
     if (!b) return;
-    B.obj = compact(bonsai(rngOf(b.seed >>> 0), Math.min(1.45, 0.6 + 0.12 * b.branches) * s)); B.obj.position.set(x, 0.48 * s, z); B.obj.userData.pick = { kind: 'bonsai', goal: b.goal }; h.g.add(B.obj);
+    B.obj = compact(bonsaiTree(rngOf(b.seed >>> 0), b.branches, false)); B.obj.scale.multiplyScalar(s * 1.25); B.obj.position.set(x, 0.48 * s, z); B.obj.userData.pick = { kind: 'bonsai', goal: b.goal }; h.g.add(B.obj);
   });
 }
 // suspensions : trois par serre, elles descendent avec les choses faites de la serre
