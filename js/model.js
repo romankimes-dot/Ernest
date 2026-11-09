@@ -197,6 +197,32 @@ export function smallProposals(state, tomorrow) {
   return out;
 }
 
+// ---------- Cases du jour (serres Bien-être et Vie perso) ----------
+// Rien à poser d'avance : une grille de gestes, cochés quand ils sont faits. Une case cochée est une chose faite du jour
+// marquée tick (elle compte partout comme les autres), mais elle ne fait pas partie des choses posées.
+export const isTick = (t) => !!(t && t.tick);
+export const planned = (d) => d.things.filter((t) => !t.tick);
+export const TICKS = {
+  bienetre: ['Marche', 'Sport', 'Étirements', 'Cuisiner un vrai repas', 'Dehors, sans téléphone', 'Respirer au calme', 'Bien dormi', 'Écrans posés tôt', 'Méditation', 'Bu assez d’eau'],
+  perso: ['Appeler quelqu’un', 'Message à un ami', 'Lire pour le plaisir', 'Ranger un coin', 'Une sortie', 'Ménage', 'Lessive', 'Courses', 'Papiers', 'Préparer demain'],
+};
+export const tickPrefs = (state) => {
+  const t = (state.ticks = state.ticks && typeof state.ticks === 'object' ? state.ticks : {});
+  for (const k of ['custom', 'hidden']) { t[k] = t[k] && typeof t[k] === 'object' ? t[k] : {}; for (const h of ['bienetre', 'perso']) if (!Array.isArray(t[k][h])) t[k][h] = []; }
+  return t;
+};
+// → [{ title, on, id }] : cochées aujourd'hui, puis les plus faites des 30 derniers jours, puis les tiennes, puis celles d'Ernest.
+export function tickGrid(state, house, today, max = 12) {
+  const p = tickPrefs(state), hidden = new Set(p.hidden[house].map(norm)), out = [], seen = new Set();
+  const add = (title, on = null) => { const k = norm(title); if (!title || seen.has(k) || (hidden.has(k) && !on)) return; seen.add(k); out.push({ title, on: on ? on.id : null }); };
+  for (const t of dayOf(state, today).things) if (t.tick && catId(t.cat) === house) add(t.title, t);
+  const n = {}; for (let i = 1; i <= 30; i++) for (const t of dayOf(state, addDays(today, -i)).things) if (t.done && !t.src && catId(t.cat) === house) n[t.title] = (n[t.title] || 0) + 1;
+  Object.entries(n).filter(([, k]) => k > 1).sort((a, b) => b[1] - a[1]).forEach(([title]) => add(title));
+  p.custom[house].forEach((title) => add(title));
+  TICKS[house].forEach((title) => add(title));
+  return out.slice(0, Math.max(max, out.filter((x) => x.on).length));
+}
+
 // ---------- Ernest : choix d'une réplique ----------
 // ctx : contexte ; env : { j, dow, mood, doneYesterday, hasIdea, firstWeek, month, n } ; said : { id: tStamp }
 export function chooseLine(lines, ctx, env, said = {}) {

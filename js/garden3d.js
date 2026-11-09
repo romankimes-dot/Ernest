@@ -1357,6 +1357,13 @@ function ernestScreen() {
   const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (_w.x + 1) / 2 * r.width, y: r.top + (1 - _w.y) / 2 * r.height };
 }
 
+// Point d'écran au-dessus du toit d'une serre (bandeau ou plein écran) : les badges d'arrosoirs s'y posent.
+function houseScreen(id) {
+  const h = HB[id]; if (!renderer || !h) return null;
+  _w.copy(toWorld(h, 0, HR + 0.55, 0)); _w.project(camera);
+  if (_w.z > 1 || Math.abs(_w.x) > 1 || Math.abs(_w.y) > 1) return null;
+  const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (_w.x + 1) / 2 * r.width, y: r.top + (1 - _w.y) / 2 * r.height };
+}
 
 // ---------- Ombres douces au sol (« blob shadows ») : un disque radial instancié, un seul appel de dessin ----------
 const blobTex = softTex((x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(0,0,0,.62)'); g.addColorStop(0.5, 'rgba(0,0,0,.38)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); }, 64, 64);
@@ -1742,7 +1749,7 @@ export const api = {
   walkInput(x, z) { walk.ix = x; walk.iz = z; if (x || z) idleInput(); },
   // monde interactif : toucher (plantes, bonsaïs, panneaux, chaumière, Ernest, graines), arroser, graines dorées
   onPick(fn) { pickFn = fn; }, onNear(fn) { nearFn = fn; near = undefined; }, onFind(fn) { findFn = fn; },
-  waterPlant, setFinds, findSpots: () => FIND_SPOTS.length, ernestScreen, get place() { return walk.place; },
+  waterPlant, setFinds, findSpots: () => FIND_SPOTS.length, ernestScreen, houseScreen, get place() { return walk.place; },
   onPlace(fn) { walk.onPlace = fn; walk.place = undefined; },
   onEnter(fn) { walk.onEnter = fn; }, placeAtDoor,
   ernest,
