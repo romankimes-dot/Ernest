@@ -211,18 +211,23 @@ function placeBadges() {
   let layer = $('#cansLayer');
   if (!layer) { layer = document.createElement('div'); layer.id = 'cansLayer'; layer.className = 'cans-layer'; layer.addEventListener('click', (e) => { const b = e.target.closest('[data-can]'); if (!b) return; e.stopPropagation(); cansSheet(b.dataset.can); }); }
   if (layer.previousElementSibling !== c) c.after(layer);
-  if (!g3d || !g3d.houseScreen || c.hidden || inter || cab) { if (layer.innerHTML) layer.innerHTML = ''; return; }
-  // bandeau : en ligne, en haut à gauche (la caméra n'y montre souvent qu'une serre) ; plein écran : au-dessus de chaque toit
-  const band = $('#serreFull').hidden, pr = layer.getBoundingClientRect(); let h = '';
-  layer.classList.toggle('band', band);
-  for (const id of ['perso', 'travail', 'bienetre']) {
-    const n = FL.cansOf(S, id).length; if (!n) continue;
-    const p = band ? null : g3d.houseScreen(id); if (!band && !p) continue;
-    h += `<button class="can-badge" data-can="${id}"${p ? ` style="left:${Math.round(p.x - pr.left)}px;top:${Math.round(p.y - pr.top)}px"` : ''} aria-label="${n} arrosoir${n > 1 ? 's' : ''} pour la serre ${H_NAME[id]}">${icon('can')}${band ? `<span class="dot" style="background:${catOf(id).couleur}"></span>` : ''}${n}</button>`;
+  if (!g3d || !g3d.houseScreen || c.hidden || inter || cab) { if (layer.firstChild) { layer.textContent = ''; layer._k = ''; } return; }
+  // bandeau : en ligne, en haut à gauche (la caméra n'y montre souvent qu'une serre) ; plein écran : au-dessus de chaque toit.
+  // Les boutons ne sont refaits que si les nombres changent ; à chaque image, seule leur position bouge (un tap aboutit).
+  const band = $('#serreFull').hidden, ns = ['perso', 'travail', 'bienetre'].map((id) => [id, FL.cansOf(S, id).length]).filter(([, n]) => n);
+  const key = `${band ? 'b' : 'f'}|${ns.map((x) => x.join(':')).join(',')}`;
+  if (layer._k !== key) {
+    layer._k = key; layer.classList.toggle('band', band);
+    layer.innerHTML = ns.map(([id, n]) => `<button class="can-badge" data-can="${id}" aria-label="${n} arrosoir${n > 1 ? 's' : ''} pour la serre ${H_NAME[id]}">${icon('can')}${band ? `<span class="dot" style="background:${catOf(id).couleur}"></span>` : ''}${n}</button>`).join('');
   }
-  if (layer.innerHTML !== h) layer.innerHTML = h;
+  if (band) return;
+  const pr = layer.getBoundingClientRect();
+  for (const b of layer.children) {
+    const p = g3d.houseScreen(b.dataset.can), v = p ? `translate3d(${Math.round(p.x - pr.left)}px,${Math.round(p.y - pr.top)}px,0) translate(-50%,-100%)` : '';
+    if (b._t !== v) { b._t = v; b.style.transform = v; b.style.visibility = p ? '' : 'hidden'; }
+  }
 }
-function followBadges() { cancelAnimationFrame(badgeRaf); const f = () => { placeBadges(); if (!$('#serreFull').hidden) badgeRaf = requestAnimationFrame(f); }; badgeRaf = requestAnimationFrame(f); }
+function followBadges() { cancelAnimationFrame(badgeRaf); let last = 0; const f = (t) => { if (t - last > 50) { last = t; placeBadges(); } if (!$('#serreFull').hidden) badgeRaf = requestAnimationFrame(f); }; badgeRaf = requestAnimationFrame(f); }
 setInterval(() => { if ($('#serreFull').hidden && !document.hidden) placeBadges(); }, 2000);
 addEventListener('resize', () => setTimeout(placeBadges, 120));
 // Les arrosoirs d'une serre : tout verser sur la plante qui en a le plus besoin, ou en choisir une.

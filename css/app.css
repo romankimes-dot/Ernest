@@ -443,7 +443,7 @@ body.cabane-open .toast,body.serre-open .toast{bottom:auto;top:calc(var(--sat) +
 .tk-today{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
 /* Arrosoirs à verser : un badge au-dessus de chaque serre */
 .cans-layer{position:absolute;inset:0;pointer-events:none;z-index:2}
-.can-badge{position:absolute;transform:translate(-50%,-100%);pointer-events:auto;display:inline-flex;align-items:center;gap:3px;padding:3px 8px 3px 6px;border-radius:999px;background:rgba(11,21,17,.86);border:1px solid var(--water);color:var(--fg);font-size:13px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.35);backdrop-filter:blur(4px)}
+.can-badge{position:absolute;left:0;top:0;will-change:transform;pointer-events:auto;display:inline-flex;align-items:center;gap:3px;padding:3px 8px 3px 6px;border-radius:999px;background:rgba(11,21,17,.86);border:1px solid var(--water);color:var(--fg);font-size:13px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .can-badge .ic{width:16px;height:16px;color:var(--water)}
 .cans-layer.band{display:flex;gap:6px;align-items:flex-start;padding:calc(var(--sat) + 12px) 0 0 max(12px,env(safe-area-inset-left,0px))}
 .cans-layer.band .can-badge{position:static;transform:none}
