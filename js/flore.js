@@ -14,6 +14,8 @@ export const STAGES = [['Graine', 1], ['Pousse', 2], ['Plante', 5], ['Grande', 1
 export const GROUND = 20;
 export const DORMANT_DAYS = 21;
 export const stageOf = (n) => { let s = -1; STAGES.forEach(([, k], i) => { if (n >= k) s = i; }); return s; };
+// Stade (0 graine … 4 pleine terre, -1 pas semée) et avancée dans le stade (0..1) : le dessin change à chaque stade.
+export const stageLook = (n) => { const s = stageOf(n); if (s < 0) return { s, k: 0 }; const a = STAGES[s][1], b = STAGES[s + 1] ? STAGES[s + 1][1] : a + 30; return { s, k: Math.min(1, (n - a) / Math.max(1, b - a)) }; };
 export const stageName = (n) => { const s = stageOf(n); return s < 0 ? 'Pas encore semée' : STAGES[s][0]; };
 
 // Douze espèces par serre, dans l'ordre du déblocage. look : le dessin utilisé par les serres (garden3d, garden2d).

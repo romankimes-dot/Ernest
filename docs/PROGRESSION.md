@@ -6,6 +6,7 @@
 - Chose nouvelle : Ernest propose de planter une graine ou de nourrir une plante existante de la catégorie.
 - Choses arrivées par un pont : chaque pont nourrit sa plante dédiée, sans geste.
 - Croissance au nombre d'arrosages. Stades : graine 1, pousse 2, plante 5, grande 10, pleine terre 20.
+- Un dessin par stade (dedans et dehors) : graine (motte et graine dans le pot), pousse (deux cotylédons, puis une et deux paires de vraies feuilles), plante (l'espèce, sans fleurs, de plus en plus fournie), grande (tout le feuillage, boutons de fleurs dedans, fleurs dehors), pleine terre (en fleurs, dans le plan). Un changement de stade refait la plante, qui repousse sous les yeux.
 - Pleine terre : la plante sort au jardin, libère son pot, continue de grandir dehors.
 - Dormance : après trois semaines sans arrosage, Ernest propose de la ranger à la cabane. On peut **fixer** une plante sur place (compteur coupé).
 

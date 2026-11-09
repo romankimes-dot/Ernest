@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createErnest } from './ernest3d.js';
 import { phaseAt } from './model.js';
-import { STAGES, stageOf, SLOT_XZ, BASKETS, layout } from './flore.js';
+import { STAGES, stageOf, stageLook, SLOT_XZ, BASKETS, layout } from './flore.js';
 
 // ---------- Outils ----------
 const rngOf = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -439,7 +439,7 @@ let renderer, scene, camera, controls, hemi, sun, sky, ernest, lampLights = [], 
 const plants = []; let P = 0, timeKey = 'day', onFps = null, variegated = true;
 
 function buildPools() {
-  const counts = {}; for (const pl of plants) for (const pc of [...pl.parts, ...(pl.seedParts || [])]) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
+  const counts = {}; for (const pl of plants) for (const pc of [...pl.parts, ...(pl.seedParts || []), ...(pl.early || [])]) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
   counts.pot = (counts.pot || 0) + BENCH.length + 6; counts.moss = (counts.moss || 0) + 260; counts.stone = (counts.stone || 0) + 60; counts.stem = (counts.stem || 0) + 8;
   if (Object.keys(pools).length && Object.entries(POOLS).every(([k]) => pools[k] && pools[k].im.instanceMatrix.count >= (counts[k] || 1))) return; // assez de place : on garde
   for (const k in pools) { scene.remove(pools[k].im); pools[k].im.dispose(); delete pools[k]; }
@@ -459,10 +459,36 @@ function rareLook(parts, look, r) {
     else if (look === 'bleu' && petal) c = blue.clone();
     return c === pc.c ? pc : { ...pc, c }; });
 }
+// Stades sans l'espèce (js/flore.js, stageLook) : graine (motte, graine, étiquette), pousse (cotylédons puis deux paires
+// de vraies feuilles). Chaque pièce porte son stade (st) ; les feuilles de la pousse apparaissent arrosage après arrosage.
+function stageParts(r) {
+  const L = [], soil = col('#4a3422'), g1 = vary('#8fbf5a', r, 0.1), g2 = vary('#5d8c3a', r, 0.1), tag = (pc, st) => { pc.st = st; return pc; };
+  part(L, 'moss', V(0, 0.004, 0), [0, r() * 6, 0], [0.12, 0.025, 0.12], soil); part(L, 'ball', V(0.012, 0.03, 0.004), [0.4, r() * 6, 0], [0.026, 0.017, 0.036], col('#c79a5a'));
+  L.forEach((pc) => tag(pc, 0)); const n0 = L.length;
+  const y0 = r() * 6.28;
+  stemPart(L, V(), V(0, 0.06, 0), 0.0035, g2, 0);
+  for (const k of [0, 1]) leafAt(L, 'round', V(0, 0.06, 0), y0 + k * Math.PI, 0.2, 0.06, g1, 0);
+  stemPart(L, V(0, 0.06, 0), V(0, 0.1, 0), 0.003, g2, 0.25);
+  for (const k of [0, 1]) leafAt(L, 'leaf', V(0, 0.1, 0), y0 + Math.PI / 2 + k * Math.PI, 0.45, 0.06, g2, 0.25);
+  stemPart(L, V(0, 0.1, 0), V(0, 0.14, 0), 0.0028, g2, 0.5);
+  for (const k of [0, 1]) leafAt(L, 'leaf', V(0, 0.14, 0), y0 + Math.PI / 4 + k * Math.PI, 0.6, 0.07, g2, 0.5);
+  L.slice(n0).forEach((pc) => tag(pc, 1));
+  return L;
+}
+const BUD = col('#6f9a4a');
+// Stades plante et grande : l'espèce sans fleurs (plante), puis tout le feuillage avec des boutons (grande).
+function emitStaged(parts, g, mat, owner, buds, kb) {
+  for (const pc of parts) {
+    const fl = PETAL_POOLS.has(pc.pool) || pc.pool === 'ball';
+    if (fl && !buds) continue;
+    const k = fl ? 0.3 + 0.2 * kb : smooth(pc.a, pc.a + 0.12, g); if (k <= 0.001) continue;
+    _S.makeScale(k, k, k); _M.multiplyMatrices(mat, pc.m).multiply(_S); push(pc.pool, _M, fl ? pc.c.clone().lerp(BUD, 0.6) : pc.c, owner);
+  }
+}
 const PART_CACHE = new Map(); // plante déjà dessinée (même espèce, même place, même variante) : on ne la refait pas
 function addPlant(it) {
   const key = it.pid ? `${it.pid}|${it.id}|${it.rare || ''}|${it.mode === 'ground' ? `${it.x},${it.z}` : 'pot'}` : null;
-  if (key && PART_CACHE.has(key)) { const c = PART_CACHE.get(key); plants.push({ it, parts: c.parts, seedParts: c.seedParts, ground: c.ground }); return; }
+  if (key && PART_CACHE.has(key)) { const c = PART_CACHE.get(key); plants.push({ it, parts: c.parts, seedParts: c.seedParts, ground: c.ground, early: c.early }); return; }
   const r = rngOf(1000 + it.i * 977), s = SP[it.id], o = s.leafy; let parts, ground;
   if (s.type === 'Liane') { const side = it.x, z = it.z, path = [], off = rngOf(it.i);
     for (let k = 0; k <= 120; k++) { const q = ribPoint(side, z, Math.min(0.97, k / 120)); const n = V(-q.x, HALL.wall - q.y, 0).normalize(); if (q.y < HALL.wall) n.set(-side, 0, 0); q.addScaledVector(n, 0.14); q.z += Math.sin(k * 0.7) * 0.07 + (off() - 0.5) * 0.03; path.push(q); }
@@ -470,9 +496,9 @@ function addPlant(it) {
   } else if (s.type === 'Tombante') { parts = G.tombante(r, o); ground = { pos: V(it.x, 3.05, it.z), ry: r() * 6, s: 1, basket: true }; }
   else { parts = s.gen(r); ground = { pos: V(it.x, 0.22, it.z), ry: r() * 6, s: s.gs || 1 }; }
   if (it.rare) { parts = rareLook(parts, it.rare, rngOf(it.i + 77)); if (it.rare === 'grand') ground.s *= 1.25; }
-  const seedParts = o ? G.semis(rngOf(it.i + 5), o) : null;
-  if (key) PART_CACHE.set(key, { parts, seedParts, ground });
-  plants.push({ it, parts, seedParts, ground });
+  const seedParts = o ? G.semis(rngOf(it.i + 5), o) : null, early = stageParts(rngOf(it.i + 9));
+  if (key) PART_CACHE.set(key, { parts, seedParts, ground, early });
+  plants.push({ it, parts, seedParts, ground, early });
 }
 
 const _M = new THREE.Matrix4(), _P = new THREE.Matrix4(), _S = new THREE.Matrix4();
@@ -532,7 +558,7 @@ export function setData(data) {
   const items = [], list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), L = layout(list);
   LIVE.assign = {}; LIVE.taken = L.taken;
   for (const p of list) {
-    const it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id, rare: p.rare || null }, a = L.at.get(p.id); if (!a) continue;
+    const it = { i: hashStr(p.id) % 100000, id: p.sp, pid: p.id, rare: p.rare || null, n: Number(p.n) || 0 }, a = L.at.get(p.id); if (!a) continue;
     if (a.mode === 'ground') { LIVE.assign[p.id] = a.k; Object.assign(it, { x: a.x, z: a.z, mode: 'ground', g: 0.5 + 0.5 * Math.min(1, (p.n - 20) / 30) }); }
     else if (a.k < BENCH.length) Object.assign(it, { x: 0, z: 0, bench: a.k, mode: 'bench', g: 0.15 + 0.45 * Math.min(1, (p.n - 1) / 18) });
     else continue;
@@ -627,6 +653,15 @@ export function showSlots(pid, sp) {
 export function hideSlots() { if (slotMarks) { scene.remove(slotMarks); slotMarks = null; } }
 export const assignOf = (pid) => (LIVE && LIVE.assign ? LIVE.assign[pid] : undefined);
 const hasDecor = (id) => (LIVE ? LIVE.decors.has(id) : P >= (DECORS.find((d) => d.id === id) || { u: 9 }).u);
+// Un pot de l'établi selon son stade : graine, pousse, plante (l'espèce, sans fleurs), grande (boutons).
+function benchStage(pl, b, sc, own) {
+  const { s: st, k } = stageLook(pl.it.n), at = b.clone().add(V(0, st <= 1 ? 0.25 : 0.22, 0)); // le pot est fermé à 0,25 : graine et pousse posées dessus
+  if (st <= 1) { _P.compose(at, _q, _s.setScalar(st ? 1.5 : 0.75)); emit(pl.early.filter((pc) => pc.st === st), st ? 0.15 + 0.75 * k : 1, _P, own); return; }
+  _P.compose(at, _q, _s.setScalar(sc * (st === 2 ? 0.8 + 0.15 * k : 0.95 + 0.05 * k)));
+  if (st >= 4) emit(pl.seedParts || pl.parts, 1, _P, own);
+  else if (pl.seedParts) emit(pl.seedParts, st === 2 ? 0.55 + 0.2 * k : 0.8 + 0.25 * k, _P, own);
+  else emitStaged(pl.parts, st === 2 ? 0.3 + 0.25 * k : 0.6 + 0.25 * k, _P, own, st === 3, k);
+}
 function renderAll() {
   for (const k in pools) pools[k].n = 0;
   const usedBench = new Set();
@@ -635,11 +670,11 @@ function renderAll() {
     if (pl.mode === 'bench') { // en pot sur l'établi
       usedBench.add(it.bench); const b = BENCH[it.bench], big = SP[it.id].type === 'Géante';
       _P.compose(b, _q.setFromEuler(_e.set(0, it.i * 1.7, 0)), _s.setScalar(1)); push('pot', _P, POTC[it.i % 3], own);
-      const sc = big ? 0.45 : 0.75; /* jeunes plantes de l'établi : assez grandes pour qu'on les voie */ _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(0.45 + g * 1.3) : Math.max(0.35, g), _P, own); /* même une graine se voit dans son pot */
+      const sc = big ? 0.45 : 0.75; /* jeunes plantes de l'établi : assez grandes pour qu'on les voie */ _P.compose(b.clone().add(V(0, 0.22, 0)), _q, _s.setScalar(sc)); if (it.n && pl.early) benchStage(pl, b, sc, own); else emit(pl.seedParts || pl.parts, pl.seedParts ? clamp01(0.45 + g * 1.3) : Math.max(0.35, g), _P, own); /* même une graine se voit dans son pot */
     } else { // pleine terre, dans son emplacement du plan
       const gr = pl.ground;
       if (gr.basket) { _P.compose(gr.pos.clone().add(V(0, -0.1, 0)), _q.identity(), _s.set(1.3, 0.7, 1.3)); push('pot', _P, BASKET_C, own); const top = roofY(gr.pos.x) - 0.05; _P.compose(gr.pos.clone().add(V(0, 0.05, 0)), _q.identity(), _s.set(0.006, Math.max(0.2, top - gr.pos.y - 0.05), 0.006)); push('stem', _P, CHAIN_C); }
-      _P.compose(gr.pos, _q.setFromEuler(_e.set(0, gr.ry, 0)), _s.setScalar(gr.s * (gr.bed ? 1 : 0.55 + 0.45 * g))); emit(pl.parts, gr.bed ? (g - 0.5) * 1.96 + 0.02 : g, _P, own);
+      _P.compose(gr.pos, _q.setFromEuler(_e.set(0, gr.ry, 0)), _s.setScalar(gr.s * (gr.bed ? 1 : it.n ? 0.85 + 0.3 * (g - 0.5) : 0.55 + 0.45 * g))); emit(pl.parts, gr.bed ? (g - 0.5) * 1.96 + 0.02 : it.n ? 0.9 + 0.2 * (g - 0.5) : g, _P, own);
     }
   }
   // pots vides (au départ et entre deux semis)
