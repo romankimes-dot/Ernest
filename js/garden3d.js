@@ -976,6 +976,10 @@ function seedling(rng, st, k) {
     add(STICK_GEO, SEEDM.tag, -0.06, 0.05, 0.03, 1.4, 0.14, 1.4, 0, 0, 0.18); add(TAG_GEO, SEEDM.tag, -0.075, 0.13, 0.03, 1.8, 1.8, 1.5, 0, 0.3, 0.18);
     return g;
   }
+  if (st === 2) { // plante : une rosette touffue, qui s'étoffe arrosage après arrosage
+    const n = 8 + Math.round(8 * k); for (let i = 0; i < n; i++) { const u = i / 16; add(GEO.leafMid, i % 3 ? SEEDM.leaf : SEEDM.sprout, 0, 0.01 + u * 0.03, 0, 2.2 - u, 2.2 - u, 2.2 - u, -(0.3 + u * 0.8), i * 2.4); }
+    return g;
+  }
   const y0 = rng() * 6.28, h = 0.07 + 0.05 * k; // pousse : deux cotylédons ronds, puis une ou deux paires de vraies feuilles
   add(STICK_GEO, M.stem, 0, h / 2, 0, 0.9, h, 0.9);
   for (const j of [0, 1]) add(GEO.leafMid, SEEDM.sprout, 0, 0.06, 0, 1.1, 1.1, 1.1, -0.25, y0 + j * Math.PI);
@@ -989,8 +993,8 @@ function buildPlant(p, h, sl) {
   if (sl.ground) { const pl = compact(SPECIES[sp](rng, (sl.big ? 3.0 : tall ? 1.6 : 1.9) * (0.9 + rng() * 0.2))); g.add(pl); g.position.set(sl.x, sl.y, sl.z); g.rotation.y = rng() * 6; h.g.add(g); return { obj: g, plant: pl }; }
   const ps = sl.pot * (tall ? 1.15 : 1) * (0.9 + rng() * 0.2), st = p.st ? p.st.s : -1;
   g.add(makePot(ps, h.pots[rng() < 0.3 ? 1 : 0]));
-  const pl = st === 0 || st === 1 ? seedling(rng, st, p.st.k) : compact(SPECIES[sp](rng, sl.hang ? 0.7 : 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; if (st === 0 || st === 1) pl.scale.setScalar(ps * 1.6); g.add(pl);
-  if (st === 2) pl.traverse((o) => { if (o.userData.fl) o.visible = false; }); // stade plante : l'espèce, pas encore de fleurs
+  const young = st >= 0 && st <= 2, pl = young ? seedling(rng, st, p.st.k) : compact(SPECIES[sp](rng, sl.hang ? 0.7 : 0.62 + rng() * 0.36)); pl.position.y = 0.19 * ps; if (young) pl.scale.setScalar(ps * 1.6); g.add(pl);
+  if (st === 3) pl.traverse((o) => { if (o.userData.fl) o.visible = false; }); // grande : l'espèce entière, pas encore en fleurs
   if (sl.hang) { const top = roofOf(h, sl.x) - 0.05 - sl.y, ch = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, top, 4), M.chain); ch.position.y = top / 2; ch.userData.own = true; g.add(ch); }
   g.position.set(sl.x, sl.y, sl.z); if (!sl.hang) g.rotation.y = rng() * Math.PI * 2;
   h.g.add(g); return { obj: g, plant: pl };
@@ -1523,7 +1527,7 @@ function applyModel(m) {
   const hm = (h) => (m.houses && m.houses[h.id]) || EMPTY_HOUSE, keep = new Map();
   const atOf = (p, i) => p.at || DEMO_AT[i] || (i - DEMO_AT.length < BENCH_SHOWN ? { mode: 'bench', k: i - DEMO_AT.length } : null); // démonstrations : sans plan
   const keyOf = (a) => (a ? `${a.mode}:${a.type || ''}:${a.k}` : '');
-  const stKey = (p) => (p.st ? `|${p.st.s}${p.st.s === 1 ? Math.round(p.st.k * 3) : ''}` : '');
+  const stKey = (p) => (p.st ? `|${p.st.s}${p.st.s === 1 || p.st.s === 2 ? Math.round(p.st.k * 3) : ''}` : '');
   for (const h of HOUSES) (hm(h).plants || []).forEach((p, i) => keep.set(p.id, [h, keyOf(atOf(p, i)) + stKey(p)]));
   for (const [id, L] of live) { const k = keep.get(id); if (!k || k[0] !== L.house || k[1] !== L.key) { L.house.g.remove(L.obj); disposeObj(L.obj); live.delete(id); } }
   for (const h of HOUSES) {
@@ -1534,7 +1538,7 @@ function applyModel(m) {
         const at = atOf(p, i), sl = spotOf(at); if (!sl) return; // pas de place visible dehors
         L = { ...buildPlant(p, h, sl), sl, key: keyOf(at) + stKey(p), house: h, id: p.id, cur: 0.001, phase: (p.seed % 1000) / 100, sway: p.cat === 'perso' || p.cat === 'revision' ? 0.05 : 0.025 }; live.set(p.id, L); L.obj.userData.pick = { kind: 'plant', id: p.id };
       }
-      L.target = !p.st || L.sl.ground ? 0.35 + 0.65 * p.g : p.st.s <= 1 ? 1 : p.st.s === 2 ? 0.55 + 0.15 * p.st.k : 0.8 + 0.2 * p.st.k; // pot : graine et pousse à leur taille, puis plante, grande
+      L.target = !p.st || L.sl.ground ? 0.35 + 0.65 * p.g : p.st.s <= 2 ? 1 : 0.75 + 0.25 * p.st.k; // pot : graine et pousse à leur taille, puis plante, grande
     });
     vines.filter((v) => v.house === h).forEach((v) => { v.target = Math.max(0, Math.min(1, (H.vine || 0) * 1.25 - v.i * 0.12)); });
     mosses[h.id].target = Math.min(MOSS_MAX, H.moss || 0);

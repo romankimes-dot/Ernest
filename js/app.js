@@ -338,7 +338,8 @@ function bindGo() {
 function refreshCabane() { if (cab) cab.set(cabData()); refreshInterior(); }
 // ---------- Dedans : la serre de botaniste (js/botaniste3d.js), avec les vraies plantes ----------
 let inter = null, interHouse = null, interKeep = null, interHint = false; // interKeep : la dernière serre visitée, en pause
-const interData = (house) => ({ plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: 'auto' });
+const interBonsai = (house) => { const gm = new Map(S.goals.map((g) => [g.id, g])); const b = S.garden.plants.filter((p) => p.kind === 'bonsai' && catId(p.cat) === house && FL.bonsaiInSerre(p, gm.get(p.goal))).sort((a, b) => (b.branches || 0) - (a.branches || 0))[0]; return b ? { goal: b.goal, seed: b.seed, branches: b.branches || 0 } : null; };
+const interData = (house) => ({ bonsai: interBonsai(house), plants: FL.plantsOf(S, house).filter((p) => !p.dormant).map((p) => ({ id: p.id, sp: p.sp, n: FL.waterCount(p), seed: p.seed, place: p.place, rare: p.rare ? (FL.RARE[p.sp] || [])[1] : null })), decors: Object.keys(S.garden.decors || {}).filter((k) => k.startsWith(house + ':')).map((k) => k.split(':')[1]), time: 'auto' });
 function interCap() {
   const house = interHouse, ps = FL.plantsOf(S, house).filter((p) => !p.dormant), cans = FL.cansOf(S, house).length, mod = inter && inter.mod;
   const g = ps.filter((p) => FL.waterCount(p) >= FL.GROUND).length;
@@ -375,6 +376,7 @@ function onPickInterior(o) {
     endMove(); refreshInterior(); if (!o.mine) setTimeout(() => inter && inter.api.play('terre', p.id), 300); return; }
   if (moving) return;
   if (o.kind === 'plant') plantSheet(o.id);
+  else if (o.kind === 'bonsai') bonsaiSheet(o.goal);
   else if (o.kind === 'ernest') { const t = say(S, `lieu.${interHouse}`, ernestEnv(S, today, plantsOf(interHouse))) || say(S, 'ernest.touche', ernestEnv(S, today, plantNames())); if (t) { toast(t, 4500); save(); } }
 }
 async function openCabane() {
@@ -527,7 +529,7 @@ function bonsaiSheet(goalId) {
   openSheet(`<h2>${esc(g.title)}</h2><div class="muted small" style="margin:-6px 0 12px">Bonsaï de la serre ${H_NAME[catId(g.cat)]} · ${done} branche${done > 1 ? 's' : ''}${g.due ? ` · pour ${esc(fmtDay(g.due))}` : ''}</div>
     <div class="stack" id="bsMs">${g.milestones.map((m, i) => `<button class="ms-row ${m.done ? 'done' : ''}" data-i="${i}"><span class="check">${m.done ? icon('check') : ''}</span><span>${esc(m.text)}${m.due ? `<small class="muted"> · ${esc(new Date(m.due + 'T12:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}</small>` : ''}</span></button>`).join('') || '<p class="muted">Pas encore d\'étape.</p>'}</div>
     ${shelfBlock(g)}<div class="row" style="gap:8px;margin-top:14px"><button class="btn quiet" id="bsEdit">Modifier l'objectif</button><button class="btn quiet" id="bsClose">Fermer</button></div>`);
-  document.querySelectorAll('[data-shelf]').forEach((b) => b.addEventListener('click', () => { label("l'étagère"); if (b.dataset.shelf === 'on') { FL.shelve(S, g.id, today); ernestLine('flore.etagere', { objectif: g.title }, 'Ernest pose le bonsaï sur l\'étagère de la cabane.'); } else { FL.keepInSerre(S, g.id); toast('Le bonsaï reste dans la serre.'); } save(); gardenUpdate(); refreshCabane(); bonsaiSheet(goalId); }));
+  document.querySelectorAll('[data-shelf]').forEach((b) => b.addEventListener('click', () => { label("l'étagère"); if (b.dataset.shelf === 'on') { FL.shelve(S, g.id, today); ernestLine('flore.etagere', { objectif: g.title }, 'Ernest pose le bonsaï sur l\'étagère de la cabane.'); } else { FL.keepInSerre(S, g.id); toast('Le bonsaï reste dans la serre.'); } save(); gardenUpdate(); refreshCabane(); refreshInterior(); render(); bonsaiSheet(goalId); }));
   $('#bsMs').querySelectorAll('[data-i]').forEach((el) => el.addEventListener('click', () => { action('goalMs', { id: g.id, i: el.dataset.i }); bonsaiSheet(goalId); }));
   $('#bsEdit').addEventListener('click', () => goalSheet(g)); $('#bsClose').addEventListener('click', closeSheet);
 }
@@ -852,6 +854,7 @@ function viewToday() {
     if (items.length) h += `<div class="moment"><div class="moment-h">${label}</div><div class="stack">${items.map((t) => swipeWrap('thing', t.id, thingRow(t, t === firstUndone))).join('')}</div></div>`;
   }
   if (pd.length) h += `<button class="btn quiet" data-act="addThing">${icon('plus', 'sm')} Ajouter à ma journée</button>`;
+  for (const b of FL.shelfCandidates(S).slice(0, 1)) { const g = S.goals.find((x) => x.id === b.goal); if (g) h += `<button class="card row spread" data-act="bonsai" data-goal="${g.id}" style="width:100%;text-align:left;margin-top:12px"><span><b>Le bonsaï de « ${esc(g.title)} »</b><br><span class="muted small">Objectif atteint. Sur l'étagère de la cabane, ou dans la serre ${H_NAME[catId(g.cat)]} ?</span></span>${icon('arrow')}</button>`; }
   { const nt = (h) => d.things.filter((t) => t.tick && catId(t.cat) === h).length; // cases du jour : Bien-être, Vie perso
     h += `<div class="tk-today"><span class="muted small">Coché aujourd'hui</span>${['bienetre', 'perso'].map((k) => `<button class="chip" data-act="ticks" data-h="${k}"><span class="dot" style="background:${catOf(k).couleur}"></span>${H_NAME[k]}${nt(k) ? ` · ${nt(k)}` : ''}</button>`).join('')}</div>`; }
   if (dueToday.length) h += `<div class="moment"><div class="moment-h">Dans la liste, daté d'aujourd'hui</div><div class="stack">${dueToday.map(listRow).join('')}</div></div>`;
@@ -954,6 +957,7 @@ function action(act, ds, el, v) {
     case 'pause': if (thing && thing.startedAt) { thing.spent = spentMs(thing); thing.startedAt = null; save(); toast('En pause. Reprends quand tu veux.'); render(); } break;
     case 'done': if (thing) doneSheet(thing); break;
     case 'ticks': tickSheet(ds.h); break;
+    case 'bonsai': bonsaiSheet(ds.goal); break;
     case 'toggle': if (thing) { if (thing.tick) untick(d, thing); else if (thing.done) { thing.done = false; thing.doneAt = null; FL.dropCan(S, { thing: thing.id }); save(); render(); } else doneSheet(thing); } break;
     case 'thingMenu': if (thing) thingSheet(thing); break;
     case 'listToggle': { const l = S.list.find((x) => x.id === ds.id); if (!l) return; if (l.done) { l.done = false; l.doneAt = null; FL.dropCan(S, { listId: l.id }); } else { l.done = true; l.doneAt = new Date().toISOString(); gainCan({ cat: l.cat || 'perso', day: today, title: l.text, listId: l.id }); /* un arrosoir, pour Vie perso par défaut */ const e = ernestEnv(S, today, plantNames()); bubble(say(S, 'coche', e)); const c = drawShort(S); if (c) toast('Une carte de plus dans le Carnet.'); } save(); render(); break; }
@@ -1260,7 +1264,7 @@ function goalSheet(g) {
   openSheet(`<h2>${isNew ? 'Un objectif' : 'Cet objectif'}</h2><input id="gTitle" value="${esc(g.title)}" placeholder="Quoi ?" autocomplete="off">${chips(g.cat)}<div class="grid2"><div class="kv"><label>Échéance</label><input type="date" id="gDue" value="${g.due || ''}"></div><div class="kv"><label>Horizon</label><select id="gHor"><option value="week" ${g.horizon === 'week' ? 'selected' : ''}>Semaine</option><option value="month" ${g.horizon === 'month' ? 'selected' : ''}>Mois ou plus</option></select></div></div><div class="kv"><label>Jalons, un par ligne</label><textarea id="gMs">${esc(g.milestones.map((m) => m.text).join('\n'))}</textarea></div><button class="btn" id="gSave">${isNew ? 'Poser' : 'Enregistrer'}</button>${isNew ? '' : `<div class="btns"><button class="btn quiet" id="gDone">${icon('check', 'sm')} Atteint</button><button class="btn danger" id="gDel">${icon('trash', 'sm')} Supprimer</button></div>`}`);
   const sh = $('#sheet'); bindChips(sh);
   $('#gSave').addEventListener('click', () => { g.title = $('#gTitle').value.trim(); if (!g.title) { toast('Donne-lui un nom d\'abord.'); $('#gTitle').focus(); return; } g.cat = chipValue(sh, 'cat') || 'perso'; g.due = $('#gDue').value || null; g.horizon = $('#gHor').value; const lines = $('#gMs').value.split('\n').map((x) => x.trim()).filter(Boolean); const old = g.milestones; g.milestones = lines.map((text, i) => old.find((m) => m.text === text) || (old[i] ? { ...old[i], text } : { text, done: false })); if (isNew) S.goals.push(g); save(); closeSheet(); render(); toast(isNew ? 'Objectif posé. Un bonsaï attend sa première étape.' : 'Objectif mis à jour.'); });
-  if (!isNew) { $('#gDone').addEventListener('click', () => { g.status = 'done'; g.doneAt = today; const c = drawRare(S, 'goal'); if (c) toast(`Carnet : « ${c.titre || ''} »`); if (FL.bonsaiOf(S, g.id)) toast("Objectif atteint. Ernest propose de poser son bonsaï sur l'étagère de la cabane : touche-le dans la serre pour décider.", 5000); save(); closeSheet(); render(); }); $('#gDel').addEventListener('click', () => { closeSheet(); removeGoal(g.id); }); }
+  if (!isNew) { $('#gDone').addEventListener('click', () => { g.status = 'done'; g.doneAt = today; const c = drawRare(S, 'goal'); if (c) toast(`Carnet : « ${c.titre || ''} »`); save(); closeSheet(); render(); if (FL.bonsaiOf(S, g.id)) setTimeout(() => bonsaiSheet(g.id), 350); }); $('#gDel').addEventListener('click', () => { closeSheet(); removeGoal(g.id); }); }
 }
 function reviewSheet() {
   const wk = isoWeek(today), days = weekDays(today), goals = S.goals.filter((g) => g.status === 'active'), counts = catCounts(S, days), e = ernestEnv(S, today, plantNames());

@@ -440,6 +440,7 @@ const plants = []; let P = 0, timeKey = 'day', onFps = null, variegated = true;
 
 function buildPools() {
   const counts = {}; for (const pl of plants) for (const pc of [...pl.parts, ...(pl.seedParts || []), ...(pl.early || [])]) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
+  if (BONSAI) for (const pc of BONSAI.parts) counts[pc.pool] = (counts[pc.pool] || 0) + 1;
   counts.pot = (counts.pot || 0) + BENCH.length + 6; counts.moss = (counts.moss || 0) + 260; counts.stone = (counts.stone || 0) + 60; counts.stem = (counts.stem || 0) + 8;
   if (Object.keys(pools).length && Object.entries(POOLS).every(([k]) => pools[k] && pools[k].im.instanceMatrix.count >= (counts[k] || 1))) return; // assez de place : on garde
   for (const k in pools) { scene.remove(pools[k].im); pools[k].im.dispose(); delete pools[k]; }
@@ -461,7 +462,8 @@ function rareLook(parts, look, r) {
 }
 // Stades sans l'espèce (js/flore.js, stageLook) : graine (motte, graine, étiquette), pousse (cotylédons puis deux paires
 // de vraies feuilles). Chaque pièce porte son stade (st) ; les feuilles de la pousse apparaissent arrosage après arrosage.
-function stageParts(r) {
+const ROS = { leaf: 0.1, ivy: 0.1, round: 0.09, needle: 0.17, monstera: 0.15, frond: 0.22, aloe: 0.13, paddle: 0.15 };
+function stageParts(r, lp) {
   const L = [], soil = col('#4a3422'), g1 = vary('#8fbf5a', r, 0.1), g2 = vary('#5d8c3a', r, 0.1), tag = (pc, st) => { pc.st = st; return pc; };
   part(L, 'moss', V(0, 0.004, 0), [0, r() * 6, 0], [0.12, 0.025, 0.12], soil); part(L, 'ball', V(0.012, 0.03, 0.004), [0.4, r() * 6, 0], [0.026, 0.017, 0.036], col('#c79a5a'));
   L.forEach((pc) => tag(pc, 0)); const n0 = L.length;
@@ -472,10 +474,27 @@ function stageParts(r) {
   for (const k of [0, 1]) leafAt(L, 'leaf', V(0, 0.1, 0), y0 + Math.PI / 2 + k * Math.PI, 0.45, 0.06, g2, 0.25);
   stemPart(L, V(0, 0.1, 0), V(0, 0.14, 0), 0.0028, g2, 0.5);
   for (const k of [0, 1]) leafAt(L, 'leaf', V(0, 0.14, 0), y0 + Math.PI / 4 + k * Math.PI, 0.6, 0.07, g2, 0.5);
-  L.slice(n0).forEach((pc) => tag(pc, 1));
+  L.slice(n0).forEach((pc) => tag(pc, 1)); const n1 = L.length;
+  // plante : une rosette touffue des feuilles de l'espèce (couleur, forme), qui s'étoffe arrosage après arrosage
+  const N = 16, sz = ROS[lp.pool] || 0.1;
+  for (let i = 0; i < N; i++) { const u = i / N; leafAt(L, lp.pool, V((r() - 0.5) * 0.02, 0.005 + u * 0.03, (r() - 0.5) * 0.02), i * 2.4 + r() * 0.3, 0.25 + u * 0.75, sz * (1.15 - u * 0.45) * (0.9 + r() * 0.2), vary(lp.c, r, 0.1), u * 0.85); }
+  L.slice(n1).forEach((pc) => tag(pc, 2));
   return L;
 }
 const BUD = col('#6f9a4a');
+// Bonsaï d'un objectif (une branche par jalon), en pot sur le rond du croisement, comme dans la serre du village.
+function bonsaiParts(r, branches) {
+  const L = [], bark = col('#5b3f26'), pad = (p, s) => { for (let i = 0; i < 7; i++) part(L, 'moss', p.clone().add(V((r() - 0.5) * s, (r() - 0.3) * s * 0.4, (r() - 0.5) * s)), [r(), r() * 6, 0], [s * 0.55, s * 0.28, s * 0.5], vary('#4f7d3a', r, 0.12)); };
+  part(L, 'pot', V(0, 0, 0), [0, 0, 0], [2.2, 0.75, 1.6], col('#3c4a5a'));
+  const pts = [V(0, 0.18, 0), V(0.08, 0.38, 0.02), V(-0.06, 0.58, -0.02), V(0.04, 0.78, 0.01)];
+  for (let i = 0; i < pts.length - 1; i++) stemPart(L, pts[i], pts[i + 1], 0.05 - i * 0.012, bark);
+  const n = Math.max(1, branches);
+  for (let j = 0; j < n; j++) { const y = 0.3 + (j / n) * 0.45, a = j * 2.3 + r() * 0.4, len = 0.28 - (j / n) * 0.1, base = V(Math.sin(y * 9) * 0.04, y, 0), tip = base.clone().add(V(Math.cos(a) * len, 0.08 + r() * 0.06, Math.sin(a) * len));
+    stemPart(L, base, tip, 0.022 - (j / n) * 0.008, bark); pad(tip, 0.16 - (j / n) * 0.04); }
+  pad(pts[3].clone().add(V(0, 0.06, 0)), 0.2);
+  return L;
+}
+let BONSAI = null; // { parts, goal, at }
 // Stades plante et grande : l'espèce sans fleurs (plante), puis tout le feuillage avec des boutons (grande).
 function emitStaged(parts, g, mat, owner, buds, kb) {
   for (const pc of parts) {
@@ -496,7 +515,7 @@ function addPlant(it) {
   } else if (s.type === 'Tombante') { parts = G.tombante(r, o); ground = { pos: V(it.x, 3.05, it.z), ry: r() * 6, s: 1, basket: true }; }
   else { parts = s.gen(r); ground = { pos: V(it.x, 0.22, it.z), ry: r() * 6, s: s.gs || 1 }; }
   if (it.rare) { parts = rareLook(parts, it.rare, rngOf(it.i + 77)); if (it.rare === 'grand') ground.s *= 1.25; }
-  const seedParts = o ? G.semis(rngOf(it.i + 5), o) : null, early = stageParts(rngOf(it.i + 9));
+  const seedParts = o ? G.semis(rngOf(it.i + 5), o) : null, early = stageParts(rngOf(it.i + 9), parts.find((pc) => LEAF_POOLS.has(pc.pool) && pc.pool !== 'frond') || parts.find((pc) => LEAF_POOLS.has(pc.pool)) || { pool: 'leaf', c: col('#5d8c3a') });
   if (key) PART_CACHE.set(key, { parts, seedParts, ground, early });
   plants.push({ it, parts, seedParts, ground, early });
 }
@@ -552,7 +571,7 @@ function blocked(x, z) {
 const freeSpot = (x, z) => { let k = 0; while (blocked(x, z) && k++ < 30) { x *= 0.85; z = Math.min(z, D - 0.35); if (Math.abs(x) < 0.05 && z < -4.25) z += 0.2; } return V(x, 0, z); };
 const hashStr = (t) => { let h = 2166136261; for (const ch of String(t)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
 export function setData(data) {
-  const sig = JSON.stringify([data.plants, data.decors]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
+  const sig = JSON.stringify([data.plants, data.decors, data.bonsai]); if (LIVE && LIVE.sig === sig) { if (data.time) setTime(data.time); return; }
   LIVE = { sig, decors: new Set(data.decors || []), waters: (data.plants || []).reduce((a, p) => a + (p.n || 0), 0) };
   // emplacements : le plan partagé avec les serres du village (js/flore.js, layout)
   const items = [], list = (data.plants || []).filter((x) => SP[x.sp]).sort((a, b) => b.n - a.n), L = layout(list);
@@ -564,6 +583,8 @@ export function setData(data) {
     else continue;
     items.push(it);
   }
+  const bz = data.bonsai, water = (data.decors || []).some((d) => d === 'bassin' || d === 'vasque');
+  BONSAI = bz ? { goal: bz.goal, parts: bonsaiParts(rngOf((bz.seed >>> 0) || 1), bz.branches || 0), at: water ? V(0.98, 0.02, -1.9) : V(0, 0.02, -2.6) } : null;
   plants.length = 0; for (const it of items) addPlant(it); for (const pl of plants) { pl.mode = pl.it.mode; pl.g = pl.it.g; }
   buildPools(); buildLabels(); renderAll(); if (data.time) setTime(data.time);
 }
@@ -656,11 +677,11 @@ const hasDecor = (id) => (LIVE ? LIVE.decors.has(id) : P >= (DECORS.find((d) => 
 // Un pot de l'établi selon son stade : graine, pousse, plante (l'espèce, sans fleurs), grande (boutons).
 function benchStage(pl, b, sc, own) {
   const { s: st, k } = stageLook(pl.it.n), at = b.clone().add(V(0, st <= 1 ? 0.25 : 0.22, 0)); // le pot est fermé à 0,25 : graine et pousse posées dessus
-  if (st <= 1) { _P.compose(at, _q, _s.setScalar(st ? 1.5 : 0.75)); emit(pl.early.filter((pc) => pc.st === st), st ? 0.15 + 0.75 * k : 1, _P, own); return; }
-  _P.compose(at, _q, _s.setScalar(sc * (st === 2 ? 0.8 + 0.15 * k : 0.95 + 0.05 * k)));
-  if (st >= 4) emit(pl.seedParts || pl.parts, 1, _P, own);
-  else if (pl.seedParts) emit(pl.seedParts, st === 2 ? 0.55 + 0.2 * k : 0.8 + 0.25 * k, _P, own);
-  else emitStaged(pl.parts, st === 2 ? 0.3 + 0.25 * k : 0.6 + 0.25 * k, _P, own, st === 3, k);
+  if (st <= 2) { _P.compose(at.setY(b.y + (st === 2 ? 0.24 : 0.25)), _q, _s.setScalar(st === 0 ? 0.75 : st === 1 ? 1.5 : 1.1 + 0.4 * k)); emit(pl.early.filter((pc) => pc.st === st), st === 0 ? 1 : st === 1 ? 0.15 + 0.75 * k : 0.35 + 0.6 * k, _P, own); return; }
+  _P.compose(at, _q, _s.setScalar(sc * (st === 3 ? 0.85 + 0.15 * k : 1)));
+  if (pl.seedParts) emit(pl.seedParts, 1, _P, own); // lianes et suspensions : leur semis, complet
+  else if (st >= 4) emit(pl.parts, 1, _P, own);
+  else emitStaged(pl.parts, 1, _P, own, true, k); // grande : l'espèce entière, en boutons
 }
 function renderAll() {
   for (const k in pools) pools[k].n = 0;
@@ -677,6 +698,7 @@ function renderAll() {
       _P.compose(gr.pos, _q.setFromEuler(_e.set(0, gr.ry, 0)), _s.setScalar(gr.s * (gr.bed ? 1 : it.n ? 0.85 + 0.3 * (g - 0.5) : 0.55 + 0.45 * g))); emit(pl.parts, gr.bed ? (g - 0.5) * 1.96 + 0.02 : it.n ? 0.9 + 0.2 * (g - 0.5) : g, _P, own);
     }
   }
+  if (BONSAI) { _P.compose(BONSAI.at, _q.identity(), _s.setScalar(1.15)); emit(BONSAI.parts, 1, _P, `bonsai:${BONSAI.goal}`); }
   // pots vides (au départ et entre deux semis)
   BENCH.forEach((b, j) => { if (usedBench.has(j) || j % 3) return; _P.compose(b, _q.setFromEuler(_e.set(0, j, 0)), _s.setScalar(1)); push('pot', _P, POTC[j % 3]); });
   // mousse et pierres : la serre se couvre avec le temps
@@ -822,7 +844,7 @@ export function setTime(k) { timeKey = k; applyTime(); }
 
 export function mount(canvas, opts = {}) {
   onFps = opts.onFps || null; configure(opts.serre); PART_CACHE.clear();
-  plants.length = 0; for (const k in pools) delete pools[k]; decorObjs = {}; labelMeshes = []; lampLights = []; lampMeshes = []; groundLights = []; groundGlow = null; water = null; chime = null; fireflies = null; LIVE = null; if (opts.data) variegated = false;
+  plants.length = 0; BONSAI = null; for (const k in pools) delete pools[k]; decorObjs = {}; labelMeshes = []; lampLights = []; lampMeshes = []; groundLights = []; groundGlow = null; water = null; chime = null; fireflies = null; LIVE = null; if (opts.data) variegated = false;
   // Un seul contexte WebGL par toile, gardé d'une serre à l'autre (en créer un à chaque entrée est lent sur iPhone,
   // et Safari finit par en refuser). L'ancienne scène est libérée, sauf les formes partagées.
   SHARED_GEO = SHARED_GEO || new Set([...Object.values(POOLS).map(([g]) => g), potG, stemG, LABEL_G]);
@@ -869,7 +891,7 @@ export function mount(canvas, opts = {}) {
   const onUp = (e) => { onEnd(e); if (!down || !opts.onPick || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) { down = null; return; } down = null; const b = canvas.getBoundingClientRect(); ptr.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(ptr, camera);
     if (slotMarks) { const sh = ray.intersectObjects(slotMarks.children, true)[0]; if (sh) { opts.onPick(sh.object.userData.pick); return; } }
     const ims = Object.values(pools).map((p) => p.im), hits = ray.intersectObjects([...ims, ernest.root], true);
-    for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { opts.onPick({ kind: 'plant', id: pool.own[h.instanceId] }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } }
+    for (const h of hits) { const pool = Object.values(pools).find((p) => p.im === h.object); if (pool && h.instanceId !== undefined && pool.own[h.instanceId]) { const o = String(pool.own[h.instanceId]); opts.onPick(o.startsWith('bonsai:') ? { kind: 'bonsai', goal: o.slice(7) } : { kind: 'plant', id: o }); return; } if (!pool) { opts.onPick({ kind: 'ernest' }); return; } }
     // le sol : la vue s'y rend, Ernest aussi
     const hit = ray.ray.intersectPlane(new THREE.Plane(UP, 0), V()); if (hit && Math.abs(hit.x) < HALL.w - 0.3 && Math.abs(hit.z) < D - 0.3 && (!scene3 || scene3.kind === 'walk')) walkErnest(hit); };
   const listen = (on) => { const f = on ? 'addEventListener' : 'removeEventListener'; canvas[f]('pointerdown', onDown); canvas[f]('pointerup', onUp); canvas[f]('pointermove', onMove); canvas[f]('pointercancel', onEnd); canvas[f]('wheel', onWheel, { passive: false }); };
